@@ -1180,7 +1180,7 @@ app.delete("/api/admin/tutorials/:id", (req, res) => {
 
 // --- PRODUCTS MANAGEMENT (CRUD) ---
 app.post("/api/admin/products", (req, res) => {
-  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, isPopular } = req.body;
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
   if (!name || !type || priceRetail === undefined || priceWholesale === undefined) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
@@ -1194,6 +1194,7 @@ app.post("/api/admin/products", (req, res) => {
     description: description || "",
     features: Array.isArray(features) ? features : [],
     imageUrl: imageUrl || "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: imageUrl2 || "",
     isPopular: !!isPopular
   };
   db.products.push(newProduct);
@@ -1203,7 +1204,7 @@ app.post("/api/admin/products", (req, res) => {
 
 app.put("/api/admin/products/:id", (req, res) => {
   const { id } = req.params;
-  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, isPopular } = req.body;
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
   const db = readDB();
   const index = db.products.findIndex(p => p.id === id);
   if (index === -1) {
@@ -1218,6 +1219,7 @@ app.put("/api/admin/products/:id", (req, res) => {
     description: description !== undefined ? description : db.products[index].description,
     features: features !== undefined ? (Array.isArray(features) ? features : []) : db.products[index].features,
     imageUrl: imageUrl !== undefined ? imageUrl : db.products[index].imageUrl,
+    imageUrl2: imageUrl2 !== undefined ? imageUrl2 : db.products[index].imageUrl2,
     isPopular: isPopular !== undefined ? !!isPopular : db.products[index].isPopular
   };
   writeDB(db);
