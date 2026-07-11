@@ -8,6 +8,7 @@ import {
   Plus, 
   Search, 
   Copy, 
+  Download,
   Clock, 
   CheckCircle, 
   X, 
@@ -27,6 +28,7 @@ interface WholesalerDashboardProps {
   onActivateClient: (data: any) => Promise<any>;
   onRequestCredit: (data: any) => Promise<any>;
   refreshWholesalerData: () => void;
+  onLogoutWholesaler?: () => void;
 }
 
 export default function WholesalerDashboard({
@@ -37,7 +39,8 @@ export default function WholesalerDashboard({
   wholesalerRequests,
   onActivateClient,
   onRequestCredit,
-  refreshWholesalerData
+  refreshWholesalerData,
+  onLogoutWholesaler
 }: WholesalerDashboardProps) {
   // Login / Register Views
   const [isRegistering, setIsRegistering] = useState(false);
@@ -187,6 +190,18 @@ export default function WholesalerDashboard({
     navigator.clipboard.writeText(text);
     setCopiedField(label);
     setTimeout(() => setCopiedField(""), 2000);
+  };
+
+  const handleDownloadM3u = (client: IptvClient) => {
+    const m3uContent = `#EXTM3U\n#EXTINF:-1, KURTAL IPTV - ${client.clientName} [${client.server}]\n${client.credentials?.m3uUrl || ""}`;
+    const blob = new Blob([m3uContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `iptv_${client.clientName.replace(/\s+/g, "_")}.m3u`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const filteredClients = wholesalerClients.filter(c =>
@@ -438,6 +453,16 @@ export default function WholesalerDashboard({
             <Plus className="h-4 w-4" />
             <span>Nouvelle Activation</span>
           </button>
+
+          {onLogoutWholesaler && (
+            <button
+              onClick={onLogoutWholesaler}
+              className="px-4 py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-400 font-bold text-xs rounded-xl border border-red-500/20 transition-all flex items-center space-x-1.5 cursor-pointer"
+            >
+              <LogIn className="h-4 w-4 rotate-180" />
+              <span>Se déconnecter</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -881,6 +906,16 @@ export default function WholesalerDashboard({
                     <Copy className="h-3.5 w-3.5" />
                   </button>
                 </div>
+                {selectedClientCredentials.credentials?.m3uUrl && (
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadM3u(selectedClientCredentials)}
+                    className="w-full mt-2 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/40 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Télécharger le Fichier .m3u</span>
+                  </button>
+                )}
               </div>
 
               <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-[10px] leading-relaxed">

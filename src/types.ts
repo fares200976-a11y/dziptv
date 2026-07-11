@@ -3,12 +3,13 @@ export type SubscriptionServer = 'Dino' | '8K' | 'V12' | 'Golden OTT';
 export interface Product {
   id: string;
   name: string;
-  type: 'iptv' | 'device';
+  type: 'iptv' | 'device' | 'adsl';
   priceRetail: number; // in DA (Algerian Dinar)
   priceWholesale: number; // in DA
   description: string;
   features: string[];
   imageUrl: string;
+  imageUrl2?: string; // Second product image for gallery
   isPopular?: boolean;
 }
 
@@ -42,6 +43,15 @@ export interface IptvClient {
   };
 }
 
+export interface Livreur {
+  id: string;
+  name: string;
+  phone: string;
+  wilaya: string;
+  status: 'active' | 'inactive';
+  createdAt: string;
+}
+
 export interface Order {
   id: string;
   customerName: string;
@@ -49,11 +59,27 @@ export interface Order {
   customerPhone: string;
   productId: string;
   productName: string;
-  productType: 'iptv' | 'device';
+  productType: 'iptv' | 'device' | 'adsl';
   priceDA: number;
   paymentMethod: 'baridimob' | 'ccp' | 'card' | 'hand';
   paymentDetails?: string; // proof ID, transaction ID, etc.
   status: 'pending' | 'completed' | 'cancelled';
+  createdAt: string;
+  tvModel?: string;
+  installedApp?: string;
+  hasAndroidBox?: boolean;
+  downloaderCode?: string;
+  assignedLivreurId?: string; // assigned deliverer ID
+  deliveryStatus?: 'pending' | 'preparing' | 'shipped' | 'delivered' | 'returned';
+}
+
+export interface VideoTutorial {
+  id: string;
+  title: string;
+  url: string;
+  description: string;
+  category: 'smart_tv' | 'android' | 'firestick' | 'other';
+  downloaderCode?: string;
   createdAt: string;
 }
 

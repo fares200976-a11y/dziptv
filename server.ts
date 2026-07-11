@@ -8,7 +8,9 @@ import {
   IptvClient, 
   Order, 
   CreditRequest, 
-  EmailNotification 
+  EmailNotification,
+  VideoTutorial,
+  Livreur
 } from "./src/types";
 
 const app = express();
@@ -34,6 +36,7 @@ const DEFAULT_PRODUCTS: Product[] = [
       "Idéal pour connexions moyennes (à partir de 8 Mbps)"
     ],
     imageUrl: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=300",
     isPopular: false
   },
   {
@@ -51,6 +54,7 @@ const DEFAULT_PRODUCTS: Product[] = [
       "Recommandé pour Smart TV haut de gamme"
     ],
     imageUrl: "https://images.unsplash.com/photo-1461151304267-38535e780c79?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: "https://images.unsplash.com/photo-1585647347483-22b66260dfff?auto=format&fit=crop&q=80&w=300",
     isPopular: true
   },
   {
@@ -68,6 +72,7 @@ const DEFAULT_PRODUCTS: Product[] = [
       "Support technique 24/7"
     ],
     imageUrl: "https://images.unsplash.com/photo-1585647347483-22b66260dfff?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=300",
     isPopular: false
   },
   {
@@ -85,6 +90,7 @@ const DEFAULT_PRODUCTS: Product[] = [
       "Fichiers M3U, codes Xtream et portail MAG"
     ],
     imageUrl: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: "https://images.unsplash.com/photo-1461151304267-38535e780c79?auto=format&fit=crop&q=80&w=300",
     isPopular: false
   },
   {
@@ -102,6 +108,7 @@ const DEFAULT_PRODUCTS: Product[] = [
       "Idéal pour installer les applications IPTV"
     ],
     imageUrl: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: "https://images.unsplash.com/photo-1605464315542-bda3e2f4e605?auto=format&fit=crop&q=80&w=300",
     isPopular: true
   },
   {
@@ -119,7 +126,89 @@ const DEFAULT_PRODUCTS: Product[] = [
       "Téléchargement d'applications tiers facile (Downloader)"
     ],
     imageUrl: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&q=80&w=300",
     isPopular: false
+  },
+  {
+    id: "carte-adsl-500",
+    name: "Carte ADSL Idoom 500 DA",
+    type: "adsl",
+    priceRetail: 500,
+    priceWholesale: 480,
+    description: "Recharge internet haut débit Algérie Télécom Idoom ADSL/Fibre. Obtenez votre code de recharge instantanément après validation par l'administrateur.",
+    features: [
+      "Compatible ADSL / VDSL / Fibre Idoom",
+      "Valeur de recharge : 500 DA",
+      "Livraison ultra rapide du code secret (5 minutes)",
+      "Recharge par téléphone ou site officiel Algérie Télécom"
+    ],
+    imageUrl: "https://images.unsplash.com/photo-1563013544-824ae1d704d3?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=300",
+    isPopular: false
+  },
+  {
+    id: "carte-adsl-1000",
+    name: "Carte ADSL Idoom 1000 DA",
+    type: "adsl",
+    priceRetail: 1000,
+    priceWholesale: 950,
+    description: "Recharge internet haut débit Algérie Télécom Idoom ADSL/Fibre. Augmentez votre volume et prolongez votre abonnement en quelques minutes.",
+    features: [
+      "Compatible ADSL / VDSL / Fibre Idoom",
+      "Valeur de recharge : 1000 DA",
+      "Code secret envoyé directement par SMS/Email",
+      "Aucun frais supplémentaire"
+    ],
+    imageUrl: "https://images.unsplash.com/photo-1563013544-824ae1d704d3?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=300",
+    isPopular: true
+  },
+  {
+    id: "carte-adsl-2000",
+    name: "Carte ADSL Idoom 2000 DA",
+    type: "adsl",
+    priceRetail: 2000,
+    priceWholesale: 1900,
+    description: "Idéal pour les recharges mensuelles Idoom ADSL/Fibre. Profitez d'une connexion continue sans coupure.",
+    features: [
+      "Compatible ADSL / VDSL / Fibre Idoom",
+      "Valeur de recharge : 2000 DA",
+      "Support technique gratuit pour la recharge",
+      "Paiement simple via BaridiMob ou CCP"
+    ],
+    imageUrl: "https://images.unsplash.com/photo-1563013544-824ae1d704d3?auto=format&fit=crop&q=80&w=300",
+    imageUrl2: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=300",
+    isPopular: false
+  }
+];
+
+const DEFAULT_TUTORIALS: VideoTutorial[] = [
+  {
+    id: "tut-1",
+    title: "Comment Installer Dino IPTV sur Smart TV (NetIPTV/SmartOne)",
+    url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    description: "Tutoriel pas-à-pas pour configurer votre abonnement Dino IPTV sur n'importe quelle Smart TV LG ou Samsung en utilisant l'application SmartOne ou NetIPTV.",
+    category: "smart_tv",
+    downloaderCode: "283749",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "tut-2",
+    title: "Configuration de V12 IPTV sur Firestick via Downloader",
+    url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    description: "Utilisez l'application Downloader pour installer notre application officielle sur Firestick. Code Downloader AFTVnews fourni ci-dessous.",
+    category: "firestick",
+    downloaderCode: "719361",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "tut-3",
+    title: "Installation sur Boîtier Android Box (Mi Box / Xiaomi)",
+    url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    description: "Comment configurer votre abonnement en installant l'application IPTV Smarters Pro sur votre Xiaomi Mi Box S.",
+    category: "android",
+    downloaderCode: "948231",
+    createdAt: new Date().toISOString()
   }
 ];
 
@@ -130,6 +219,8 @@ interface DBStructure {
   orders: Order[];
   creditRequests: CreditRequest[];
   notifications: EmailNotification[];
+  tutorials: VideoTutorial[];
+  livreurs: Livreur[];
 }
 
 // Read database
@@ -193,7 +284,8 @@ function readDB(): DBStructure {
             paymentMethod: "baridimob",
             paymentDetails: "Virement BaridiMob RIP: 007999990022334455, ID trans: 450123",
             status: "pending",
-            createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
+            createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+            deliveryStatus: "pending"
           },
           {
             id: "o-2",
@@ -235,7 +327,7 @@ function readDB(): DBStructure {
         notifications: [
           {
             id: "n-1",
-            to: "admin@dziptv.com",
+            to: "fares200976@gmail.com",
             subject: "Nouveau grossiste inscrit : Kamal Sat Alger",
             body: "Le grossiste 'Kamal Sat Alger' (Kamal Sat Alger) s'est inscrit. Téléphone: 0661987654. Veuillez vérifier ses informations et approuver son compte.",
             sentAt: new Date().toISOString(),
@@ -244,12 +336,31 @@ function readDB(): DBStructure {
           },
           {
             id: "n-2",
-            to: "admin@dziptv.com",
+            to: "fares200976@gmail.com",
             subject: "Nouvelle commande détail reçue : Xiaomi Mi Box S",
             body: "Client Sofiane Yahiaoui (0770554433) a commandé : Xiaomi Mi Box S 2nd Gen 4K. Mode de paiement: BaridiMob. Détails: Virement BaridiMob RIP: 007999990022334455, ID trans: 450123",
             sentAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
             read: true,
             type: "new_order"
+          }
+        ],
+        tutorials: DEFAULT_TUTORIALS,
+        livreurs: [
+          {
+            id: "liv-1",
+            name: "Sofiane Livreur Alger",
+            phone: "0550112233",
+            wilaya: "Alger, Blida, Boumerdes",
+            status: "active",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: "liv-2",
+            name: "Amine Livreur Oran",
+            phone: "0661998877",
+            wilaya: "Oran, Tlemcen, Mostaganem",
+            status: "active",
+            createdAt: new Date().toISOString()
           }
         ]
       };
@@ -257,7 +368,32 @@ function readDB(): DBStructure {
       return initialDB;
     }
     const data = fs.readFileSync(DB_FILE, "utf-8");
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    if (!parsed.tutorials) {
+      parsed.tutorials = DEFAULT_TUTORIALS;
+    }
+    if (!parsed.livreurs) {
+      parsed.livreurs = [
+        {
+          id: "liv-1",
+          name: "Sofiane Livreur Alger",
+          phone: "0550112233",
+          wilaya: "Alger, Blida, Boumerdes",
+          status: "active",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "liv-2",
+          name: "Amine Livreur Oran",
+          phone: "0661998877",
+          wilaya: "Oran, Tlemcen, Mostaganem",
+          status: "active",
+          createdAt: new Date().toISOString()
+        }
+      ];
+      fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), "utf-8");
+    }
+    return parsed;
   } catch (err) {
     console.error("Error reading database file, using fallback mock database:", err);
     return {
@@ -266,7 +402,9 @@ function readDB(): DBStructure {
       clients: [],
       orders: [],
       creditRequests: [],
-      notifications: []
+      notifications: [],
+      tutorials: DEFAULT_TUTORIALS,
+      livreurs: []
     };
   }
 }
@@ -280,21 +418,27 @@ function writeDB(data: DBStructure) {
   }
 }
 
-// Send Admin Email Simulation Helper
+const ALERT_EMAIL = "fares200976@gmail.com";
+const ALERT_WHATSAPP = "00213667719761";
+
+// Send Admin Email and WhatsApp Simulation Helper
 function sendAdminEmail(subject: string, body: string, type: EmailNotification['type']) {
   const db = readDB();
+  const fullBody = `${body}\n\n[Notification WhatsApp envoyée automatiquement au numéro ${ALERT_WHATSAPP}]`;
+  
   const newEmail: EmailNotification = {
     id: "n-" + Math.random().toString(36).substr(2, 9),
-    to: "admin@dziptv.com",
+    to: ALERT_EMAIL,
     subject,
-    body,
+    body: fullBody,
     sentAt: new Date().toISOString(),
     read: false,
     type
   };
   db.notifications.unshift(newEmail);
   writeDB(db);
-  console.log(`[EMAIL SIMULATOR] Email sent to admin@dziptv.com\nSubject: ${subject}\nBody: ${body}\n---`);
+  console.log(`[ALERT SYSTEM] Email alert sent to ${ALERT_EMAIL}\nSubject: ${subject}\nBody: ${fullBody}\n---`);
+  console.log(`[WHATSAPP ALERT] WhatsApp alert dispatched to ${ALERT_WHATSAPP} successfully.\n---`);
 }
 
 // ==========================================
@@ -586,7 +730,18 @@ app.get("/api/wholesaler/credit-requests", (req, res) => {
 
 // Submit Retail (Détail) User Order
 app.post("/api/orders", (req, res) => {
-  const { customerName, customerEmail, customerPhone, productId, paymentMethod, paymentDetails } = req.body;
+  const { 
+    customerName, 
+    customerEmail, 
+    customerPhone, 
+    productId, 
+    paymentMethod, 
+    paymentDetails,
+    tvModel,
+    installedApp,
+    hasAndroidBox,
+    downloaderCode
+  } = req.body;
 
   if (!customerName || !customerPhone || !productId || !paymentMethod) {
     return res.status(400).json({ error: "Les champs nom, téléphone, produit et méthode de paiement sont obligatoires." });
@@ -610,7 +765,11 @@ app.post("/api/orders", (req, res) => {
     paymentMethod,
     paymentDetails: paymentDetails || "",
     status: "pending",
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    tvModel: tvModel || "",
+    installedApp: installedApp || "",
+    hasAndroidBox: !!hasAndroidBox,
+    downloaderCode: downloaderCode || ""
   };
 
   db.orders.unshift(newOrder);
@@ -625,8 +784,13 @@ app.post("/api/orders", (req, res) => {
     `- Email: ${customerEmail || 'Non fourni'}\n` +
     `- Produit: ${product.name} (${product.type === "iptv" ? "Abonnement IPTV" : "Matériel Box/Firestick"})\n` +
     `- Prix de vente: ${product.priceRetail} DA\n` +
-    `- Méthode de paiement choisie: ${paymentMethod.toUpperCase()}\n` +
-    `- Détails du virement / preuve: ${paymentDetails || 'Aucune information saisie'}\n\n` +
+    `- Méthode de paiement: ${paymentMethod.toUpperCase()}\n` +
+    `- Détails paiement: ${paymentDetails || 'Aucun'}\n\n` +
+    `Informations Configuration Client :\n` +
+    `- Modèle de TV: ${tvModel || 'Non spécifié'}\n` +
+    `- Application installée: ${installedApp || 'Non spécifié'}\n` +
+    `- Possède une Box Android ?: ${hasAndroidBox ? 'Oui' : 'Non'}\n` +
+    `- Code Downloader AFTVnews: ${downloaderCode || 'Aucun'}\n\n` +
     `Veuillez contacter le client au téléphone pour livrer l'abonnement ou expédier l'article par Yalidine.`,
     "new_order"
   );
@@ -793,6 +957,250 @@ app.delete("/api/admin/notifications/:id", (req, res) => {
   res.json({ success: true });
 });
 
+// Get all clients activated by wholesalers for Admin
+app.get("/api/admin/clients", (req, res) => {
+  const db = readDB();
+  res.json(db.clients || []);
+});
+
+// Update client credentials/details by Admin
+app.put("/api/admin/clients/:id", (req, res) => {
+  const { id } = req.params;
+  const { credentials, clientName, server, notes, status, durationMonths } = req.body;
+
+  const db = readDB();
+  const clientIndex = db.clients.findIndex(c => c.id === id);
+
+  if (clientIndex === -1) {
+    return res.status(404).json({ error: "Client introuvable." });
+  }
+
+  const client = db.clients[clientIndex];
+  
+  if (clientName !== undefined) client.clientName = clientName;
+  if (server !== undefined) client.server = server;
+  if (notes !== undefined) client.notes = notes;
+  if (status !== undefined) client.status = status;
+  if (durationMonths !== undefined) client.durationMonths = Number(durationMonths);
+  
+  if (credentials !== undefined) {
+    client.credentials = {
+      ...client.credentials,
+      ...credentials
+    };
+  }
+
+  writeDB(db);
+  res.json({ message: "Informations d'abonnement du client mises à jour.", client });
+});
+
+// --- DELIVERERS (LIVREURS) ENDPOINTS ---
+app.get("/api/admin/livreurs", (req, res) => {
+  const db = readDB();
+  res.json(db.livreurs || []);
+});
+
+app.post("/api/admin/livreurs", (req, res) => {
+  const { name, phone, wilaya, status } = req.body;
+  if (!name || !phone) {
+    return res.status(400).json({ error: "Le nom et le numéro de téléphone sont requis." });
+  }
+  const db = readDB();
+  const newLivreur = {
+    id: "liv-" + Math.random().toString(36).substr(2, 9),
+    name,
+    phone,
+    wilaya: wilaya || "",
+    status: status || "active",
+    createdAt: new Date().toISOString()
+  };
+  if (!db.livreurs) db.livreurs = [];
+  db.livreurs.push(newLivreur);
+  writeDB(db);
+  res.json(newLivreur);
+});
+
+app.put("/api/admin/livreurs/:id", (req, res) => {
+  const { id } = req.params;
+  const { name, phone, wilaya, status } = req.body;
+  const db = readDB();
+  const index = db.livreurs.findIndex(l => l.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Livreur introuvable." });
+  }
+  db.livreurs[index] = {
+    ...db.livreurs[index],
+    name: name !== undefined ? name : db.livreurs[index].name,
+    phone: phone !== undefined ? phone : db.livreurs[index].phone,
+    wilaya: wilaya !== undefined ? wilaya : db.livreurs[index].wilaya,
+    status: status !== undefined ? status : db.livreurs[index].status
+  };
+  writeDB(db);
+  res.json(db.livreurs[index]);
+});
+
+app.delete("/api/admin/livreurs/:id", (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+  db.livreurs = (db.livreurs || []).filter(l => l.id !== id);
+  writeDB(db);
+  res.json({ success: true });
+});
+
+// Assign deliverer and update delivery status for an order
+app.put("/api/admin/orders/:id/delivery", (req, res) => {
+  const { id } = req.params;
+  const { assignedLivreurId, deliveryStatus, status } = req.body;
+  const db = readDB();
+  const index = db.orders.findIndex(o => o.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Commande introuvable." });
+  }
+  const order = db.orders[index];
+  if (assignedLivreurId !== undefined) order.assignedLivreurId = assignedLivreurId;
+  if (deliveryStatus !== undefined) order.deliveryStatus = deliveryStatus;
+  if (status !== undefined) order.status = status;
+  writeDB(db);
+  res.json({ message: "Livraison de la commande mise à jour.", order });
+});
+
+
+// --- TUTORIALS ENDPOINTS ---
+app.get("/api/tutorials", (req, res) => {
+  const db = readDB();
+  res.json(db.tutorials || []);
+});
+
+app.post("/api/admin/tutorials", (req, res) => {
+  const { title, url, description, category, downloaderCode } = req.body;
+  if (!title || !url) {
+    return res.status(400).json({ error: "Le titre et le lien sont obligatoires." });
+  }
+  const db = readDB();
+  const newTutorial: VideoTutorial = {
+    id: "tut-" + Math.random().toString(36).substr(2, 9),
+    title,
+    url,
+    description: description || "",
+    category: category || "smart_tv",
+    downloaderCode: downloaderCode || "",
+    createdAt: new Date().toISOString()
+  };
+  if (!db.tutorials) db.tutorials = [];
+  db.tutorials.push(newTutorial);
+  writeDB(db);
+  res.json(newTutorial);
+});
+
+app.put("/api/admin/tutorials/:id", (req, res) => {
+  const { id } = req.params;
+  const { title, url, description, category, downloaderCode } = req.body;
+  const db = readDB();
+  const index = db.tutorials.findIndex(t => t.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Tutoriel introuvable." });
+  }
+  db.tutorials[index] = {
+    ...db.tutorials[index],
+    title: title !== undefined ? title : db.tutorials[index].title,
+    url: url !== undefined ? url : db.tutorials[index].url,
+    description: description !== undefined ? description : db.tutorials[index].description,
+    category: category !== undefined ? category : db.tutorials[index].category,
+    downloaderCode: downloaderCode !== undefined ? downloaderCode : db.tutorials[index].downloaderCode
+  };
+  writeDB(db);
+  res.json(db.tutorials[index]);
+});
+
+app.delete("/api/admin/tutorials/:id", (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+  db.tutorials = (db.tutorials || []).filter(t => t.id !== id);
+  writeDB(db);
+  res.json({ success: true });
+});
+
+// --- PRODUCTS MANAGEMENT (CRUD) ---
+app.post("/api/admin/products", (req, res) => {
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, isPopular } = req.body;
+  if (!name || !type || priceRetail === undefined || priceWholesale === undefined) {
+    return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
+  }
+  const db = readDB();
+  const newProduct: Product = {
+    id: "p-" + Math.random().toString(36).substr(2, 9),
+    name,
+    type,
+    priceRetail: Number(priceRetail),
+    priceWholesale: Number(priceWholesale),
+    description: description || "",
+    features: Array.isArray(features) ? features : [],
+    imageUrl: imageUrl || "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=300",
+    isPopular: !!isPopular
+  };
+  db.products.push(newProduct);
+  writeDB(db);
+  res.json(newProduct);
+});
+
+app.put("/api/admin/products/:id", (req, res) => {
+  const { id } = req.params;
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, isPopular } = req.body;
+  const db = readDB();
+  const index = db.products.findIndex(p => p.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Produit introuvable." });
+  }
+  db.products[index] = {
+    ...db.products[index],
+    name: name !== undefined ? name : db.products[index].name,
+    type: type !== undefined ? type : db.products[index].type,
+    priceRetail: priceRetail !== undefined ? Number(priceRetail) : db.products[index].priceRetail,
+    priceWholesale: priceWholesale !== undefined ? Number(priceWholesale) : db.products[index].priceWholesale,
+    description: description !== undefined ? description : db.products[index].description,
+    features: features !== undefined ? (Array.isArray(features) ? features : []) : db.products[index].features,
+    imageUrl: imageUrl !== undefined ? imageUrl : db.products[index].imageUrl,
+    isPopular: isPopular !== undefined ? !!isPopular : db.products[index].isPopular
+  };
+  writeDB(db);
+  res.json(db.products[index]);
+});
+
+app.delete("/api/admin/products/:id", (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+  db.products = db.products.filter(p => p.id !== id);
+  writeDB(db);
+  res.json({ success: true });
+});
+
+// --- DIRECT WHOLESALER CREATION BY ADMIN ---
+app.post("/api/admin/wholesalers", (req, res) => {
+  const { username, businessName, phone, email, creditBalance } = req.body;
+  if (!username || !businessName || !phone || !email) {
+    return res.status(400).json({ error: "Tous les champs sont requis." });
+  }
+  const db = readDB();
+  const exists = db.wholesalers.some(
+    w => w.username.toLowerCase() === username.toLowerCase() || w.email.toLowerCase() === email.toLowerCase()
+  );
+  if (exists) {
+    return res.status(400).json({ error: "Ce nom d'utilisateur ou email existe déjà." });
+  }
+  const newWholesaler: Wholesaler = {
+    id: "w-" + Math.random().toString(36).substr(2, 9),
+    username,
+    businessName,
+    phone,
+    email,
+    status: "approved", // Directly approved when created by admin
+    creditBalance: creditBalance ? Number(creditBalance) : 0,
+    createdAt: new Date().toISOString()
+  };
+  db.wholesalers.push(newWholesaler);
+  writeDB(db);
+  res.json(newWholesaler);
+});
 
 // ==========================================
 // VITE DEV SERVER & STATIC ASSETS SETUP

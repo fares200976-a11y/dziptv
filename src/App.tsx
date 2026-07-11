@@ -4,6 +4,8 @@ import Hero from "./components/Hero";
 import RetailCatalog from "./components/RetailCatalog";
 import WholesalerDashboard from "./components/WholesalerDashboard";
 import AdminSimulator from "./components/AdminSimulator";
+import InstallationTutorials from "./components/InstallationTutorials";
+import MusicPlayer from "./components/MusicPlayer";
 import { 
   Product, 
   Wholesaler, 
@@ -11,15 +13,20 @@ import {
   Order, 
   CreditRequest, 
   EmailNotification, 
-  AppStats 
+  AppStats,
+  VideoTutorial
 } from "./types";
 import { Tv, Sparkles, ShieldCheck, Flame, HelpCircle } from "lucide-react";
 
 export default function App() {
   const [currentView, setView] = useState<"retail" | "wholesaler" | "admin">("retail");
+  const [isAdminUnlocked, setAdminUnlocked] = useState(() => {
+    return localStorage.getItem("adminUnlocked") === "true";
+  });
   
   // Data State
   const [products, setProducts] = useState<Product[]>([]);
+  const [tutorials, setTutorials] = useState<VideoTutorial[]>([]);
   const [loggedWholesaler, setLoggedWholesaler] = useState<Wholesaler | null>(null);
   
   // Wholesaler-specific lists
@@ -38,10 +45,12 @@ export default function App() {
   const [adminOrders, setAdminOrders] = useState<Order[]>([]);
   const [adminRequests, setAdminRequests] = useState<CreditRequest[]>([]);
   const [adminNotifications, setAdminNotifications] = useState<EmailNotification[]>([]);
+  const [adminClients, setAdminClients] = useState<IptvClient[]>([]);
 
   // 1. Initial Load of Products & Auth check
   useEffect(() => {
     fetchProducts();
+    fetchTutorials();
     
     // Check local storage for persistent login
     const savedProfile = localStorage.getItem("wholesalerProfile");
@@ -80,6 +89,18 @@ export default function App() {
     }
   };
 
+  const fetchTutorials = async () => {
+    try {
+      const res = await fetch("/api/tutorials");
+      if (res.ok) {
+        const data = await res.json();
+        setTutorials(data);
+      }
+    } catch (e) {
+      console.error("Error fetching tutorials:", e);
+    }
+  };
+
   const fetchWholesalerData = async () => {
     if (!loggedWholesaler) return;
     try {
@@ -89,8 +110,17 @@ export default function App() {
       });
       if (profRes.ok) {
         const freshProfile = await profRes.json();
+        if (freshProfile.status === "suspended") {
+          localStorage.removeItem("wholesalerProfile");
+          setLoggedWholesaler(null);
+          alert("Votre compte grossiste a été suspendu par l'administration.");
+          return;
+        }
         setLoggedWholesaler(freshProfile);
         localStorage.setItem("wholesalerProfile", JSON.stringify(freshProfile));
+      } else if (profRes.status === 403 || profRes.status === 401) {
+        localStorage.removeItem("wholesalerProfile");
+        setLoggedWholesaler(null);
       }
 
       // Fetch Clients
@@ -131,6 +161,9 @@ export default function App() {
 
       const notifsRes = await fetch("/api/admin/notifications");
       if (notifsRes.ok) setAdminNotifications(await notifsRes.json());
+
+      const clientsRes = await fetch("/api/admin/clients");
+      if (clientsRes.ok) setAdminClients(await clientsRes.json());
     } catch (e) {
       console.error("Error fetching admin data:", e);
     }
@@ -138,6 +171,7 @@ export default function App() {
 
   const refreshAllData = () => {
     fetchProducts();
+    fetchTutorials();
     if (loggedWholesaler) {
       fetchWholesalerData();
     }
@@ -184,6 +218,12 @@ export default function App() {
   const handleWholesalerLogout = () => {
     localStorage.removeItem("wholesalerProfile");
     setLoggedWholesaler(null);
+    setView("retail");
+  };
+
+  const handleAdminLogout = () => {
+    localStorage.removeItem("adminUnlocked");
+    setAdminUnlocked(false);
     setView("retail");
   };
 
@@ -343,6 +383,21 @@ export default function App() {
     }
   };
 
+  const handleUpdateClient = async (clientId: string, payload: any) => {
+    try {
+      const res = await fetch(`/api/admin/clients/${clientId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        refreshAllData();
+      }
+    } catch (e) {
+      console.error("Error updating client details:", e);
+    }
+  };
+
   const handleResetDatabase = async () => {
     try {
       const res = await fetch("/api/admin/reset", {
@@ -366,13 +421,19 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] flex flex-col">
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
+      currentView === "retail" 
+        ? "bg-slate-50 text-slate-900" 
+        : "bg-[#0b0f19] text-gray-200"
+    }`}>
       {/* Dynamic Header */}
       <Header 
         currentView={currentView} 
         setView={setView} 
         loggedWholesaler={loggedWholesaler}
         onLogout={handleWholesalerLogout}
+        isAdminUnlocked={isAdminUnlocked}
+        setAdminUnlocked={setAdminUnlocked}
       />
 
       {/* Main Content Area */}
@@ -390,23 +451,26 @@ export default function App() {
               onOrderSubmit={handleOrderSubmit}
             />
 
+            {/* Video Installation Tutorials */}
+            <InstallationTutorials tutorials={tutorials} />
+
             {/* General FAQ section or trust badges */}
             <section className="max-w-4xl mx-auto px-4 mt-8">
-              <div className="p-6 bg-gray-950/40 rounded-2xl border border-gray-800 space-y-4">
-                <h3 className="font-display font-bold text-lg text-white flex items-center space-x-1.5">
-                  <HelpCircle className="h-5 w-5 text-indigo-400" />
+              <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <h3 className="font-display font-bold text-lg text-slate-800 flex items-center space-x-1.5">
+                  <HelpCircle className="h-5 w-5 text-indigo-600" />
                   <span>Foire Aux Questions (Détail & Gros)</span>
                 </h3>
                 <div className="space-y-3.5 text-xs">
                   <div>
-                    <h4 className="font-bold text-white">Comment se passe l'activation après commande ?</h4>
-                    <p className="text-gray-400 mt-1 leading-relaxed">
+                    <h4 className="font-bold text-slate-900">Comment se passe l'activation après commande ?</h4>
+                    <p className="text-slate-600 mt-1 leading-relaxed">
                       Une fois que vous validez votre commande au détail (Dino, 8K, V12 ou Golden OTT), notre admin reçoit une notification par email. Nous vous contactons immédiatement sur votre numéro de téléphone pour vous guider et vous transmettre vos codes Xtream / Lien M3U à configurer sur votre TV ou smartphone.
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-bold text-white">Je suis revendeur, comment fonctionne le solde de crédit ?</h4>
-                    <p className="text-gray-400 mt-1 leading-relaxed">
+                    <h4 className="font-bold text-slate-900">Je suis revendeur, comment fonctionne le solde de crédit ?</h4>
+                    <p className="text-slate-600 mt-1 leading-relaxed">
                       En créant un compte grossiste, après approbation par l'admin, vous pouvez recharger votre portefeuille en effectuant un transfert BaridiMob ou CCP. Une fois le virement envoyé, soumettez la preuve dans votre tableau de bord. L'admin crédite votre compte, et vous pouvez alors activer vos clients de manière 100% autonome et instantanée à toute heure.
                     </p>
                   </div>
@@ -427,6 +491,7 @@ export default function App() {
               onActivateClient={handleActivateClient}
               onRequestCredit={handleRequestCredit}
               refreshWholesalerData={fetchWholesalerData}
+              onLogoutWholesaler={handleWholesalerLogout}
             />
           </div>
         )}
@@ -439,6 +504,10 @@ export default function App() {
               orders={adminOrders}
               requests={adminRequests}
               notifications={adminNotifications}
+              products={products}
+              tutorials={tutorials}
+              clients={adminClients}
+              onUpdateClient={handleUpdateClient}
               onApproveWholesaler={handleApproveWholesaler}
               onAddCreditManual={handleAddCreditManual}
               onUpdateOrderStatus={handleUpdateOrderStatus}
@@ -447,15 +516,19 @@ export default function App() {
               onDeleteNotification={handleDeleteNotification}
               onResetDatabase={handleResetDatabase}
               refreshAllData={refreshAllData}
+              onLogoutAdmin={handleAdminLogout}
             />
           </div>
         )}
       </main>
 
+      {/* Background Autoplay Music Widget */}
+      <MusicPlayer />
+
       {/* Modern Compact Footer */}
       <footer className="border-t border-gray-900 bg-black/40 py-6 text-center text-xs text-gray-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <p>© 2026 DZ IPTV Premium. Tous droits réservés. Vente en gros et au détail.</p>
+          <p>© 2026 KURTAL IPTV Premium. Tous droits réservés. Vente en gros et au détail.</p>
           <div className="flex space-x-4 text-gray-400 font-medium">
             <span className="hover:text-white cursor-pointer" onClick={() => setView("retail")}>Accueil</span>
             <span>•</span>
