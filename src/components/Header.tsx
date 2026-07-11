@@ -40,10 +40,9 @@ export default function Header({
 
   const handleSecretSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const isLegacy = adminPassword === "123456789" && adminUsername === "";
     const isCredentials = adminUsername.trim().toLowerCase() === "fares2026" && adminPassword === "Fares14081976";
 
-    if (isLegacy || isCredentials) {
+    if (isCredentials) {
       setUnlockSuccess(true);
       setTimeout(() => {
         setAdminUnlocked(true);

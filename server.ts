@@ -466,82 +466,104 @@ app.post("/api/admin/reset", (req, res) => {
 
 // Wholesaler Registration
 app.post("/api/auth/wholesaler/register", (req, res) => {
-  const { username, password, businessName, phone, email } = req.body;
-  if (!username || !password || !businessName || !phone || !email) {
-    return res.status(400).json({ error: "Tous les champs sont requis." });
+  try {
+    const { username, password, businessName, phone, email } = req.body;
+    if (!username || !password || !businessName || !phone || !email) {
+      return res.status(400).json({ error: "Tous les champs sont requis." });
+    }
+
+    const db = readDB();
+    if (!db.wholesalers) {
+      db.wholesalers = [];
+    }
+
+    const exists = db.wholesalers.some(
+      w => (w.username || "").toLowerCase() === username.toLowerCase() || (w.email || "").toLowerCase() === email.toLowerCase()
+    );
+
+    if (exists) {
+      return res.status(400).json({ error: "Ce nom d'utilisateur ou cet email est déjà enregistré." });
+    }
+
+    const newWholesaler: Wholesaler = {
+      id: "w-" + Math.random().toString(36).substr(2, 9),
+      username,
+      businessName,
+      phone,
+      email,
+      status: "pending",
+      creditBalance: 0,
+      createdAt: new Date().toISOString()
+    };
+
+    db.wholesalers.push(newWholesaler);
+    writeDB(db);
+
+    // Trigger admin email notification
+    try {
+      sendAdminEmail(
+        `Nouveau grossiste inscrit : ${businessName}`,
+        `Un nouveau grossiste s'est inscrit sur la plateforme !\n\n` +
+        `- Nom d'utilisateur: ${username}\n` +
+        `- Nom de l'entreprise: ${businessName}\n` +
+        `- Téléphone: ${phone}\n` +
+        `- Email: ${email}\n` +
+        `- Statut: En attente d'approbation\n\n` +
+        `Veuillez vous connecter à l'administration pour valider son compte et lui accorder ses premiers crédits.`,
+        "new_wholesaler"
+      );
+    } catch (emailErr) {
+      console.error("Error sending admin notification email:", emailErr);
+    }
+
+    res.json({ 
+      message: "Inscription réussie ! Votre compte est en attente d'approbation par l'administrateur.",
+      wholesaler: newWholesaler
+    });
+  } catch (err: any) {
+    console.error("Error in wholesaler register:", err);
+    res.status(500).json({ error: err.message || "Une erreur est survenue lors de l'inscription." });
   }
-
-  const db = readDB();
-  const exists = db.wholesalers.some(
-    w => w.username.toLowerCase() === username.toLowerCase() || w.email.toLowerCase() === email.toLowerCase()
-  );
-
-  if (exists) {
-    return res.status(400).json({ error: "Ce nom d'utilisateur ou cet email est déjà enregistré." });
-  }
-
-  const newWholesaler: Wholesaler = {
-    id: "w-" + Math.random().toString(36).substr(2, 9),
-    username,
-    businessName,
-    phone,
-    email,
-    status: "pending",
-    creditBalance: 0,
-    createdAt: new Date().toISOString()
-  };
-
-  db.wholesalers.push(newWholesaler);
-  writeDB(db);
-
-  // Trigger admin email notification
-  sendAdminEmail(
-    `Nouveau grossiste inscrit : ${businessName}`,
-    `Un nouveau grossiste s'est inscrit sur la plateforme !\n\n` +
-    `- Nom d'utilisateur: ${username}\n` +
-    `- Nom de l'entreprise: ${businessName}\n` +
-    `- Téléphone: ${phone}\n` +
-    `- Email: ${email}\n` +
-    `- Statut: En attente d'approbation\n\n` +
-    `Veuillez vous connecter à l'administration pour valider son compte et lui accorder ses premiers crédits.`,
-    "new_wholesaler"
-  );
-
-  res.json({ 
-    message: "Inscription réussie ! Votre compte est en attente d'approbation par l'administrateur.",
-    wholesaler: newWholesaler
-  });
 });
 
 // Wholesaler Login
 app.post("/api/auth/wholesaler/login", (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: "Nom d'utilisateur et mot de passe requis." });
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: "Nom d'utilisateur et mot de passe requis." });
+    }
+
+    const db = readDB();
+    if (!db.wholesalers) {
+      db.wholesalers = [];
+    }
+
+    const wholesaler = db.wholesalers.find(
+      w => (w.username || "").toLowerCase() === username.toLowerCase()
+    );
+
+    if (!wholesaler) {
+      return res.status(401).json({ error: "Identifiants invalides." });
+    }
+
+    if (wholesaler.status === "pending") {
+      return res.status(403).json({ error: "Votre compte est toujours en attente d'approbation par l'administrateur." });
+    }
+
+    if (wholesaler.status === "suspended") {
+      return res.status(403).json({ error: "Votre compte grossiste a été suspendu par l'administration." });
+    }
+
+    // Simple auth: return wholesaler profile as a token for demonstration
+    res.json({
+      message: "Connexion réussie.",
+      wholesaler
+    });
+  } catch (err: any) {
+    console.error("Error in wholesaler login:", err);
+    res.status(500).json({ error: err.message || "Une erreur est survenue lors de la connexion." });
   }
-
-  const db = readDB();
-  const wholesaler = db.wholesalers.find(
-    w => w.username.toLowerCase() === username.toLowerCase()
-  );
-
-  if (!wholesaler) {
-    return res.status(401).json({ error: "Identifiants invalides." });
-  }
-
-  if (wholesaler.status === "pending") {
-    return res.status(403).json({ error: "Votre compte est toujours en attente d'approbation par l'administrateur." });
-  }
-
-  if (wholesaler.status === "suspended") {
-    return res.status(403).json({ error: "Votre compte grossiste a été suspendu par l'administration." });
-  }
-
-  // Simple auth: return wholesaler profile as a token for demonstration
-  res.json({
-    message: "Connexion réussie.",
-    wholesaler
-  });
 });
 
 // Get Wholesaler Profile (using custom header for simulation)
@@ -613,15 +635,6 @@ app.post("/api/wholesaler/clients", (req, res) => {
     });
   }
 
-  // Generate mock IPTV credentials
-  const username = "dz_" + Math.random().toString(36).substr(2, 6);
-  const password = Math.random().toString(36).substr(2, 8);
-  const m3uUrl = `http://dz-premium-server.net:8080/get.php?username=${username}&password=${password}&output=ts`;
-
-  const activationDate = new Date();
-  const expirationDate = new Date();
-  expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths));
-
   const newClient: IptvClient = {
     id: "c-" + Math.random().toString(36).substr(2, 9),
     wholesalerId,
@@ -629,15 +642,15 @@ app.post("/api/wholesaler/clients", (req, res) => {
     server: server as any,
     durationMonths: Number(durationMonths),
     pricePaid,
-    activationDate: activationDate.toISOString(),
-    expirationDate: expirationDate.toISOString(),
-    status: "active",
+    activationDate: "", // Empty until admin activates
+    expirationDate: "", // Empty until admin activates
+    status: "pending",  // Pending admin activation
     notes: notes || "",
     credentials: {
-      m3uUrl,
-      xtreamUser: username,
-      xtreamPass: password,
-      xtreamHost: "http://dz-premium-server.net:8080"
+      m3uUrl: "",
+      xtreamUser: "",
+      xtreamPass: "",
+      xtreamHost: ""
     }
   };
 
@@ -648,20 +661,24 @@ app.post("/api/wholesaler/clients", (req, res) => {
   writeDB(db);
 
   // Trigger notification to admin
-  sendAdminEmail(
-    `Nouvelle activation par ${wholesaler.businessName} : ${clientName}`,
-    `Le revendeur grossiste '${wholesaler.businessName}' a activé un nouvel abonnement.\n\n` +
-    `- Client: ${clientName}\n` +
-    `- Serveur: ${server}\n` +
-    `- Durée: ${durationMonths} Mois\n` +
-    `- Prix facturé: ${pricePaid} DA (déduit de son solde)\n` +
-    `- Nouveau solde du revendeur: ${wholesaler.creditBalance} DA\n\n` +
-    `L'activation a été effectuée de manière automatique sur le serveur.`,
-    "client_activation"
-  );
+  try {
+    sendAdminEmail(
+      `Demande d'activation IPTV par ${wholesaler.businessName} : ${clientName}`,
+      `Le revendeur grossiste '${wholesaler.businessName}' a demandé l'activation d'un abonnement IPTV.\n\n` +
+      `- Client: ${clientName}\n` +
+      `- Serveur: ${server}\n` +
+      `- Durée: ${durationMonths} Mois\n` +
+      `- Prix: ${pricePaid} DA (déduit de son solde)\n` +
+      `- Nouveau solde du revendeur: ${wholesaler.creditBalance} DA\n\n` +
+      `Veuillez vous connecter à l'administration de KURTAL IPTV, générer la ligne sur votre panel IPTV, et renseigner les codes d'accès (M3U et Xtream Codes) pour ce client afin d'activer sa ligne et lui transmettre automatiquement ses codes sur son espace grossiste.`,
+      "client_activation"
+    );
+  } catch (err) {
+    console.error("Error sending admin notification email:", err);
+  }
 
   res.json({
-    message: `Client '${clientName}' activé avec succès. ${pricePaid} DA déduits de votre crédit.`,
+    message: `Demande d'activation envoyée ! L'administrateur va générer les accès sous peu. ${pricePaid} DA réservés/déduits de votre crédit.`,
     client: newClient,
     newBalance: wholesaler.creditBalance
   });
@@ -799,6 +816,37 @@ app.post("/api/orders", (req, res) => {
     message: "Votre commande a été enregistrée avec succès ! Notre équipe va vous contacter par téléphone pour finaliser l'activation.",
     order: newOrder
   });
+});
+
+
+// Track Retail Order Status
+app.get("/api/orders/track", (req, res) => {
+  const { query } = req.query;
+  if (!query) {
+    return res.status(400).json({ error: "Veuillez fournir un numéro de téléphone ou un ID de commande." });
+  }
+
+  const searchStr = (query as string).trim().toLowerCase();
+  const db = readDB();
+
+  const foundOrders = db.orders.filter(o => 
+    o.id.toLowerCase() === searchStr || 
+    o.customerPhone.trim() === searchStr ||
+    o.customerPhone.replace(/\s+/g, '') === searchStr.replace(/\s+/g, '')
+  );
+
+  const ordersWithLivreurs = foundOrders.map(order => {
+    let assignedLivreur = null;
+    if (order.assignedLivreurId && db.livreurs) {
+      assignedLivreur = db.livreurs.find(l => l.id === order.assignedLivreurId) || null;
+    }
+    return {
+      ...order,
+      livreur: assignedLivreur
+    };
+  });
+
+  res.json({ orders: ordersWithLivreurs });
 });
 
 
@@ -976,6 +1024,7 @@ app.put("/api/admin/clients/:id", (req, res) => {
   }
 
   const client = db.clients[clientIndex];
+  const oldStatus = client.status;
   
   if (clientName !== undefined) client.clientName = clientName;
   if (server !== undefined) client.server = server;
@@ -988,6 +1037,15 @@ app.put("/api/admin/clients/:id", (req, res) => {
       ...client.credentials,
       ...credentials
     };
+  }
+
+  // Auto-calculate activation and expiration dates when going from pending to active
+  if (client.status === "active" && (!client.activationDate || oldStatus === "pending")) {
+    const activationDate = new Date();
+    const expirationDate = new Date();
+    expirationDate.setMonth(expirationDate.getMonth() + Number(client.durationMonths));
+    client.activationDate = activationDate.toISOString();
+    client.expirationDate = expirationDate.toISOString();
   }
 
   writeDB(db);

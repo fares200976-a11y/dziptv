@@ -33,7 +33,7 @@ export interface IptvClient {
   pricePaid: number; // Wholesaler's cost
   activationDate: string;
   expirationDate: string;
-  status: 'active' | 'expired';
+  status: 'active' | 'expired' | 'pending';
   notes?: string;
   credentials?: {
     m3uUrl?: string;

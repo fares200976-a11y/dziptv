@@ -547,7 +547,7 @@ export default function WholesalerDashboard({
               </thead>
               <tbody className="divide-y divide-gray-800/40">
                 {filteredClients.map((client) => {
-                  const isExpired = new Date(client.expirationDate) < new Date();
+                  const isExpired = client.expirationDate ? new Date(client.expirationDate) < new Date() : false;
                   return (
                     <tr key={client.id} className="hover:bg-gray-900/10">
                       <td className="p-4 font-bold text-white">{client.clientName}</td>
@@ -557,16 +557,28 @@ export default function WholesalerDashboard({
                         </span>
                       </td>
                       <td className="p-4">{client.durationMonths} Mois</td>
-                      <td className="p-4 text-gray-400">{new Date(client.activationDate).toLocaleDateString("fr-FR")}</td>
-                      <td className="p-4 text-gray-400 font-mono">{new Date(client.expirationDate).toLocaleDateString("fr-FR")}</td>
+                      <td className="p-4 text-gray-400">
+                        {client.activationDate 
+                          ? new Date(client.activationDate).toLocaleDateString("fr-FR") 
+                          : "En attente"}
+                      </td>
+                      <td className="p-4 text-gray-400 font-mono">
+                        {client.expirationDate 
+                          ? new Date(client.expirationDate).toLocaleDateString("fr-FR") 
+                          : "En attente"}
+                      </td>
                       <td className="p-4 font-bold text-emerald-400">{client.pricePaid.toLocaleString()} DA</td>
                       <td className="p-4 text-center">
-                        {isExpired ? (
+                        {client.status === "pending" ? (
+                          <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-[9px] font-semibold animate-pulse">
+                            En attente
+                          </span>
+                        ) : isExpired ? (
                           <span className="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-[9px] font-semibold">
                             Expiré
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-semibold animate-pulse">
+                          <span className="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-semibold">
                             Actif
                           </span>
                         )}
@@ -574,9 +586,13 @@ export default function WholesalerDashboard({
                       <td className="p-4 text-right">
                         <button
                           onClick={() => setSelectedClientCredentials(client)}
-                          className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg font-bold text-[10px] transition-all cursor-pointer"
+                          className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all cursor-pointer ${
+                            client.status === "pending"
+                              ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20"
+                              : "bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                          }`}
                         >
-                          Voir les Accès
+                          {client.status === "pending" ? "Suivre l'Activation" : "Voir les Accès"}
                         </button>
                       </td>
                     </tr>
@@ -847,88 +863,115 @@ export default function WholesalerDashboard({
               <p className="text-gray-400 text-xs">Serveur : {selectedClientCredentials.server} ({selectedClientCredentials.durationMonths} Mois)</p>
             </div>
 
-            {copiedField && (
-              <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-400 rounded-lg text-[10px] text-center font-semibold mb-4">
-                Copié avec succès : {copiedField} !
+            {selectedClientCredentials.status === "pending" ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-xl space-y-3 text-center">
+                  <div className="flex justify-center mb-1">
+                    <span className="relative flex h-8 w-8">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-8 w-8 bg-amber-500 flex items-center justify-center text-black font-bold">⏱️</span>
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-amber-400 uppercase tracking-wider text-[11px]">En attente d'activation</h4>
+                  <p className="text-[10px] leading-relaxed text-gray-300">
+                    Votre demande d'abonnement a été envoyée avec succès à l'administrateur et le coût de <strong>{selectedClientCredentials.pricePaid} DA</strong> a été déduit de votre solde.
+                  </p>
+                  <p className="text-[10px] leading-relaxed text-gray-400">
+                    L'administrateur génère actuellement votre accès sur le serveur. Les codes s'afficheront automatiquement ici dès validation. Merci pour votre patience !
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setSelectedClientCredentials(null)}
+                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
+                >
+                  Fermer
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4 text-xs">
+                {copiedField && (
+                  <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-400 rounded-lg text-[10px] text-center font-semibold mb-4">
+                    Copié avec succès : {copiedField} !
+                  </div>
+                )}
+
+                {/* Xtream Codes format */}
+                <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
+                  <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Format Xtream Codes</span>
+                  
+                  <div className="space-y-2 pt-1.5 font-mono">
+                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
+                      <span className="text-gray-400">Host:</span>
+                      <span className="text-gray-200 break-all">{selectedClientCredentials.credentials?.xtreamHost}</span>
+                      <button 
+                        onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamHost || "", "Host")}
+                        className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
+                      <span className="text-gray-400">User:</span>
+                      <span className="text-gray-200">{selectedClientCredentials.credentials?.xtreamUser}</span>
+                      <button 
+                        onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamUser || "", "Username")}
+                        className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
+                      <span className="text-gray-400">Pass:</span>
+                      <span className="text-gray-200">{selectedClientCredentials.credentials?.xtreamPass}</span>
+                      <button 
+                        onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamPass || "", "Password")}
+                        className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* M3U Link Format */}
+                <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
+                  <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Lien M3U Complet</span>
+                  <div className="flex items-center justify-between bg-black/30 p-2 rounded border border-gray-800 font-mono">
+                    <span className="text-gray-200 truncate pr-2 select-all">{selectedClientCredentials.credentials?.m3uUrl}</span>
+                    <button 
+                      onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.m3uUrl || "", "Lien M3U")}
+                      className="p-1 text-gray-500 hover:text-white shrink-0"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {selectedClientCredentials.credentials?.m3uUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadM3u(selectedClientCredentials)}
+                      className="w-full mt-2 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/40 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Télécharger le Fichier .m3u</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-[10px] leading-relaxed">
+                  💡 Vous pouvez transmettre directement ces codes à votre client. Ils sont compatibles avec toutes les applications IPTV (Smarters Pro, NetIPTV, SmartOne, IBO Player, etc.).
+                </div>
+
+                <button
+                  onClick={() => setSelectedClientCredentials(null)}
+                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
+                >
+                  Fermer
+                </button>
               </div>
             )}
-
-            <div className="space-y-4 text-xs">
-              {/* Xtream Codes format */}
-              <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
-                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Format Xtream Codes</span>
-                
-                <div className="space-y-2 pt-1.5 font-mono">
-                  <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
-                    <span className="text-gray-400">Host:</span>
-                    <span className="text-gray-200 break-all">{selectedClientCredentials.credentials?.xtreamHost}</span>
-                    <button 
-                      onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamHost || "", "Host")}
-                      className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
-                    <span className="text-gray-400">User:</span>
-                    <span className="text-gray-200">{selectedClientCredentials.credentials?.xtreamUser}</span>
-                    <button 
-                      onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamUser || "", "Username")}
-                      className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
-                    <span className="text-gray-400">Pass:</span>
-                    <span className="text-gray-200">{selectedClientCredentials.credentials?.xtreamPass}</span>
-                    <button 
-                      onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamPass || "", "Password")}
-                      className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* M3U Link Format */}
-              <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
-                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Lien M3U Complet</span>
-                <div className="flex items-center justify-between bg-black/30 p-2 rounded border border-gray-800 font-mono">
-                  <span className="text-gray-200 truncate pr-2 select-all">{selectedClientCredentials.credentials?.m3uUrl}</span>
-                  <button 
-                    onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.m3uUrl || "", "Lien M3U")}
-                    className="p-1 text-gray-500 hover:text-white shrink-0"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                {selectedClientCredentials.credentials?.m3uUrl && (
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadM3u(selectedClientCredentials)}
-                    className="w-full mt-2 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/40 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Télécharger le Fichier .m3u</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-[10px] leading-relaxed">
-                💡 Vous pouvez transmettre directement ces codes à votre client. Ils sont compatibles avec toutes les applications IPTV (Smarters Pro, NetIPTV, SmartOne, IBO Player, etc.).
-              </div>
-
-              <button
-                onClick={() => setSelectedClientCredentials(null)}
-                className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
-              >
-                Fermer
-              </button>
-            </div>
           </div>
         </div>
       )}

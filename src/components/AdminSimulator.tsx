@@ -328,6 +328,22 @@ export default function AdminSimulator({
   };
 
   // Product CRUD Submits
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean, field: "imageUrl" | "imageUrl2") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      if (isEdit) {
+        setEditingProduct(prev => prev ? { ...prev, [field]: base64String } : null);
+      } else {
+        setProductForm(prev => ({ ...prev, [field]: base64String }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAddProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
@@ -1196,26 +1212,39 @@ export default function AdminSimulator({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-gray-400 mb-1">Image URL 1</label>
+                      <label className="block text-amber-400 font-bold mb-1">Image 1 (Uploader / Fichier)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleImageUpload(e, false, "imageUrl")}
+                        className="w-full bg-black border border-gray-800 rounded-lg px-2 py-1 text-white text-xs mb-1"
+                      />
                       <input
                         type="text"
                         required
+                        placeholder="Ou coller l'URL de l'image"
                         value={productForm.imageUrl}
                         onChange={e => setProductForm({ ...productForm, imageUrl: e.target.value })}
-                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white"
+                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white text-xs"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-gray-400 mb-1">Image URL 2 (Optionnel - Pour affichage alternatif)</label>
+                      <label className="block text-amber-400 font-bold mb-1">Image 2 (Optionnel - Uploader)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleImageUpload(e, false, "imageUrl2")}
+                        className="w-full bg-black border border-gray-800 rounded-lg px-2 py-1 text-white text-xs mb-1"
+                      />
                       <input
                         type="text"
-                        placeholder="Ex: https://images.unsplash.com/... (Image secondaire)"
+                        placeholder="Ou coller l'URL de l'image secondaire"
                         value={productForm.imageUrl2 || ""}
                         onChange={e => setProductForm({ ...productForm, imageUrl2: e.target.value })}
-                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white"
+                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white text-xs"
                       />
                     </div>
                   </div>
@@ -1301,26 +1330,39 @@ export default function AdminSimulator({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-gray-400 mb-1">Image URL 1</label>
+                      <label className="block text-amber-400 font-bold mb-1">Image 1 (Uploader / Fichier)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleImageUpload(e, true, "imageUrl")}
+                        className="w-full bg-black border border-gray-800 rounded-lg px-2 py-1 text-white text-xs mb-1"
+                      />
                       <input
                         type="text"
                         required
+                        placeholder="Ou coller l'URL de l'image"
                         value={editingProduct.imageUrl}
                         onChange={e => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })}
-                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white"
+                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white text-xs"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-gray-400 mb-1">Image URL 2 (Optionnel - Pour affichage alternatif)</label>
+                      <label className="block text-amber-400 font-bold mb-1">Image 2 (Optionnel - Uploader)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleImageUpload(e, true, "imageUrl2")}
+                        className="w-full bg-black border border-gray-800 rounded-lg px-2 py-1 text-white text-xs mb-1"
+                      />
                       <input
                         type="text"
-                        placeholder="Ex: Image secondaire"
+                        placeholder="Ou coller l'URL de l'image secondaire"
                         value={editingProduct.imageUrl2 || ""}
                         onChange={e => setEditingProduct({ ...editingProduct, imageUrl2: e.target.value })}
-                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white"
+                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white text-xs"
                       />
                     </div>
                   </div>

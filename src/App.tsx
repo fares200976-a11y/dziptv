@@ -187,8 +187,22 @@ export default function App() {
     });
     
     if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error || "Identifiants incorrects.");
+      let errorMessage = "Identifiants incorrects.";
+      try {
+        const errData = await res.json();
+        errorMessage = errData.error || errorMessage;
+      } catch (e) {
+        try {
+          const text = await res.text();
+          if (text && text.trim().startsWith("{")) {
+            const parsed = JSON.parse(text);
+            errorMessage = parsed.error || errorMessage;
+          } else {
+            errorMessage = text ? text.substring(0, 150) : res.statusText || errorMessage;
+          }
+        } catch (_) {}
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await res.json();
@@ -206,8 +220,22 @@ export default function App() {
     });
 
     if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error || "Erreur d'inscription.");
+      let errorMessage = "Erreur d'inscription.";
+      try {
+        const errData = await res.json();
+        errorMessage = errData.error || errorMessage;
+      } catch (e) {
+        try {
+          const text = await res.text();
+          if (text && text.trim().startsWith("{")) {
+            const parsed = JSON.parse(text);
+            errorMessage = parsed.error || errorMessage;
+          } else {
+            errorMessage = text ? text.substring(0, 150) : res.statusText || errorMessage;
+          }
+        } catch (_) {}
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await res.json();
@@ -218,7 +246,7 @@ export default function App() {
   const handleWholesalerLogout = () => {
     localStorage.removeItem("wholesalerProfile");
     setLoggedWholesaler(null);
-    setView("retail");
+    setView("wholesaler");
   };
 
   const handleAdminLogout = () => {
