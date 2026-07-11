@@ -1,0 +1,823 @@
+import express from "express";
+import path from "path";
+import fs from "fs";
+import { createServer as createViteServer } from "vite";
+import { 
+  Product, 
+  Wholesaler, 
+  IptvClient, 
+  Order, 
+  CreditRequest, 
+  EmailNotification 
+} from "./src/types";
+
+const app = express();
+const PORT = 3000;
+const DB_FILE = path.join(process.cwd(), "db.json");
+
+app.use(express.json());
+
+// Default Seed Data
+const DEFAULT_PRODUCTS: Product[] = [
+  {
+    id: "dino",
+    name: "Dino IPTV",
+    type: "iptv",
+    priceRetail: 4900,
+    priceWholesale: 4200,
+    description: "Le serveur incontournable pour les foyers algériens. Excellent rapport qualité/prix avec toutes les chaînes françaises, arabes, beIN Sports, et Canal+.",
+    features: [
+      "Plus de 12,000 chaînes Live",
+      "Qualité FHD / HD / SD stable",
+      "VOD Films & Séries incluses (Mises à jour)",
+      "Chaînes Algériennes et Arabes complètes",
+      "Idéal pour connexions moyennes (à partir de 8 Mbps)"
+    ],
+    imageUrl: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=300",
+    isPopular: false
+  },
+  {
+    id: "8k",
+    name: "8K Premium IPTV",
+    type: "iptv",
+    priceRetail: 7500,
+    priceWholesale: 6800,
+    description: "Le serveur ultime pour les connexions ultra-rapides (Fibre/ADSL 20M+). Bitrate extrêmement élevé, latence minimale, idéal pour les grands matchs en direct.",
+    features: [
+      "Chaînes sportives en 50 FPS (sans saccades)",
+      "Qualité Ultra HD (4K authentique)",
+      "Système anti-buffering de pointe",
+      "Assistance VIP et serveurs de secours",
+      "Recommandé pour Smart TV haut de gamme"
+    ],
+    imageUrl: "https://images.unsplash.com/photo-1461151304267-38535e780c79?auto=format&fit=crop&q=80&w=300",
+    isPopular: true
+  },
+  {
+    id: "v12",
+    name: "V12 IPTV Pro",
+    type: "iptv",
+    priceRetail: 5000,
+    priceWholesale: 4300,
+    description: "Un serveur très populaire en Algérie réputé pour sa rapidité de zapping et son immense catalogue de films et séries en français et arabe.",
+    features: [
+      "Zapping ultra-rapide (< 1 seconde)",
+      "VOD gigantesque (Netflix, Disney, Amazon Prime clones)",
+      "Multi-langues audio et sous-titres",
+      "Compatible tous boîtiers et applications",
+      "Support technique 24/7"
+    ],
+    imageUrl: "https://images.unsplash.com/photo-1585647347483-22b66260dfff?auto=format&fit=crop&q=80&w=300",
+    isPopular: false
+  },
+  {
+    id: "golden-ott",
+    name: "Golden OTT IPTV",
+    type: "iptv",
+    priceRetail: 7000,
+    priceWholesale: 6200,
+    description: "Le serveur haut de gamme par excellence. Très stable lors des grands événements sportifs avec un panel de chaînes internationales unique.",
+    features: [
+      "Stabilité absolue pendant la Coupe du Monde / Ligue des Champions",
+      "Chaînes VIP et d'autres pays d'Europe",
+      "Espace VOD premium en qualité Blu-ray",
+      "Replay de 7 jours sur les chaînes majeures",
+      "Fichiers M3U, codes Xtream et portail MAG"
+    ],
+    imageUrl: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&q=80&w=300",
+    isPopular: false
+  },
+  {
+    id: "mibox-s",
+    name: "Xiaomi Mi Box S 2nd Gen 4K",
+    type: "device",
+    priceRetail: 9500,
+    priceWholesale: 8900,
+    description: "La box Android officielle certifiée par Google et Netflix. Transforme n'importe quelle télévision en Smart TV ultra performante.",
+    features: [
+      "Système d'exploitation Google TV",
+      "Résolution 4K Ultra HD & Dolby Vision",
+      "2 Go RAM + 8 Go Stockage",
+      "Télécommande vocale avec Google Assistant",
+      "Idéal pour installer les applications IPTV"
+    ],
+    imageUrl: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&q=80&w=300",
+    isPopular: true
+  },
+  {
+    id: "firestick-4k",
+    name: "Amazon Fire TV Stick 4K",
+    type: "device",
+    priceRetail: 11000,
+    priceWholesale: 10200,
+    description: "La clé de streaming d'Amazon compacte et extrêmement fluide. Profitez d'une rapidité d'affichage exceptionnelle.",
+    features: [
+      "Format clé HDMI discret",
+      "Processeur ultra-rapide optimisé IPTV",
+      "Compatible Wi-Fi 6 pour moins de saccades",
+      "Télécommande avec boutons de raccourcis",
+      "Téléchargement d'applications tiers facile (Downloader)"
+    ],
+    imageUrl: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&q=80&w=300",
+    isPopular: false
+  }
+];
+
+interface DBStructure {
+  products: Product[];
+  wholesalers: Wholesaler[];
+  clients: IptvClient[];
+  orders: Order[];
+  creditRequests: CreditRequest[];
+  notifications: EmailNotification[];
+}
+
+// Read database
+function readDB(): DBStructure {
+  try {
+    if (!fs.existsSync(DB_FILE)) {
+      const initialDB: DBStructure = {
+        products: DEFAULT_PRODUCTS,
+        wholesalers: [
+          {
+            id: "w-dino-pro",
+            username: "dino_pro",
+            businessName: "Dino Pro Oran",
+            phone: "0550123456",
+            email: "dino.oran@gmail.com",
+            status: "approved",
+            creditBalance: 15400,
+            createdAt: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
+          },
+          {
+            id: "w-kamal-sat",
+            username: "kamal_sat",
+            businessName: "Kamal Sat Alger",
+            phone: "0661987654",
+            email: "kamal.sat@yahoo.fr",
+            status: "pending",
+            creditBalance: 0,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        clients: [
+          {
+            id: "c-1",
+            wholesalerId: "w-dino-pro",
+            clientName: "Mohamed Belkaid",
+            server: "Dino",
+            durationMonths: 12,
+            pricePaid: 4200,
+            activationDate: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+            expirationDate: new Date(Date.now() + 360 * 24 * 3600 * 1000).toISOString(),
+            status: "active",
+            notes: "Configuré sur Smart TV Samsung via SmartOne",
+            credentials: {
+              m3uUrl: "http://dino-server.xyz:8080/get.php?auth=demo1&pass=test1",
+              xtreamUser: "demo1",
+              xtreamPass: "test1",
+              xtreamHost: "http://dino-server.xyz:8080"
+            }
+          }
+        ],
+        orders: [
+          {
+            id: "o-1",
+            customerName: "Sofiane Yahiaoui",
+            customerEmail: "sofiane.yah@gmail.com",
+            customerPhone: "0770554433",
+            productId: "mibox-s",
+            productName: "Xiaomi Mi Box S 2nd Gen 4K",
+            productType: "device",
+            priceDA: 9500,
+            paymentMethod: "baridimob",
+            paymentDetails: "Virement BaridiMob RIP: 007999990022334455, ID trans: 450123",
+            status: "pending",
+            createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
+          },
+          {
+            id: "o-2",
+            customerName: "Riad Mahrez",
+            customerEmail: "riad.m@outlook.com",
+            customerPhone: "0555221199",
+            productId: "8k",
+            productName: "8K Premium IPTV (12 Mois)",
+            productType: "iptv",
+            priceDA: 7500,
+            paymentMethod: "card",
+            paymentDetails: "Payé par Carte CIB / Dahabia",
+            status: "completed",
+            createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString()
+          }
+        ],
+        creditRequests: [
+          {
+            id: "cr-1",
+            wholesalerId: "w-dino-pro",
+            wholesalerName: "Dino Pro Oran",
+            amountDA: 20000,
+            paymentMethod: "baridimob",
+            receiptReference: "BaridiMob Trans #881290",
+            status: "approved",
+            createdAt: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString()
+          },
+          {
+            id: "cr-2",
+            wholesalerId: "w-dino-pro",
+            wholesalerName: "Dino Pro Oran",
+            amountDA: 15000,
+            paymentMethod: "ccp",
+            receiptReference: "Mandat CCP #99120",
+            status: "pending",
+            createdAt: new Date().toISOString()
+          }
+        ],
+        notifications: [
+          {
+            id: "n-1",
+            to: "admin@dziptv.com",
+            subject: "Nouveau grossiste inscrit : Kamal Sat Alger",
+            body: "Le grossiste 'Kamal Sat Alger' (Kamal Sat Alger) s'est inscrit. Téléphone: 0661987654. Veuillez vérifier ses informations et approuver son compte.",
+            sentAt: new Date().toISOString(),
+            read: false,
+            type: "new_wholesaler"
+          },
+          {
+            id: "n-2",
+            to: "admin@dziptv.com",
+            subject: "Nouvelle commande détail reçue : Xiaomi Mi Box S",
+            body: "Client Sofiane Yahiaoui (0770554433) a commandé : Xiaomi Mi Box S 2nd Gen 4K. Mode de paiement: BaridiMob. Détails: Virement BaridiMob RIP: 007999990022334455, ID trans: 450123",
+            sentAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+            read: true,
+            type: "new_order"
+          }
+        ]
+      };
+      fs.writeFileSync(DB_FILE, JSON.stringify(initialDB, null, 2), "utf-8");
+      return initialDB;
+    }
+    const data = fs.readFileSync(DB_FILE, "utf-8");
+    return JSON.parse(data);
+  } catch (err) {
+    console.error("Error reading database file, using fallback mock database:", err);
+    return {
+      products: DEFAULT_PRODUCTS,
+      wholesalers: [],
+      clients: [],
+      orders: [],
+      creditRequests: [],
+      notifications: []
+    };
+  }
+}
+
+// Write database
+function writeDB(data: DBStructure) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error writing database file:", err);
+  }
+}
+
+// Send Admin Email Simulation Helper
+function sendAdminEmail(subject: string, body: string, type: EmailNotification['type']) {
+  const db = readDB();
+  const newEmail: EmailNotification = {
+    id: "n-" + Math.random().toString(36).substr(2, 9),
+    to: "admin@dziptv.com",
+    subject,
+    body,
+    sentAt: new Date().toISOString(),
+    read: false,
+    type
+  };
+  db.notifications.unshift(newEmail);
+  writeDB(db);
+  console.log(`[EMAIL SIMULATOR] Email sent to admin@dziptv.com\nSubject: ${subject}\nBody: ${body}\n---`);
+}
+
+// ==========================================
+// API ROUTES
+// ==========================================
+
+// Get Products
+app.get("/api/products", (req, res) => {
+  const db = readDB();
+  res.json(db.products);
+});
+
+// Reset database to default
+app.post("/api/admin/reset", (req, res) => {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      fs.unlinkSync(DB_FILE);
+    }
+    const db = readDB();
+    res.json({ message: "Base de données réinitialisée avec succès.", db });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Wholesaler Registration
+app.post("/api/auth/wholesaler/register", (req, res) => {
+  const { username, password, businessName, phone, email } = req.body;
+  if (!username || !password || !businessName || !phone || !email) {
+    return res.status(400).json({ error: "Tous les champs sont requis." });
+  }
+
+  const db = readDB();
+  const exists = db.wholesalers.some(
+    w => w.username.toLowerCase() === username.toLowerCase() || w.email.toLowerCase() === email.toLowerCase()
+  );
+
+  if (exists) {
+    return res.status(400).json({ error: "Ce nom d'utilisateur ou cet email est déjà enregistré." });
+  }
+
+  const newWholesaler: Wholesaler = {
+    id: "w-" + Math.random().toString(36).substr(2, 9),
+    username,
+    businessName,
+    phone,
+    email,
+    status: "pending",
+    creditBalance: 0,
+    createdAt: new Date().toISOString()
+  };
+
+  db.wholesalers.push(newWholesaler);
+  writeDB(db);
+
+  // Trigger admin email notification
+  sendAdminEmail(
+    `Nouveau grossiste inscrit : ${businessName}`,
+    `Un nouveau grossiste s'est inscrit sur la plateforme !\n\n` +
+    `- Nom d'utilisateur: ${username}\n` +
+    `- Nom de l'entreprise: ${businessName}\n` +
+    `- Téléphone: ${phone}\n` +
+    `- Email: ${email}\n` +
+    `- Statut: En attente d'approbation\n\n` +
+    `Veuillez vous connecter à l'administration pour valider son compte et lui accorder ses premiers crédits.`,
+    "new_wholesaler"
+  );
+
+  res.json({ 
+    message: "Inscription réussie ! Votre compte est en attente d'approbation par l'administrateur.",
+    wholesaler: newWholesaler
+  });
+});
+
+// Wholesaler Login
+app.post("/api/auth/wholesaler/login", (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: "Nom d'utilisateur et mot de passe requis." });
+  }
+
+  const db = readDB();
+  const wholesaler = db.wholesalers.find(
+    w => w.username.toLowerCase() === username.toLowerCase()
+  );
+
+  if (!wholesaler) {
+    return res.status(401).json({ error: "Identifiants invalides." });
+  }
+
+  if (wholesaler.status === "pending") {
+    return res.status(403).json({ error: "Votre compte est toujours en attente d'approbation par l'administrateur." });
+  }
+
+  if (wholesaler.status === "suspended") {
+    return res.status(403).json({ error: "Votre compte grossiste a été suspendu par l'administration." });
+  }
+
+  // Simple auth: return wholesaler profile as a token for demonstration
+  res.json({
+    message: "Connexion réussie.",
+    wholesaler
+  });
+});
+
+// Get Wholesaler Profile (using custom header for simulation)
+app.get("/api/wholesaler/profile", (req, res) => {
+  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+  if (!wholesalerId) {
+    return res.status(401).json({ error: "Non autorisé." });
+  }
+
+  const db = readDB();
+  const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
+  if (!wholesaler) {
+    return res.status(404).json({ error: "Grossiste introuvable." });
+  }
+
+  res.json(wholesaler);
+});
+
+// Get Wholesaler Clients
+app.get("/api/wholesaler/clients", (req, res) => {
+  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+  if (!wholesalerId) {
+    return res.status(401).json({ error: "Non autorisé." });
+  }
+
+  const db = readDB();
+  const clients = db.clients.filter(c => c.wholesalerId === wholesalerId);
+  res.json(clients);
+});
+
+// Wholesaler Activate / Add IPTV Client
+app.post("/api/wholesaler/clients", (req, res) => {
+  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+  const { clientName, server, durationMonths, notes } = req.body;
+
+  if (!wholesalerId) {
+    return res.status(401).json({ error: "Non autorisé." });
+  }
+  if (!clientName || !server || !durationMonths) {
+    return res.status(400).json({ error: "Nom, serveur et durée requis." });
+  }
+
+  const db = readDB();
+  const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
+  if (!wholesaler) {
+    return res.status(404).json({ error: "Grossiste introuvable." });
+  }
+
+  // Find product of server type to check price
+  const product = db.products.find(p => p.name.toLowerCase().includes(server.toLowerCase()) && p.type === "iptv");
+  if (!product) {
+    return res.status(400).json({ error: "Serveur IPTV invalide." });
+  }
+
+  // Calculate pricing based on duration (1, 6, or 12 months)
+  // Let's assume wholesale base price is for 12 months, and prorate if needed.
+  let pricePaid = product.priceWholesale;
+  if (durationMonths === 1) {
+    pricePaid = Math.round(product.priceWholesale * 0.15); // e.g., 15% for 1 month
+  } else if (durationMonths === 6) {
+    pricePaid = Math.round(product.priceWholesale * 0.60); // e.g., 60% for 6 months
+  } else if (durationMonths === 12) {
+    pricePaid = product.priceWholesale;
+  }
+
+  if (wholesaler.creditBalance < pricePaid) {
+    return res.status(400).json({ 
+      error: `Crédit insuffisant. Cette activation coûte ${pricePaid} DA. Votre solde actuel est de ${wholesaler.creditBalance} DA. Veuillez recharger votre solde.` 
+    });
+  }
+
+  // Generate mock IPTV credentials
+  const username = "dz_" + Math.random().toString(36).substr(2, 6);
+  const password = Math.random().toString(36).substr(2, 8);
+  const m3uUrl = `http://dz-premium-server.net:8080/get.php?username=${username}&password=${password}&output=ts`;
+
+  const activationDate = new Date();
+  const expirationDate = new Date();
+  expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths));
+
+  const newClient: IptvClient = {
+    id: "c-" + Math.random().toString(36).substr(2, 9),
+    wholesalerId,
+    clientName,
+    server: server as any,
+    durationMonths: Number(durationMonths),
+    pricePaid,
+    activationDate: activationDate.toISOString(),
+    expirationDate: expirationDate.toISOString(),
+    status: "active",
+    notes: notes || "",
+    credentials: {
+      m3uUrl,
+      xtreamUser: username,
+      xtreamPass: password,
+      xtreamHost: "http://dz-premium-server.net:8080"
+    }
+  };
+
+  // Deduct wholesaler credit
+  wholesaler.creditBalance -= pricePaid;
+
+  db.clients.push(newClient);
+  writeDB(db);
+
+  // Trigger notification to admin
+  sendAdminEmail(
+    `Nouvelle activation par ${wholesaler.businessName} : ${clientName}`,
+    `Le revendeur grossiste '${wholesaler.businessName}' a activé un nouvel abonnement.\n\n` +
+    `- Client: ${clientName}\n` +
+    `- Serveur: ${server}\n` +
+    `- Durée: ${durationMonths} Mois\n` +
+    `- Prix facturé: ${pricePaid} DA (déduit de son solde)\n` +
+    `- Nouveau solde du revendeur: ${wholesaler.creditBalance} DA\n\n` +
+    `L'activation a été effectuée de manière automatique sur le serveur.`,
+    "client_activation"
+  );
+
+  res.json({
+    message: `Client '${clientName}' activé avec succès. ${pricePaid} DA déduits de votre crédit.`,
+    client: newClient,
+    newBalance: wholesaler.creditBalance
+  });
+});
+
+// Wholesaler Credit Recharge Request
+app.post("/api/wholesaler/credit-requests", (req, res) => {
+  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+  const { amountDA, paymentMethod, receiptReference } = req.body;
+
+  if (!wholesalerId) {
+    return res.status(401).json({ error: "Non autorisé." });
+  }
+  if (!amountDA || !paymentMethod || !receiptReference) {
+    return res.status(400).json({ error: "Tous les champs de recharge sont requis." });
+  }
+
+  const db = readDB();
+  const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
+  if (!wholesaler) {
+    return res.status(404).json({ error: "Grossiste introuvable." });
+  }
+
+  const newRequest: CreditRequest = {
+    id: "cr-" + Math.random().toString(36).substr(2, 9),
+    wholesalerId,
+    wholesalerName: wholesaler.businessName,
+    amountDA: Number(amountDA),
+    paymentMethod,
+    receiptReference,
+    status: "pending",
+    createdAt: new Date().toISOString()
+  };
+
+  db.creditRequests.push(newRequest);
+  writeDB(db);
+
+  // Trigger admin email notification
+  sendAdminEmail(
+    `Demande de recharge crédit : ${wholesaler.businessName} (${amountDA} DA)`,
+    `Le grossiste '${wholesaler.businessName}' a envoyé une demande de recharge de crédit.\n\n` +
+    `- Montant: ${amountDA} DA\n` +
+    `- Mode de paiement: ${paymentMethod.toUpperCase()}\n` +
+    `- Référence/Reçu: ${receiptReference}\n\n` +
+    `Veuillez vérifier votre compte CCP ou BaridiMob, puis approuver la demande dans l'administration pour créditer son compte.`,
+    "credit_request"
+  );
+
+  res.json({
+    message: "Demande de recharge soumise avec succès. Elle sera validée dès réception du paiement.",
+    request: newRequest
+  });
+});
+
+// Get wholesaler's own credit requests
+app.get("/api/wholesaler/credit-requests", (req, res) => {
+  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+  if (!wholesalerId) {
+    return res.status(401).json({ error: "Non autorisé." });
+  }
+
+  const db = readDB();
+  const requests = db.creditRequests.filter(r => r.wholesalerId === wholesalerId);
+  res.json(requests);
+});
+
+// Submit Retail (Détail) User Order
+app.post("/api/orders", (req, res) => {
+  const { customerName, customerEmail, customerPhone, productId, paymentMethod, paymentDetails } = req.body;
+
+  if (!customerName || !customerPhone || !productId || !paymentMethod) {
+    return res.status(400).json({ error: "Les champs nom, téléphone, produit et méthode de paiement sont obligatoires." });
+  }
+
+  const db = readDB();
+  const product = db.products.find(p => p.id === productId);
+  if (!product) {
+    return res.status(404).json({ error: "Produit ou abonnement introuvable." });
+  }
+
+  const newOrder: Order = {
+    id: "o-" + Math.random().toString(36).substr(2, 9),
+    customerName,
+    customerEmail: customerEmail || "",
+    customerPhone,
+    productId,
+    productName: product.name,
+    productType: product.type,
+    priceDA: product.priceRetail,
+    paymentMethod,
+    paymentDetails: paymentDetails || "",
+    status: "pending",
+    createdAt: new Date().toISOString()
+  };
+
+  db.orders.unshift(newOrder);
+  writeDB(db);
+
+  // Trigger admin email notification
+  sendAdminEmail(
+    `Nouvelle commande Client : ${product.name} (${product.priceRetail} DA)`,
+    `Nouvelle commande reçue au détail !\n\n` +
+    `- Client: ${customerName}\n` +
+    `- Téléphone: ${customerPhone}\n` +
+    `- Email: ${customerEmail || 'Non fourni'}\n` +
+    `- Produit: ${product.name} (${product.type === "iptv" ? "Abonnement IPTV" : "Matériel Box/Firestick"})\n` +
+    `- Prix de vente: ${product.priceRetail} DA\n` +
+    `- Méthode de paiement choisie: ${paymentMethod.toUpperCase()}\n` +
+    `- Détails du virement / preuve: ${paymentDetails || 'Aucune information saisie'}\n\n` +
+    `Veuillez contacter le client au téléphone pour livrer l'abonnement ou expédier l'article par Yalidine.`,
+    "new_order"
+  );
+
+  res.json({
+    message: "Votre commande a été enregistrée avec succès ! Notre équipe va vous contacter par téléphone pour finaliser l'activation.",
+    order: newOrder
+  });
+});
+
+
+// ==========================================
+// ADMIN API ROUTES
+// ==========================================
+
+// Get Admin Dashboard Stats
+app.get("/api/admin/stats", (req, res) => {
+  const db = readDB();
+  
+  // Calculate stats
+  const totalRetailSales = db.orders
+    .filter(o => o.status === "completed")
+    .reduce((sum, o) => sum + o.priceDA, 0);
+
+  const totalWholesaleSales = db.clients
+    .reduce((sum, c) => sum + c.pricePaid, 0);
+
+  const activeWholesalers = db.wholesalers.filter(w => w.status === "approved").length;
+  const totalClientsActivated = db.clients.length;
+
+  res.json({
+    totalRetailSales,
+    totalWholesaleSales,
+    totalRevenueDA: totalRetailSales + totalWholesaleSales,
+    activeWholesalers,
+    totalClientsActivated
+  });
+});
+
+// Get all Wholesalers for Admin
+app.get("/api/admin/wholesalers", (req, res) => {
+  const db = readDB();
+  res.json(db.wholesalers);
+});
+
+// Update Wholesaler status / balance by Admin
+app.put("/api/admin/wholesalers/:id", (req, res) => {
+  const { id } = req.params;
+  const { status, creditBalance } = req.body;
+
+  const db = readDB();
+  const wholesalerIndex = db.wholesalers.findIndex(w => w.id === id);
+
+  if (wholesalerIndex === -1) {
+    return res.status(404).json({ error: "Grossiste introuvable." });
+  }
+
+  const updated = { ...db.wholesalers[wholesalerIndex] };
+  if (status !== undefined) updated.status = status;
+  if (creditBalance !== undefined) updated.creditBalance = Number(creditBalance);
+
+  db.wholesalers[wholesalerIndex] = updated;
+  writeDB(db);
+
+  res.json({ message: "Compte grossiste mis à jour.", wholesaler: updated });
+});
+
+// Get all Orders for Admin
+app.get("/api/admin/orders", (req, res) => {
+  const db = readDB();
+  res.json(db.orders);
+});
+
+// Update Order status by Admin
+app.put("/api/admin/orders/:id", (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const db = readDB();
+  const orderIndex = db.orders.findIndex(o => o.id === id);
+
+  if (orderIndex === -1) {
+    return res.status(404).json({ error: "Commande introuvable." });
+  }
+
+  db.orders[orderIndex].status = status;
+  writeDB(db);
+
+  res.json({ message: "Statut de la commande mis à jour.", order: db.orders[orderIndex] });
+});
+
+// Get all credit requests for Admin
+app.get("/api/admin/credit-requests", (req, res) => {
+  const db = readDB();
+  res.json(db.creditRequests);
+});
+
+// Process Credit request (Approve / Reject) by Admin
+app.put("/api/admin/credit-requests/:id", (req, res) => {
+  const { id } = req.params;
+  const { action } = req.body; // 'approve' or 'reject'
+
+  if (action !== "approve" && action !== "reject") {
+    return res.status(400).json({ error: "Action invalide. Doit être 'approve' ou 'reject'." });
+  }
+
+  const db = readDB();
+  const requestIndex = db.creditRequests.findIndex(r => r.id === id);
+
+  if (requestIndex === -1) {
+    return res.status(404).json({ error: "Demande de recharge introuvable." });
+  }
+
+  const request = db.creditRequests[requestIndex];
+
+  if (request.status !== "pending") {
+    return res.status(400).json({ error: "Cette demande a déjà été traitée." });
+  }
+
+  if (action === "approve") {
+    const wholesalerIndex = db.wholesalers.findIndex(w => w.id === request.wholesalerId);
+    if (wholesalerIndex === -1) {
+      return res.status(404).json({ error: "Le grossiste émetteur de la demande n'existe plus." });
+    }
+    
+    // Add credit to wholesaler balance
+    db.wholesalers[wholesalerIndex].creditBalance += request.amountDA;
+    request.status = "approved";
+  } else {
+    request.status = "rejected";
+  }
+
+  writeDB(db);
+  res.json({ 
+    message: action === "approve" ? "Recharge crédit approuvée et crédit ajouté au grossiste." : "Demande de recharge rejetée.",
+    request
+  });
+});
+
+// Get Email Notifications for Admin (live simulator)
+app.get("/api/admin/notifications", (req, res) => {
+  const db = readDB();
+  res.json(db.notifications);
+});
+
+// Mark admin notifications as read
+app.put("/api/admin/notifications/:id/read", (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+  const notif = db.notifications.find(n => n.id === id);
+  if (notif) {
+    notif.read = true;
+    writeDB(db);
+  }
+  res.json({ success: true });
+});
+
+// Delete admin notification
+app.delete("/api/admin/notifications/:id", (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+  db.notifications = db.notifications.filter(n => n.id !== id);
+  writeDB(db);
+  res.json({ success: true });
+});
+
+
+// ==========================================
+// VITE DEV SERVER & STATIC ASSETS SETUP
+// ==========================================
+
+async function startServer() {
+  if (process.env.NODE_ENV !== "production") {
+    // Vite middleware for local development
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    // Production static files
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[DZ IPTV] Full-stack Server listening at http://0.0.0.0:${PORT}`);
+  });
+}
+
+startServer();

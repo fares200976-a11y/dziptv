@@ -1,0 +1,6 @@
+{
+  "name": "DZ IPTV",
+  "description": "Plateforme professionnelle de vente d'abonnements IPTV en gros et au détail avec tableau de bord revendeurs, gestion des activations et ventes de boîtiers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
