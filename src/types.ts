@@ -1,5 +1,10 @@
 export type SubscriptionServer = 'Dino' | '8K' | 'V12' | 'Golden OTT';
 
+export interface CatalogCategory {
+  id: string;
+  name: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -11,6 +16,7 @@ export interface Product {
   imageUrl: string;
   imageUrl2?: string; // Second product image for gallery
   isPopular?: boolean;
+  categoryId?: string; // category link
 }
 
 export interface Wholesaler {
@@ -101,7 +107,18 @@ export interface EmailNotification {
   body: string;
   sentAt: string;
   read: boolean;
-  type: 'new_wholesaler' | 'new_order' | 'credit_request' | 'client_activation';
+  type: 'new_wholesaler' | 'new_order' | 'credit_request' | 'client_activation' | 'panel_request';
+}
+
+export interface PanelRequest {
+  id: string;
+  wholesalerId: string;
+  wholesalerName: string;
+  server: SubscriptionServer;
+  codesCount: number; // minimum 10
+  notes?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 }
 
 export interface AppStats {

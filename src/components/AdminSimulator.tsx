@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Wholesaler, Order, CreditRequest, EmailNotification, AppStats, Product, VideoTutorial, IptvClient, Livreur } from "../types";
+import { Wholesaler, Order, CreditRequest, EmailNotification, AppStats, Product, VideoTutorial, IptvClient, Livreur, PanelRequest, CatalogCategory } from "../types";
 import { 
   Mail, 
   Users, 
@@ -25,7 +25,9 @@ import {
   Undo2,
   Info,
   LogOut,
-  Truck
+  Truck,
+  Key,
+  FolderOpen
 } from "lucide-react";
 
 interface AdminSimulatorProps {
@@ -37,11 +39,17 @@ interface AdminSimulatorProps {
   products: Product[];
   tutorials: VideoTutorial[];
   clients: IptvClient[];
+  panelRequests?: PanelRequest[];
+  catalogCategories?: CatalogCategory[];
   onUpdateClient: (id: string, payload: any) => Promise<void>;
   onApproveWholesaler: (id: string, currentStatus: string) => Promise<void>;
   onAddCreditManual: (id: string, amount: number) => Promise<void>;
   onUpdateOrderStatus: (id: string, status: "completed" | "cancelled") => Promise<void>;
   onProcessCreditRequest: (id: string, action: "approve" | "reject") => Promise<void>;
+  onProcessPanelRequest?: (id: string, status: "approved" | "rejected", notes?: string) => Promise<void>;
+  onAddCategory?: (name: string) => Promise<void>;
+  onUpdateCategory?: (id: string, name: string) => Promise<void>;
+  onDeleteCategory?: (id: string) => Promise<void>;
   onMarkNotificationRead: (id: string) => Promise<void>;
   onDeleteNotification: (id: string) => Promise<void>;
   onResetDatabase: () => Promise<void>;
@@ -58,22 +66,30 @@ export default function AdminSimulator({
   products,
   tutorials,
   clients = [],
+  panelRequests = [],
+  catalogCategories = [],
   onUpdateClient,
   onApproveWholesaler,
   onAddCreditManual,
   onUpdateOrderStatus,
   onProcessCreditRequest,
+  onProcessPanelRequest,
+  onAddCategory,
+  onUpdateCategory,
+  onDeleteCategory,
   onMarkNotificationRead,
   onDeleteNotification,
   onResetDatabase,
   refreshAllData,
   onLogoutAdmin
 }: AdminSimulatorProps) {
-  const [activeTab, setActiveTab] = useState<"emails" | "wholesalers" | "requests" | "orders" | "products" | "tutorials" | "clients" | "livreurs">("emails");
+  const [activeTab, setActiveTab] = useState<"emails" | "wholesalers" | "requests" | "orders" | "products" | "tutorials" | "clients" | "livreurs" | "panels" | "categories">("emails");
   const [refreshing, setRefreshing] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [panelActionNotes, setPanelActionNotes] = useState<Record<string, string>>({});
 
   // Deliverers (Livreurs) state and CRUD
   const [livreurs, setLivreurs] = useState<Livreur[]>([]);
@@ -256,7 +272,8 @@ export default function AdminSimulator({
     description: "",
     featuresString: "",
     imageUrl: "https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?auto=format&fit=crop&w=400&q=80",
-    imageUrl2: ""
+    imageUrl2: "",
+    categoryId: ""
   });
 
   // Tutorial CRUD Form States
@@ -368,7 +385,8 @@ export default function AdminSimulator({
           description: "",
           featuresString: "",
           imageUrl: "https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?auto=format&fit=crop&w=400&q=80",
-          imageUrl2: ""
+          imageUrl2: "",
+          categoryId: ""
         });
         setShowAddProduct(false);
         refreshAllData();
@@ -697,6 +715,32 @@ export default function AdminSimulator({
           >
             <Truck className="h-4 w-4 text-amber-400" />
             <span>Livreurs & Suivi ({livreurs.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("panels")}
+            className={`px-5 py-4 text-xs font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+              activeTab === "panels"
+                ? "border-amber-500 text-amber-400 bg-amber-500/5"
+                : "border-transparent text-gray-400 hover:text-white"
+            }`}
+          >
+            <Key className="h-4 w-4 text-amber-400" />
+            <span>Demandes Panels ({panelRequests.filter(p => p.status === "pending").length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("categories")}
+            className={`px-5 py-4 text-xs font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+              activeTab === "categories"
+                ? "border-amber-500 text-amber-400 bg-amber-500/5"
+                : "border-transparent text-gray-400 hover:text-white"
+            }`}
+          >
+            <FolderOpen className="h-4 w-4 text-amber-400" />
+            <span>Catégories ({catalogCategories.length})</span>
           </button>
         </div>
 
@@ -1187,7 +1231,7 @@ export default function AdminSimulator({
               {showAddProduct && (
                 <form onSubmit={handleAddProductSubmit} className="p-5 bg-gray-900/60 rounded-2xl border border-gray-800 space-y-4">
                   <h4 className="font-bold text-blue-400 uppercase">Ajouter un nouveau produit</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-gray-400 mb-1">Nom du Produit</label>
                       <input
@@ -1209,6 +1253,19 @@ export default function AdminSimulator({
                         <option value="iptv">IPTV (Abonnement)</option>
                         <option value="device">Device (Box Android / Firestick)</option>
                         <option value="adsl">Carte ADSL Idoom (Recharge)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-gray-400 mb-1">Catégorie du Catalogue</label>
+                      <select
+                        value={productForm.categoryId || ""}
+                        onChange={e => setProductForm({ ...productForm, categoryId: e.target.value })}
+                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white"
+                      >
+                        <option value="">-- Sans catégorie --</option>
+                        {catalogCategories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1306,7 +1363,7 @@ export default function AdminSimulator({
               {editingProduct && (
                 <form onSubmit={handleEditProductSubmit} className="p-5 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-4">
                   <h4 className="font-bold text-amber-400 uppercase">Modifier le produit : {editingProduct.name}</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-gray-400 mb-1">Nom du Produit</label>
                       <input
@@ -1327,6 +1384,19 @@ export default function AdminSimulator({
                         <option value="iptv">IPTV</option>
                         <option value="device">Device / Android Box</option>
                         <option value="adsl">Carte ADSL Idoom</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-gray-400 mb-1">Catégorie du Catalogue</label>
+                      <select
+                        value={editingProduct.categoryId || ""}
+                        onChange={e => setEditingProduct({ ...editingProduct, categoryId: e.target.value })}
+                        className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white"
+                      >
+                        <option value="">-- Sans catégorie --</option>
+                        {catalogCategories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1438,6 +1508,11 @@ export default function AdminSimulator({
                         <span className="px-1.5 py-0.2 text-[8px] bg-gray-800 text-gray-400 rounded uppercase">
                           {p.type}
                         </span>
+                        {p.categoryId && (
+                          <span className="px-1.5 py-0.2 text-[8px] bg-blue-950 text-blue-400 border border-blue-900 rounded uppercase font-bold">
+                            {catalogCategories.find(c => c.id === p.categoryId)?.name || "Catégorie inconnue"}
+                          </span>
+                        )}
                       </div>
                       <p className="text-gray-400 text-[11px] line-clamp-1">{p.description}</p>
                       <div className="text-[10px] space-x-3 mt-1.5">
@@ -2073,6 +2148,207 @@ export default function AdminSimulator({
                     <p className="text-xs">Aucun livreur enregistré.</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 9: PANEL REQUESTS MANAGEMENT */}
+          {activeTab === "panels" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-display font-black text-lg text-white">Demandes de Panels Revendeur</h3>
+                  <p className="text-xs text-gray-400 mt-1">Validez et configurez les demandes de panels grossistes (10 codes minimum).</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-950 rounded-2xl border border-gray-800 overflow-hidden">
+                <table className="w-full text-left text-xs text-gray-400 border-collapse">
+                  <thead>
+                    <tr className="bg-gray-900 border-b border-gray-800 text-[10px] uppercase font-bold tracking-wider text-gray-400">
+                      <th className="p-4">Date / ID</th>
+                      <th className="p-4">Revendeur</th>
+                      <th className="p-4">Serveur</th>
+                      <th className="p-4">Codes</th>
+                      <th className="p-4 text-center">Statut</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {panelRequests.map((req) => (
+                      <tr key={req.id} className="border-b border-gray-900 hover:bg-gray-900/30">
+                        <td className="p-4 font-mono text-[10px]">
+                          <span className="text-gray-400 block">{new Date(req.createdAt).toLocaleString("fr-FR")}</span>
+                          <span className="text-gray-600">ID: {req.id}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="font-bold text-white block">{req.wholesalerName}</span>
+                          <span className="text-gray-500">ID Revendeur: {req.wholesalerId}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="px-2.5 py-0.5 rounded font-bold text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            {req.server}
+                          </span>
+                        </td>
+                        <td className="p-4 font-bold text-white text-sm">
+                          {req.codesCount} codes
+                        </td>
+                        <td className="p-4 text-center">
+                          {req.status === "pending" && (
+                            <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded font-semibold text-[10px]">
+                              En attente
+                            </span>
+                          )}
+                          {req.status === "approved" && (
+                            <span className="px-2.5 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded font-semibold text-[10px]">
+                              Panel Activé
+                            </span>
+                          )}
+                          {req.status === "rejected" && (
+                            <span className="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded font-semibold text-[10px]">
+                              Rejeté
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 text-right">
+                          {req.status === "pending" ? (
+                            <div className="flex flex-col items-end gap-2">
+                              <input
+                                type="text"
+                                placeholder="Note admin (ex: Vos accès sont...)"
+                                value={panelActionNotes[req.id] || ""}
+                                onChange={(e) => setPanelActionNotes({ ...panelActionNotes, [req.id]: e.target.value })}
+                                className="bg-black border border-gray-800 rounded px-2 py-1 text-[10px] text-white w-48 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onProcessPanelRequest) {
+                                      onProcessPanelRequest(req.id, "approved", panelActionNotes[req.id] || "Panel créé et configuré avec succès.");
+                                    }
+                                  }}
+                                  className="px-2.5 py-1.5 bg-green-500 hover:bg-green-400 text-black font-extrabold rounded text-[10px] cursor-pointer"
+                                >
+                                  Approuver & Activer
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onProcessPanelRequest) {
+                                      onProcessPanelRequest(req.id, "rejected", panelActionNotes[req.id] || "Demande refusée par l'administrateur.");
+                                    }
+                                  }}
+                                  className="px-2.5 py-1.5 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-black font-bold rounded text-[10px] cursor-pointer"
+                                >
+                                  Rejeter
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500 italic text-[10px]">Traité (Note: {req.notes || "Aucune note"})</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {panelRequests.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-gray-500">
+                          Aucune demande de panel de revendeur en attente.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 10: CATALOG CATEGORIES MANAGEMENT */}
+          {activeTab === "categories" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-display font-black text-lg text-white">Gestion des Catégories du Catalogue</h3>
+                  <p className="text-xs text-gray-400 mt-1">Créez et supprimez des catégories personnalisées pour structurer votre catalogue.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Form to Add Category */}
+                <div className="md:col-span-1 p-5 bg-gray-900/60 rounded-2xl border border-gray-800 space-y-4">
+                  <h4 className="font-bold text-white uppercase text-[10px] tracking-wider text-indigo-400">➕ Nouvelle Catégorie</h4>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-gray-300">Nom de la catégorie</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Abonnements VIP, Box Android, ADSL..."
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!newCategoryName.trim()) return;
+                      if (onAddCategory) {
+                        await onAddCategory(newCategoryName);
+                        setNewCategoryName("");
+                      }
+                    }}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/10 transition-all cursor-pointer"
+                  >
+                    Ajouter au Catalogue
+                  </button>
+                </div>
+
+                {/* Categories List */}
+                <div className="md:col-span-2 space-y-4">
+                  <div className="bg-gray-950 rounded-2xl border border-gray-800 p-5 space-y-4">
+                    <h4 className="font-bold text-white text-xs">Catégories existantes ({catalogCategories.length})</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {catalogCategories.map((cat) => (
+                        <div key={cat.id} className="p-3.5 bg-gray-900/40 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
+                          <div>
+                            <span className="font-bold text-white">{cat.name}</span>
+                            <span className="text-[10px] text-gray-500 block mt-0.5">ID: {cat.id}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newName = prompt("Nouveau nom de la catégorie :", cat.name);
+                                if (newName && newName.trim() && onUpdateCategory) {
+                                  onUpdateCategory(cat.id, newName.trim());
+                                }
+                              }}
+                              className="p-1.5 bg-gray-800 hover:bg-gray-700 text-amber-400 rounded cursor-pointer"
+                              title="Modifier"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?") && onDeleteCategory) {
+                                  onDeleteCategory(cat.id);
+                                }
+                              }}
+                              className="p-1.5 bg-gray-800 hover:bg-red-500/20 text-red-400 rounded cursor-pointer"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {catalogCategories.length === 0 && (
+                        <p className="text-xs text-gray-500 col-span-2 text-center py-2">Aucune catégorie personnalisée.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

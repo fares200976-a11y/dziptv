@@ -14,7 +14,9 @@ import {
   CreditRequest, 
   EmailNotification, 
   AppStats,
-  VideoTutorial
+  VideoTutorial,
+  PanelRequest,
+  CatalogCategory
 } from "./types";
 import { Tv, Sparkles, ShieldCheck, Flame, HelpCircle } from "lucide-react";
 
@@ -27,11 +29,13 @@ export default function App() {
   // Data State
   const [products, setProducts] = useState<Product[]>([]);
   const [tutorials, setTutorials] = useState<VideoTutorial[]>([]);
+  const [catalogCategories, setCatalogCategories] = useState<CatalogCategory[]>([]);
   const [loggedWholesaler, setLoggedWholesaler] = useState<Wholesaler | null>(null);
   
   // Wholesaler-specific lists
   const [wholesalerClients, setWholesalerClients] = useState<IptvClient[]>([]);
   const [wholesalerRequests, setWholesalerRequests] = useState<CreditRequest[]>([]);
+  const [wholesalerPanelRequests, setWholesalerPanelRequests] = useState<PanelRequest[]>([]);
   
   // Admin-specific lists
   const [adminStats, setAdminStats] = useState<AppStats>({
@@ -46,11 +50,13 @@ export default function App() {
   const [adminRequests, setAdminRequests] = useState<CreditRequest[]>([]);
   const [adminNotifications, setAdminNotifications] = useState<EmailNotification[]>([]);
   const [adminClients, setAdminClients] = useState<IptvClient[]>([]);
+  const [adminPanelRequests, setAdminPanelRequests] = useState<PanelRequest[]>([]);
 
-  // 1. Initial Load of Products & Auth check
+  // 1. Initial Load of Products, Categories & Auth check
   useEffect(() => {
     fetchProducts();
     fetchTutorials();
+    fetchCatalogCategories();
     
     // Check local storage for persistent login
     const savedProfile = localStorage.getItem("wholesalerProfile");
@@ -71,6 +77,7 @@ export default function App() {
     } else {
       setWholesalerClients([]);
       setWholesalerRequests([]);
+      setWholesalerPanelRequests([]);
     }
     // Also load admin data so simulator is synced
     fetchAdminData();
@@ -98,6 +105,18 @@ export default function App() {
       }
     } catch (e) {
       console.error("Error fetching tutorials:", e);
+    }
+  };
+
+  const fetchCatalogCategories = async () => {
+    try {
+      const res = await fetch("/api/catalog-categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCatalogCategories(data);
+      }
+    } catch (e) {
+      console.error("Error fetching catalog categories:", e);
     }
   };
 
@@ -140,6 +159,15 @@ export default function App() {
         const reqData = await reqRes.json();
         setWholesalerRequests(reqData);
       }
+
+      // Fetch Panel Requests
+      const panelRes = await fetch("/api/wholesaler/panel-requests", {
+        headers: { "x-wholesaler-id": loggedWholesaler.id }
+      });
+      if (panelRes.ok) {
+        const panelData = await panelRes.json();
+        setWholesalerPanelRequests(panelData);
+      }
     } catch (e) {
       console.error("Error fetching wholesaler data:", e);
     }
@@ -164,6 +192,9 @@ export default function App() {
 
       const clientsRes = await fetch("/api/admin/clients");
       if (clientsRes.ok) setAdminClients(await clientsRes.json());
+
+      const panelRes = await fetch("/api/admin/panel-requests");
+      if (panelRes.ok) setAdminPanelRequests(await panelRes.json());
     } catch (e) {
       console.error("Error fetching admin data:", e);
     }
@@ -172,6 +203,7 @@ export default function App() {
   const refreshAllData = () => {
     fetchProducts();
     fetchTutorials();
+    fetchCatalogCategories();
     if (loggedWholesaler) {
       fetchWholesalerData();
     }
@@ -243,10 +275,21 @@ export default function App() {
     return data;
   };
 
+  const handleSetView = (view: "retail" | "wholesaler" | "admin") => {
+    if (view === "admin") {
+      if (loggedWholesaler) {
+        alert("Accès refusé. Les comptes revendeurs ne sont pas autorisés à accéder au panneau d'administration.");
+        setView("wholesaler");
+        return;
+      }
+    }
+    setView(view);
+  };
+
   const handleWholesalerLogout = () => {
     localStorage.removeItem("wholesalerProfile");
     setLoggedWholesaler(null);
-    setView("wholesaler");
+    setView("retail"); // Exit the dashboard and go to home page
   };
 
   const handleAdminLogout = () => {
@@ -293,6 +336,28 @@ export default function App() {
     if (!res.ok) {
       const errData = await res.json();
       throw new Error(errData.error || "Échec de la soumission de recharge.");
+    }
+
+    const data = await res.json();
+    fetchWholesalerData();
+    fetchAdminData();
+    return data;
+  };
+
+  const handleRequestPanel = async (payload: any) => {
+    if (!loggedWholesaler) return;
+    const res = await fetch("/api/wholesaler/panel-requests", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-wholesaler-id": loggedWholesaler.id
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || "Échec de la demande de panel.");
     }
 
     const data = await res.json();
@@ -385,6 +450,64 @@ export default function App() {
     }
   };
 
+  const handleProcessPanelRequest = async (id: string, status: "approved" | "rejected", notes: string) => {
+    try {
+      const res = await fetch(`/api/admin/panel-requests/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, notes })
+      });
+      if (res.ok) {
+        refreshAllData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddCategory = async (name: string) => {
+    try {
+      const res = await fetch("/api/admin/catalog-categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        refreshAllData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpdateCategory = async (id: string, name: string) => {
+    try {
+      const res = await fetch(`/api/admin/catalog-categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        refreshAllData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/catalog-categories/${id}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        refreshAllData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleMarkNotificationRead = async (id: string) => {
     try {
       const res = await fetch(`/api/admin/notifications/${id}/read`, {
@@ -457,7 +580,7 @@ export default function App() {
       {/* Dynamic Header */}
       <Header 
         currentView={currentView} 
-        setView={setView} 
+        setView={handleSetView} 
         loggedWholesaler={loggedWholesaler}
         onLogout={handleWholesalerLogout}
         isAdminUnlocked={isAdminUnlocked}
@@ -471,11 +594,12 @@ export default function App() {
             {/* Elegant Hero Slider/Title */}
             <Hero 
               onExploreClick={scrollToCatalog}
-              onWholesaleClick={() => setView("wholesaler")}
+              onWholesaleClick={() => handleSetView("wholesaler")}
             />
             {/* Products grid and checkout modals */}
             <RetailCatalog 
               products={products} 
+              catalogCategories={catalogCategories}
               onOrderSubmit={handleOrderSubmit}
             />
 
@@ -516,8 +640,10 @@ export default function App() {
               onRegister={handleWholesalerRegister}
               wholesalerClients={wholesalerClients}
               wholesalerRequests={wholesalerRequests}
+              panelRequests={wholesalerPanelRequests}
               onActivateClient={handleActivateClient}
               onRequestCredit={handleRequestCredit}
+              onRequestPanel={handleRequestPanel}
               refreshWholesalerData={fetchWholesalerData}
               onLogoutWholesaler={handleWholesalerLogout}
             />
@@ -526,26 +652,54 @@ export default function App() {
 
         {currentView === "admin" && (
           <div className="animate-in fade-in duration-300">
-            <AdminSimulator 
-              stats={adminStats}
-              wholesalers={adminWholesalers}
-              orders={adminOrders}
-              requests={adminRequests}
-              notifications={adminNotifications}
-              products={products}
-              tutorials={tutorials}
-              clients={adminClients}
-              onUpdateClient={handleUpdateClient}
-              onApproveWholesaler={handleApproveWholesaler}
-              onAddCreditManual={handleAddCreditManual}
-              onUpdateOrderStatus={handleUpdateOrderStatus}
-              onProcessCreditRequest={handleProcessCreditRequest}
-              onMarkNotificationRead={handleMarkNotificationRead}
-              onDeleteNotification={handleDeleteNotification}
-              onResetDatabase={handleResetDatabase}
-              refreshAllData={refreshAllData}
-              onLogoutAdmin={handleAdminLogout}
-            />
+            {isAdminUnlocked && !loggedWholesaler ? (
+              <AdminSimulator 
+                stats={adminStats}
+                wholesalers={adminWholesalers}
+                orders={adminOrders}
+                requests={adminRequests}
+                notifications={adminNotifications}
+                products={products}
+                tutorials={tutorials}
+                clients={adminClients}
+                panelRequests={adminPanelRequests}
+                catalogCategories={catalogCategories}
+                onUpdateClient={handleUpdateClient}
+                onApproveWholesaler={handleApproveWholesaler}
+                onAddCreditManual={handleAddCreditManual}
+                onUpdateOrderStatus={handleUpdateOrderStatus}
+                onProcessCreditRequest={handleProcessCreditRequest}
+                onProcessPanelRequest={handleProcessPanelRequest}
+                onAddCategory={handleAddCategory}
+                onUpdateCategory={handleUpdateCategory}
+                onDeleteCategory={handleDeleteCategory}
+                onMarkNotificationRead={handleMarkNotificationRead}
+                onDeleteNotification={handleDeleteNotification}
+                onResetDatabase={handleResetDatabase}
+                refreshAllData={refreshAllData}
+                onLogoutAdmin={handleAdminLogout}
+              />
+            ) : (
+              <div className="max-w-md mx-auto my-16 p-8 bg-gray-950 border border-gray-800 rounded-3xl text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="h-16 w-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto border border-red-500/20 shadow-inner">
+                  <ShieldCheck className="h-8 w-8" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-black font-display text-white tracking-tight uppercase">Accès Réservé à l'Admin</h2>
+                  <p className="text-gray-400 text-xs leading-relaxed max-w-xs mx-auto">
+                    Vous n'avez pas l'autorisation d'accéder à cette page. Les comptes revendeurs grossistes ne peuvent pas accéder au panneau administratif.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <button
+                    onClick={() => handleSetView(loggedWholesaler ? "wholesaler" : "retail")}
+                    className="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/15 transition-all cursor-pointer"
+                  >
+                    Retourner à mon espace autorisé
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -558,11 +712,11 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p>© 2026 KURTAL IPTV Premium. Tous droits réservés. Vente en gros et au détail.</p>
           <div className="flex space-x-4 text-gray-400 font-medium">
-            <span className="hover:text-white cursor-pointer" onClick={() => setView("retail")}>Accueil</span>
+            <span className="hover:text-white cursor-pointer" onClick={() => handleSetView("retail")}>Accueil</span>
             <span>•</span>
-            <span className="hover:text-white cursor-pointer" onClick={() => setView("wholesaler")}>Espace Revendeurs</span>
+            <span className="hover:text-white cursor-pointer" onClick={() => handleSetView("wholesaler")}>Espace Revendeurs</span>
             <span>•</span>
-            <span className="hover:text-white cursor-pointer" onClick={() => setView("admin")}>Simulateur Admin</span>
+            <span className="hover:text-white cursor-pointer" onClick={() => handleSetView("admin")}>Simulateur Admin</span>
           </div>
         </div>
       </footer>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Product, Order } from "../types";
+import { Product, Order, CatalogCategory } from "../types";
 import { 
   Check, 
   Tv, 
@@ -21,11 +21,13 @@ import {
 
 interface RetailCatalogProps {
   products: Product[];
+  catalogCategories?: CatalogCategory[];
   onOrderSubmit: (orderData: any) => Promise<any>;
 }
 
-export default function RetailCatalog({ products, onOrderSubmit }: RetailCatalogProps) {
+export default function RetailCatalog({ products, catalogCategories = [], onOrderSubmit }: RetailCatalogProps) {
   const [filter, setFilter] = useState<"all" | "iptv" | "device" | "adsl" | "track">("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
   // Checkout Form State
@@ -50,9 +52,11 @@ export default function RetailCatalog({ products, onOrderSubmit }: RetailCatalog
   const [trackedOrders, setTrackedOrders] = useState<any[] | null>(null);
   const [trackError, setTrackError] = useState("");
 
-  const filteredProducts = products.filter(
-    (p) => filter === "all" || p.type === filter
-  );
+  const filteredProducts = products.filter((p) => {
+    const matchesType = filter === "all" || p.type === filter;
+    const matchesCategory = selectedCategory === "all" || p.categoryId === selectedCategory;
+    return matchesType && matchesCategory;
+  });
 
   const handleTrackOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,6 +217,37 @@ export default function RetailCatalog({ products, onOrderSubmit }: RetailCatalog
           </button>
         </div>
       </div>
+
+      {catalogCategories.length > 0 && filter !== "track" && (
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/60 self-start max-w-full overflow-x-auto">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-3 py-1.5 border-r border-slate-200 shrink-0">
+            Filtre Catalogue
+          </span>
+          <button
+            onClick={() => setSelectedCategory("all")}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
+              selectedCategory === "all"
+                ? "bg-slate-800 text-white shadow-sm"
+                : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
+            }`}
+          >
+            Tous les catalogues
+          </button>
+          {catalogCategories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
+                selectedCategory === cat.id
+                  ? "bg-slate-800 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {filter === "track" ? (
         <div className="max-w-3xl mx-auto bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl space-y-8 text-white">

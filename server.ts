@@ -10,14 +10,17 @@ import {
   CreditRequest, 
   EmailNotification,
   VideoTutorial,
-  Livreur
+  Livreur,
+  CatalogCategory,
+  PanelRequest
 } from "./src/types";
 
 const app = express();
 const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), "db.json");
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Default Seed Data
 const DEFAULT_PRODUCTS: Product[] = [
@@ -221,6 +224,8 @@ interface DBStructure {
   notifications: EmailNotification[];
   tutorials: VideoTutorial[];
   livreurs: Livreur[];
+  catalogCategories: CatalogCategory[];
+  panelRequests: PanelRequest[];
 }
 
 // Read database
@@ -362,15 +367,23 @@ function readDB(): DBStructure {
             status: "active",
             createdAt: new Date().toISOString()
           }
-        ]
+        ],
+        catalogCategories: [
+          { id: "cat-iptv", name: "Abonnements IPTV Premium" },
+          { id: "cat-device", name: "Boîtiers Android & Récepteurs" },
+          { id: "cat-adsl", name: "Recharges ADSL & Fibre" }
+        ],
+        panelRequests: []
       };
       fs.writeFileSync(DB_FILE, JSON.stringify(initialDB, null, 2), "utf-8");
       return initialDB;
     }
     const data = fs.readFileSync(DB_FILE, "utf-8");
     const parsed = JSON.parse(data);
+    let changed = false;
     if (!parsed.tutorials) {
       parsed.tutorials = DEFAULT_TUTORIALS;
+      changed = true;
     }
     if (!parsed.livreurs) {
       parsed.livreurs = [
@@ -391,6 +404,21 @@ function readDB(): DBStructure {
           createdAt: new Date().toISOString()
         }
       ];
+      changed = true;
+    }
+    if (!parsed.catalogCategories) {
+      parsed.catalogCategories = [
+        { id: "cat-iptv", name: "Abonnements IPTV Premium" },
+        { id: "cat-device", name: "Boîtiers Android & Récepteurs" },
+        { id: "cat-adsl", name: "Recharges ADSL & Fibre" }
+      ];
+      changed = true;
+    }
+    if (!parsed.panelRequests) {
+      parsed.panelRequests = [];
+      changed = true;
+    }
+    if (changed) {
       fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), "utf-8");
     }
     return parsed;
@@ -404,7 +432,13 @@ function readDB(): DBStructure {
       creditRequests: [],
       notifications: [],
       tutorials: DEFAULT_TUTORIALS,
-      livreurs: []
+      livreurs: [],
+      catalogCategories: [
+        { id: "cat-iptv", name: "Abonnements IPTV Premium" },
+        { id: "cat-device", name: "Boîtiers Android & Récepteurs" },
+        { id: "cat-adsl", name: "Recharges ADSL & Fibre" }
+      ],
+      panelRequests: []
     };
   }
 }
@@ -449,6 +483,124 @@ function sendAdminEmail(subject: string, body: string, type: EmailNotification['
 app.get("/api/products", (req, res) => {
   const db = readDB();
   res.json(db.products);
+});
+
+// --- CATALOG CATEGORY ENDPOINTS ---
+app.get("/api/catalog-categories", (req, res) => {
+  const db = readDB();
+  res.json(db.catalogCategories || []);
+});
+
+app.post("/api/admin/catalog-categories", (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
+  const db = readDB();
+  const newCat: CatalogCategory = {
+    id: "cat-" + Math.random().toString(36).substr(2, 9),
+    name
+  };
+  if (!db.catalogCategories) db.catalogCategories = [];
+  db.catalogCategories.push(newCat);
+  writeDB(db);
+  res.json(newCat);
+});
+
+app.put("/api/admin/catalog-categories/:id", (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
+  const db = readDB();
+  const cat = db.catalogCategories?.find(c => c.id === id);
+  if (!cat) return res.status(404).json({ error: "Catalogue introuvable." });
+  cat.name = name;
+  writeDB(db);
+  res.json(cat);
+});
+
+app.delete("/api/admin/catalog-categories/:id", (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+  db.catalogCategories = (db.catalogCategories || []).filter(c => c.id !== id);
+  writeDB(db);
+  res.json({ success: true });
+});
+
+// --- PANEL REQUEST ENDPOINTS ---
+app.get("/api/wholesaler/panel-requests", (req, res) => {
+  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+  if (!wholesalerId) return res.status(401).json({ error: "Non autorisé." });
+  const db = readDB();
+  const reqs = (db.panelRequests || []).filter(r => r.wholesalerId === wholesalerId);
+  res.json(reqs);
+});
+
+app.post("/api/wholesaler/panel-requests", (req, res) => {
+  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+  const { server, codesCount, notes } = req.body;
+  if (!wholesalerId) return res.status(401).json({ error: "Non autorisé." });
+  if (!server || !codesCount) return res.status(400).json({ error: "Serveur et quantité requis." });
+  
+  const count = Number(codesCount);
+  if (count < 10) {
+    return res.status(400).json({ error: "Le nombre de codes minimum requis pour la création d'un panel est de 10 codes." });
+  }
+
+  const db = readDB();
+  const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
+  if (!wholesaler) return res.status(404).json({ error: "Revendeur introuvable." });
+
+  const newRequest: PanelRequest = {
+    id: "pr-" + Math.random().toString(36).substr(2, 9),
+    wholesalerId,
+    wholesalerName: wholesaler.businessName,
+    server,
+    codesCount: count,
+    notes: notes || "",
+    status: "pending",
+    createdAt: new Date().toISOString()
+  };
+
+  if (!db.panelRequests) db.panelRequests = [];
+  db.panelRequests.push(newRequest);
+  writeDB(db);
+
+  // Trigger admin notification
+  try {
+    sendAdminEmail(
+      `Nouvelle demande de panel revendeur par ${wholesaler.businessName}`,
+      `Le revendeur grossiste '${wholesaler.businessName}' a soumis une demande de création de panel revendeur.\n\n` +
+      `- Serveur IPTV: ${server}\n` +
+      `- Quantité de codes demandés (min 10): ${count} codes\n` +
+      `- Notes / Message: ${notes || "Aucun message"}\n\n` +
+      `Veuillez vous connecter à l'administration de KURTAL IPTV pour valider et configurer ce panel.`,
+      "panel_request"
+    );
+  } catch (err) {
+    console.error("Error sending admin email notification:", err);
+  }
+
+  res.json(newRequest);
+});
+
+app.get("/api/admin/panel-requests", (req, res) => {
+  const db = readDB();
+  res.json(db.panelRequests || []);
+});
+
+app.put("/api/admin/panel-requests/:id", (req, res) => {
+  const { id } = req.params;
+  const { status, notes } = req.body;
+  if (!status) return res.status(400).json({ error: "Le statut est requis." });
+
+  const db = readDB();
+  const reqItem = db.panelRequests?.find(r => r.id === id);
+  if (!reqItem) return res.status(404).json({ error: "Demande de panel introuvable." });
+
+  reqItem.status = status;
+  if (notes !== undefined) reqItem.notes = notes;
+
+  writeDB(db);
+  res.json(reqItem);
 });
 
 // Reset database to default
@@ -594,7 +746,7 @@ app.get("/api/wholesaler/clients", (req, res) => {
   res.json(clients);
 });
 
-// Wholesaler Activate / Add IPTV Client
+// Wholesaler Activate / Add IPTV Client (INSTANT ACTIVATION)
 app.post("/api/wholesaler/clients", (req, res) => {
   const wholesalerId = req.headers["x-wholesaler-id"] as string;
   const { clientName, server, durationMonths, notes } = req.body;
@@ -619,7 +771,6 @@ app.post("/api/wholesaler/clients", (req, res) => {
   }
 
   // Calculate pricing based on duration (1, 6, or 12 months)
-  // Let's assume wholesale base price is for 12 months, and prorate if needed.
   let pricePaid = product.priceWholesale;
   if (durationMonths === 1) {
     pricePaid = Math.round(product.priceWholesale * 0.15); // e.g., 15% for 1 month
@@ -635,6 +786,28 @@ app.post("/api/wholesaler/clients", (req, res) => {
     });
   }
 
+  // Auto-generate credentials for Instant Activation
+  const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
+  const username = `kt_${server.toLowerCase().replace(/[^a-z0-9]/g, "")}_${randomSuffix}`;
+  const password = Math.random().toString(36).substring(2, 10);
+  
+  let host = "http://kurtal-server.xyz:8080";
+  if (server.toLowerCase().includes("dino")) {
+    host = "http://dino-ott.xyz:8080";
+  } else if (server.toLowerCase().includes("8k")) {
+    host = "http://8k-premium.co:8080";
+  } else if (server.toLowerCase().includes("v12")) {
+    host = "http://v12-pro.com:8080";
+  } else if (server.toLowerCase().includes("golden")) {
+    host = "http://golden-ott.net:8080";
+  }
+
+  const m3uUrl = `${host}/get.php?username=${username}&password=${password}&output=ts`;
+
+  const activationDate = new Date();
+  const expirationDate = new Date();
+  expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths));
+
   const newClient: IptvClient = {
     id: "c-" + Math.random().toString(36).substr(2, 9),
     wholesalerId,
@@ -642,15 +815,15 @@ app.post("/api/wholesaler/clients", (req, res) => {
     server: server as any,
     durationMonths: Number(durationMonths),
     pricePaid,
-    activationDate: "", // Empty until admin activates
-    expirationDate: "", // Empty until admin activates
-    status: "pending",  // Pending admin activation
+    activationDate: activationDate.toISOString(),
+    expirationDate: expirationDate.toISOString(),
+    status: "active",  // Instant Activation = Immediately Active!
     notes: notes || "",
     credentials: {
-      m3uUrl: "",
-      xtreamUser: "",
-      xtreamPass: "",
-      xtreamHost: ""
+      m3uUrl,
+      xtreamUser: username,
+      xtreamPass: password,
+      xtreamHost: host
     }
   };
 
@@ -663,14 +836,17 @@ app.post("/api/wholesaler/clients", (req, res) => {
   // Trigger notification to admin
   try {
     sendAdminEmail(
-      `Demande d'activation IPTV par ${wholesaler.businessName} : ${clientName}`,
-      `Le revendeur grossiste '${wholesaler.businessName}' a demandé l'activation d'un abonnement IPTV.\n\n` +
+      `Activation IPTV instantanée par ${wholesaler.businessName} : ${clientName}`,
+      `Le revendeur grossiste '${wholesaler.businessName}' a activé instantanément un abonnement IPTV.\n\n` +
       `- Client: ${clientName}\n` +
       `- Serveur: ${server}\n` +
       `- Durée: ${durationMonths} Mois\n` +
       `- Prix: ${pricePaid} DA (déduit de son solde)\n` +
+      `- Identifiant: ${username}\n` +
+      `- Mot de passe: ${password}\n` +
+      `- Lien M3U: ${m3uUrl}\n` +
       `- Nouveau solde du revendeur: ${wholesaler.creditBalance} DA\n\n` +
-      `Veuillez vous connecter à l'administration de KURTAL IPTV, générer la ligne sur votre panel IPTV, et renseigner les codes d'accès (M3U et Xtream Codes) pour ce client afin d'activer sa ligne et lui transmettre automatiquement ses codes sur son espace grossiste.`,
+      `L'activation a été effectuée de manière 100% autonome et instantanée. Les codes d'accès ont été générés pour le revendeur.`,
       "client_activation"
     );
   } catch (err) {
@@ -678,7 +854,7 @@ app.post("/api/wholesaler/clients", (req, res) => {
   }
 
   res.json({
-    message: `Demande d'activation envoyée ! L'administrateur va générer les accès sous peu. ${pricePaid} DA réservés/déduits de votre crédit.`,
+    message: `Activation effectuée de manière 100% autonome et instantanée ! Les codes d'accès ont été générés avec succès. ${pricePaid} DA ont été déduits de votre crédit.`,
     client: newClient,
     newBalance: wholesaler.creditBalance
   });
@@ -1179,7 +1355,7 @@ app.delete("/api/admin/tutorials/:id", (req, res) => {
 });
 
 // --- PRODUCTS MANAGEMENT (CRUD) ---
-app.post("/api/admin/products", (req, res) => {
+app.post(["/api/admin/products", "/api/products"], (req, res) => {
   const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
   if (!name || !type || priceRetail === undefined || priceWholesale === undefined) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
@@ -1202,7 +1378,7 @@ app.post("/api/admin/products", (req, res) => {
   res.json(newProduct);
 });
 
-app.put("/api/admin/products/:id", (req, res) => {
+app.put(["/api/admin/products/:id", "/api/products/:id"], (req, res) => {
   const { id } = req.params;
   const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
   const db = readDB();
@@ -1226,7 +1402,7 @@ app.put("/api/admin/products/:id", (req, res) => {
   res.json(db.products[index]);
 });
 
-app.delete("/api/admin/products/:id", (req, res) => {
+app.delete(["/api/admin/products/:id", "/api/products/:id"], (req, res) => {
   const { id } = req.params;
   const db = readDB();
   db.products = db.products.filter(p => p.id !== id);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Wholesaler, IptvClient, CreditRequest } from "../types";
+import { Wholesaler, IptvClient, CreditRequest, PanelRequest, SubscriptionServer } from "../types";
 import { 
   UserPlus, 
   LogIn, 
@@ -25,8 +25,10 @@ interface WholesalerDashboardProps {
   onRegister: (data: any) => Promise<any>;
   wholesalerClients: IptvClient[];
   wholesalerRequests: CreditRequest[];
+  panelRequests?: PanelRequest[];
   onActivateClient: (data: any) => Promise<any>;
   onRequestCredit: (data: any) => Promise<any>;
+  onRequestPanel?: (data: any) => Promise<any>;
   refreshWholesalerData: () => void;
   onLogoutWholesaler?: () => void;
 }
@@ -37,8 +39,10 @@ export default function WholesalerDashboard({
   onRegister,
   wholesalerClients,
   wholesalerRequests,
+  panelRequests = [],
   onActivateClient,
   onRequestCredit,
+  onRequestPanel,
   refreshWholesalerData,
   onLogoutWholesaler
 }: WholesalerDashboardProps) {
@@ -62,6 +66,7 @@ export default function WholesalerDashboard({
   const [searchTerm, setSearchTerm] = useState("");
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [showPanelModal, setShowPanelModal] = useState(false);
   const [selectedClientCredentials, setSelectedClientCredentials] = useState<IptvClient | null>(null);
   const [copiedField, setCopiedField] = useState("");
 
@@ -72,6 +77,11 @@ export default function WholesalerDashboard({
   const [clientNotes, setClientNotes] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionSuccess, setActionSuccess] = useState("");
+
+  // New Panel Form
+  const [panelServer, setPanelServer] = useState<SubscriptionServer>("Dino");
+  const [panelCodesCount, setPanelCodesCount] = useState<number>(10);
+  const [panelNotes, setPanelNotes] = useState("");
 
   // New Recharge Form
   const [rechargeAmount, setRechargeAmount] = useState("");
@@ -181,6 +191,33 @@ export default function WholesalerDashboard({
       setShowRechargeModal(false);
     } catch (err: any) {
       setActionError(err.message || "Erreur de recharge.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePanelRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onRequestPanel) return;
+    if (panelCodesCount < 10) {
+      setActionError("Le nombre minimum de codes requis pour un panel est de 10.");
+      return;
+    }
+    setLoading(true);
+    setActionError("");
+    setActionSuccess("");
+    try {
+      await onRequestPanel({
+        server: panelServer,
+        codesCount: panelCodesCount,
+        notes: panelNotes
+      });
+      setActionSuccess(`Demande de panel ${panelServer} (${panelCodesCount} codes) soumise avec succès !`);
+      setPanelNotes("");
+      setPanelCodesCount(10);
+      setShowPanelModal(false);
+    } catch (err: any) {
+      setActionError(err.message || "Erreur de demande de panel.");
     } finally {
       setLoading(false);
     }
@@ -446,6 +483,18 @@ export default function WholesalerDashboard({
             onClick={() => {
               setActionError("");
               setActionSuccess("");
+              setShowPanelModal(true);
+            }}
+            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-amber-400 font-bold text-xs rounded-xl border border-gray-700 transition-all flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Key className="h-4 w-4" />
+            <span>Demander Panel (Min 10 codes)</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActionError("");
+              setActionSuccess("");
               setShowActivateModal(true);
             }}
             className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/15 transition-all flex items-center space-x-1.5 cursor-pointer"
@@ -644,6 +693,125 @@ export default function WholesalerDashboard({
           )}
         </div>
       </div>
+
+      {/* Panel Requests Followup List */}
+      <div className="bg-gray-950 rounded-2xl border border-gray-800 p-5 space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-display font-bold text-base text-white flex items-center space-x-2">
+            <Key className="h-4 w-4 text-amber-500" />
+            <span>Suivi de vos demandes de Panels Revendeur (Min 10 codes)</span>
+          </h3>
+          <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-bold uppercase">
+            10 Codes Min.
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {panelRequests.map((panelReq) => (
+            <div key={panelReq.id} className="p-4 bg-gray-900/40 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
+              <div>
+                <span className="text-[10px] text-gray-400 block">{new Date(panelReq.createdAt).toLocaleString("fr-FR")}</span>
+                <span className="font-bold text-white text-sm">Panel : {panelReq.server}</span>
+                <span className="text-gray-300 block mt-1 font-semibold">{panelReq.codesCount} codes demandés</span>
+                {panelReq.notes && (
+                  <p className="text-[10px] text-amber-400 mt-1 italic">Note Admin: {panelReq.notes}</p>
+                )}
+              </div>
+              <div>
+                {panelReq.status === "pending" && (
+                  <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded font-semibold text-[10px]">
+                    En attente de validation
+                  </span>
+                )}
+                {panelReq.status === "approved" && (
+                  <span className="px-2.5 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded font-semibold text-[10px]">
+                    Panel Activé
+                  </span>
+                )}
+                {panelReq.status === "rejected" && (
+                  <span className="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded font-semibold text-[10px]">
+                    Rejetée
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+          {panelRequests.length === 0 && (
+            <p className="text-xs text-gray-500 col-span-2 text-center py-2">Aucune demande de panel effectuée.</p>
+          )}
+        </div>
+      </div>
+
+      {/* MODAL 3: REQUEST RESELLER PANEL */}
+      {showPanelModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowPanelModal(false)}
+              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="space-y-1 mb-6">
+              <h3 className="font-display font-extrabold text-lg text-white">Demande de Panel Revendeur</h3>
+              <p className="text-gray-400 text-xs">Créez votre propre panel IPTV autonome pour gérer vos clients.</p>
+            </div>
+
+            <form onSubmit={handlePanelRequestSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Serveur Panel IPTV</label>
+                <select
+                  value={panelServer}
+                  onChange={(e) => setPanelServer(e.target.value as SubscriptionServer)}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="Dino">Dino OTT</option>
+                  <option value="8K">8K OTT</option>
+                  <option value="V12">V12 OTT</option>
+                  <option value="Golden OTT">Golden OTT</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Nombre de codes (Minimum 10)</label>
+                <input
+                  type="number"
+                  min="10"
+                  required
+                  value={panelCodesCount}
+                  onChange={(e) => setPanelCodesCount(Number(e.target.value))}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">Conformément aux règles de revente, les panels nécessitent un achat initial de minimum 10 codes d'activation.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Note ou Message Optionnel</label>
+                <textarea
+                  placeholder="Informations supplémentaires pour l'admin..."
+                  value={panelNotes}
+                  onChange={(e) => setPanelNotes(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 h-20 resize-none"
+                />
+              </div>
+
+              {actionError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-[10px] font-semibold">
+                  {actionError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-black text-xs rounded-xl shadow-lg shadow-amber-600/10 transition-all cursor-pointer"
+              >
+                {loading ? "Traitement..." : "Soumettre la Demande de Panel"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
 
       {/* MODAL 1: NEW ACTIVATION */}
