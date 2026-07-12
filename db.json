@@ -1,0 +1,358 @@
+{
+  "products": [
+    {
+      "id": "dino",
+      "name": "Dino IPTV",
+      "type": "iptv",
+      "categoryId": "cat-iptv",
+      "priceRetail": 4900,
+      "priceWholesale": 4200,
+      "description": "Le serveur incontournable pour les foyers algériens. Excellent rapport qualité/prix avec toutes les chaînes françaises, arabes, beIN Sports, et Canal+.",
+      "features": [
+        "Plus de 12,000 chaînes Live",
+        "Qualité FHD / HD / SD stable",
+        "VOD Films & Séries incluses (Mises à jour)",
+        "Chaînes Algériennes et Arabes complètes",
+        "Idéal pour connexions moyennes (à partir de 8 Mbps)"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=300",
+      "imageUrl2": "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=300",
+      "isPopular": false
+    },
+    {
+      "id": "8k",
+      "name": "8K Premium IPTV",
+      "type": "iptv",
+      "categoryId": "cat-iptv",
+      "priceRetail": 7500,
+      "priceWholesale": 6800,
+      "description": "Le serveur ultime pour les connexions ultra-rapides (Fibre/ADSL 20M+). Bitrate extrêmement élevé, latence minimale, idéal pour les grands matchs en direct.",
+      "features": [
+        "Chaînes sportives en 50 FPS (sans saccades)",
+        "Qualité Ultra HD (4K authentique)",
+        "Système anti-buffering de pointe",
+        "Assistance VIP et serveurs de secours",
+        "Recommandé pour Smart TV haut de gamme"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1461151304267-38535e780c79?auto=format&fit=crop&q=80&w=300",
+      "imageUrl2": "https://images.unsplash.com/photo-1585647347483-22b66260dfff?auto=format&fit=crop&q=80&w=300",
+      "isPopular": true
+    },
+    {
+      "id": "v12",
+      "name": "V12 IPTV Pro",
+      "type": "iptv",
+      "categoryId": "cat-iptv",
+      "priceRetail": 5000,
+      "priceWholesale": 4300,
+      "description": "Un serveur très populaire en Algérie réputé pour sa rapidité de zapping et son immense catalogue de films et séries en français et arabe.",
+      "features": [
+        "Zapping ultra-rapide (< 1 seconde)",
+        "VOD gigantesque (Netflix, Disney, Amazon Prime clones)",
+        "Multi-langues audio et sous-titres",
+        "Compatible tous boîtiers et applications",
+        "Support technique 24/7"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1585647347483-22b66260dfff?auto=format&fit=crop&q=80&w=300",
+      "imageUrl2": "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=300",
+      "isPopular": false
+    },
+    {
+      "id": "golden-ott",
+      "name": "Golden OTT IPTV",
+      "type": "iptv",
+      "categoryId": "cat-iptv",
+      "priceRetail": 7000,
+      "priceWholesale": 6200,
+      "description": "Le serveur haut de gamme par excellence. Très stable lors des grands événements sportifs avec un panel de chaînes internationales unique.",
+      "features": [
+        "Stabilité absolue pendant la Coupe du Monde / Ligue des Champions",
+        "Chaînes VIP et d'autres pays d'Europe",
+        "Espace VOD premium en qualité Blu-ray",
+        "Replay de 7 jours sur les chaînes majeures",
+        "Fichiers M3U, codes Xtream et portail MAG"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&q=80&w=300",
+      "imageUrl2": "https://images.unsplash.com/photo-1461151304267-38535e780c79?auto=format&fit=crop&q=80&w=300",
+      "isPopular": false
+    },
+    {
+      "id": "mibox-s",
+      "name": "Xiaomi Mi Box S 2nd Gen 4K",
+      "type": "device",
+      "categoryId": "cat-device",
+      "priceRetail": 9500,
+      "priceWholesale": 8900,
+      "description": "La box Android officielle certifiée par Google et Netflix. Transforme n'importe quelle télévision en Smart TV ultra performante.",
+      "features": [
+        "Système d'exploitation Google TV",
+        "Résolution 4K Ultra HD & Dolby Vision",
+        "2 Go RAM + 8 Go Stockage",
+        "Télécommande vocale avec Google Assistant",
+        "Idéal pour installer les applications IPTV"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&q=80&w=300",
+      "imageUrl2": "https://images.unsplash.com/photo-1605464315542-bda3e2f4e605?auto=format&fit=crop&q=80&w=300",
+      "isPopular": true
+    },
+    {
+      "id": "firestick-4k",
+      "name": "Amazon Fire TV Stick 4K",
+      "type": "device",
+      "categoryId": "cat-device",
+      "priceRetail": 11000,
+      "priceWholesale": 10200,
+      "description": "La clé de streaming d'Amazon compacte et extrêmement fluide. Profitez d'une rapidité d'affichage exceptionnelle.",
+      "features": [
+        "Format clé HDMI discret",
+        "Processeur ultra-rapide optimisé IPTV",
+        "Compatible Wi-Fi 6 pour moins de saccades",
+        "Télécommande avec boutons de raccourcis",
+        "Téléchargement d'applications tiers facile (Downloader)"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&q=80&w=300",
+      "imageUrl2": "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&q=80&w=300",
+      "isPopular": false
+    },
+    {
+      "id": "carte-adsl-500",
+      "name": "Carte ADSL Idoom 500 DA",
+      "type": "adsl",
+      "categoryId": "cat-adsl",
+      "priceRetail": 500,
+      "priceWholesale": 480,
+      "description": "Recharge internet haut débit Algérie Télécom Idoom ADSL/Fibre. Obtenez votre code de recharge instantanément après validation par l'administrateur.",
+      "features": [
+        "Compatible ADSL / VDSL / Fibre Idoom",
+        "Valeur de recharge : 500 DA",
+        "Livraison ultra rapide du code secret (5 minutes)",
+        "Recharge par téléphone ou site officiel Algérie Télécom"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1563013544-824ae1d704d3?auto=format&fit=crop&q=80&w=300",
+      "imageUrl2": "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=300",
+      "isPopular": false
+    },
+    {
+      "id": "carte-adsl-1000",
+      "name": "Carte ADSL Idoom 1000 DA",
+      "type": "adsl",
+      "categoryId": "cat-adsl",
+      "priceRetail": 1000,
+      "priceWholesale": 950,
+      "description": "Recharge internet haut débit Algérie Télécom Idoom ADSL/Fibre. Augmentez votre volume et prolongez votre abonnement en quelques minutes.",
+      "features": [
+        "Compatible ADSL / VDSL / Fibre Idoom",
+        "Valeur de recharge : 1000 DA",
+        "Code secret envoyé directement par SMS/Email",
+        "Aucun frais supplémentaire"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1563013544-824ae1d704d3?auto=format&fit=crop&q=80&w=300",
+      "imageUrl2": "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=300",
+      "isPopular": true
+    },
+    {
+      "id": "carte-adsl-2000",
+      "name": "Carte ADSL Idoom 2000 DA",
+      "type": "adsl",
+      "categoryId": "cat-adsl",
+      "priceRetail": 2000,
+      "priceWholesale": 1900,
+      "description": "Idéal pour les recharges mensuelles Idoom ADSL/Fibre. Profitez d'une connexion continue sans coupure.",
+      "features": [
+        "Compatible ADSL / VDSL / Fibre Idoom",
+        "Valeur de recharge : 2000 DA",
+        "Support technique gratuit pour la recharge",
+        "Paiement simple via BaridiMob ou CCP"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1563013544-824ae1d704d3?auto=format&fit=crop&q=80&w=300",
+      "imageUrl2": "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=300",
+      "isPopular": false
+    }
+  ],
+  "wholesalers": [
+    {
+      "id": "w-dino-pro",
+      "username": "dino_pro",
+      "businessName": "Dino Pro Oran",
+      "phone": "0550123456",
+      "email": "dino.oran@gmail.com",
+      "status": "approved",
+      "creditBalance": 15400,
+      "createdAt": "2026-06-12T17:34:23.235Z"
+    },
+    {
+      "id": "w-kamal-sat",
+      "username": "kamal_sat",
+      "businessName": "Kamal Sat Alger",
+      "phone": "0661987654",
+      "email": "kamal.sat@yahoo.fr",
+      "status": "pending",
+      "creditBalance": 0,
+      "createdAt": "2026-07-12T17:34:23.235Z"
+    }
+  ],
+  "clients": [
+    {
+      "id": "c-1",
+      "wholesalerId": "w-dino-pro",
+      "clientName": "Mohamed Belkaid",
+      "server": "Dino",
+      "durationMonths": 12,
+      "pricePaid": 4200,
+      "activationDate": "2026-07-07T17:34:23.235Z",
+      "expirationDate": "2027-07-07T17:34:23.235Z",
+      "status": "active",
+      "notes": "Configuré sur Smart TV Samsung via SmartOne",
+      "credentials": {
+        "m3uUrl": "http://dino-server.xyz:8080/get.php?auth=demo1&pass=test1",
+        "xtreamUser": "demo1",
+        "xtreamPass": "test1",
+        "xtreamHost": "http://dino-server.xyz:8080"
+      }
+    }
+  ],
+  "orders": [
+    {
+      "id": "o-1",
+      "customerName": "Sofiane Yahiaoui",
+      "customerEmail": "sofiane.yah@gmail.com",
+      "customerPhone": "0770554433",
+      "productId": "mibox-s",
+      "productName": "Xiaomi Mi Box S 2nd Gen 4K",
+      "productType": "device",
+      "priceDA": 9500,
+      "paymentMethod": "baridimob",
+      "paymentDetails": "Virement BaridiMob RIP: 007999990022334455, ID trans: 450123",
+      "status": "pending",
+      "createdAt": "2026-07-11T17:34:23.235Z",
+      "deliveryStatus": "pending"
+    },
+    {
+      "id": "o-2",
+      "customerName": "Riad Mahrez",
+      "customerEmail": "riad.m@outlook.com",
+      "customerPhone": "0555221199",
+      "productId": "8k",
+      "productName": "8K Premium IPTV (12 Mois)",
+      "productType": "iptv",
+      "priceDA": 7500,
+      "paymentMethod": "card",
+      "paymentDetails": "Payé par Carte CIB / Dahabia",
+      "status": "completed",
+      "createdAt": "2026-07-09T17:34:23.235Z"
+    }
+  ],
+  "creditRequests": [
+    {
+      "id": "cr-1",
+      "wholesalerId": "w-dino-pro",
+      "wholesalerName": "Dino Pro Oran",
+      "amountDA": 20000,
+      "paymentMethod": "baridimob",
+      "receiptReference": "BaridiMob Trans #881290",
+      "status": "approved",
+      "createdAt": "2026-07-02T17:34:23.235Z"
+    },
+    {
+      "id": "cr-2",
+      "wholesalerId": "w-dino-pro",
+      "wholesalerName": "Dino Pro Oran",
+      "amountDA": 15000,
+      "paymentMethod": "ccp",
+      "receiptReference": "Mandat CCP #99120",
+      "status": "pending",
+      "createdAt": "2026-07-12T17:34:23.235Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "n-1",
+      "to": "fares200976@gmail.com",
+      "subject": "Nouveau grossiste inscrit : Kamal Sat Alger",
+      "body": "Le grossiste 'Kamal Sat Alger' (Kamal Sat Alger) s'est inscrit. Téléphone: 0661987654. Veuillez vérifier ses informations et approuver son compte.",
+      "sentAt": "2026-07-12T17:34:23.235Z",
+      "read": false,
+      "type": "new_wholesaler"
+    },
+    {
+      "id": "n-2",
+      "to": "fares200976@gmail.com",
+      "subject": "Nouvelle commande détail reçue : Xiaomi Mi Box S",
+      "body": "Client Sofiane Yahiaoui (0770554433) a commandé : Xiaomi Mi Box S 2nd Gen 4K. Mode de paiement: BaridiMob. Détails: Virement BaridiMob RIP: 007999990022334455, ID trans: 450123",
+      "sentAt": "2026-07-11T17:34:23.235Z",
+      "read": true,
+      "type": "new_order"
+    }
+  ],
+  "tutorials": [
+    {
+      "id": "tut-1",
+      "title": "Comment Installer Dino IPTV sur Smart TV (NetIPTV/SmartOne)",
+      "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "description": "Tutoriel pas-à-pas pour configurer votre abonnement Dino IPTV sur n'importe quelle Smart TV LG ou Samsung en utilisant l'application SmartOne ou NetIPTV.",
+      "category": "smart_tv",
+      "downloaderCode": "283749",
+      "createdAt": "2026-07-12T17:34:14.154Z"
+    },
+    {
+      "id": "tut-2",
+      "title": "Configuration de V12 IPTV sur Firestick via Downloader",
+      "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "description": "Utilisez l'application Downloader pour installer notre application officielle sur Firestick. Code Downloader AFTVnews fourni ci-dessous.",
+      "category": "firestick",
+      "downloaderCode": "719361",
+      "createdAt": "2026-07-12T17:34:14.154Z"
+    },
+    {
+      "id": "tut-3",
+      "title": "Installation sur Boîtier Android Box (Mi Box / Xiaomi)",
+      "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "description": "Comment configurer votre abonnement en installant l'application IPTV Smarters Pro sur votre Xiaomi Mi Box S.",
+      "category": "android",
+      "downloaderCode": "948231",
+      "createdAt": "2026-07-12T17:34:14.154Z"
+    }
+  ],
+  "livreurs": [
+    {
+      "id": "liv-1",
+      "name": "Sofiane Livreur Alger",
+      "phone": "0550112233",
+      "wilaya": "Alger, Blida, Boumerdes",
+      "status": "active",
+      "createdAt": "2026-07-12T17:34:23.235Z"
+    },
+    {
+      "id": "liv-2",
+      "name": "Amine Livreur Oran",
+      "phone": "0661998877",
+      "wilaya": "Oran, Tlemcen, Mostaganem",
+      "status": "active",
+      "createdAt": "2026-07-12T17:34:23.235Z"
+    }
+  ],
+  "catalogCategories": [
+    {
+      "id": "cat-iptv",
+      "name": "Abonnements IPTV Premium",
+      "description": "Abonnements IPTV 12, 6 et 3 mois stables et rapides.",
+      "icon": "Tv",
+      "color": "indigo"
+    },
+    {
+      "id": "cat-device",
+      "name": "Boîtiers Android & Récepteurs",
+      "description": "Matériel, box TV Android, clés Fire Stick et accessoires.",
+      "icon": "Box",
+      "color": "emerald"
+    },
+    {
+      "id": "cat-adsl",
+      "name": "Recharges ADSL & Fibre",
+      "description": "Codes et cartes de recharge Idoom Algérie Télécom.",
+      "icon": "Key",
+      "color": "amber"
+    }
+  ],
+  "panelRequests": []
+}
