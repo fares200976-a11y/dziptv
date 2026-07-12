@@ -20,39 +20,8 @@ export default function Header({
   isAdminUnlocked,
   setAdminUnlocked
 }: HeaderProps) {
-  const [showSecretModal, setShowSecretModal] = useState(false);
-  const [adminUsername, setAdminUsername] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [secretError, setSecretError] = useState("");
-  const [unlockSuccess, setUnlockSuccess] = useState(false);
-
   const handleLogoClick = () => {
-    if (isAdminUnlocked) {
-      setView("admin");
-    } else {
-      setShowSecretModal(true);
-      setAdminUsername("");
-      setAdminPassword("");
-      setSecretError("");
-      setUnlockSuccess(false);
-    }
-  };
-
-  const handleSecretSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const isCredentials = adminUsername.trim().toLowerCase() === "fares2026" && adminPassword === "Fares14081976";
-
-    if (isCredentials) {
-      setUnlockSuccess(true);
-      setTimeout(() => {
-        setAdminUnlocked(true);
-        localStorage.setItem("adminUnlocked", "true");
-        setShowSecretModal(false);
-        setView("admin");
-      }, 1000);
-    } else {
-      setSecretError("Utilisateur ou mot de passe incorrect.");
-    }
+    setView("retail");
   };
 
   return (
@@ -125,26 +94,6 @@ export default function Header({
               <span>Espace Grossiste</span>
             </button>
 
-            {/* Admin Panel button - visible ONLY if unlocked */}
-            {isAdminUnlocked && (
-              <button
-                id="nav-admin"
-                onClick={() => setView("admin")}
-                className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  currentView === "admin"
-                    ? "bg-amber-600/10 text-amber-400 border border-amber-500/20 font-semibold"
-                    : currentView === "retail"
-                    ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                    : "text-gray-400 hover:text-white hover:bg-gray-800/40"
-                }`}
-              >
-                <Settings className="h-4 w-4" />
-                <span>Admin Panel</span>
-                <span className="hidden sm:inline-block px-1 py-0.2 text-[8px] bg-amber-500 text-black rounded font-bold uppercase tracking-widest scale-90">
-                  Live
-                </span>
-              </button>
-            )}
           </nav>
 
           {/* Right Session Status */}
@@ -194,74 +143,6 @@ export default function Header({
         </div>
       </div>
 
-      {/* Secret Admin Unlock Modal */}
-      {showSecretModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm p-6 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl space-y-4">
-            <div className="text-center space-y-1">
-              <div className="inline-flex p-3 bg-amber-500/10 text-amber-400 rounded-full mb-2">
-                <Lock className="h-6 w-6" />
-              </div>
-              <h3 className="font-display font-bold text-lg text-white">KURTAL IPTV Administrateur</h3>
-              <p className="text-xs text-gray-400">
-                Entrez le code secret sur le logo pour déverrouiller l'accès.
-              </p>
-            </div>
-
-            <form onSubmit={handleSecretSubmit} className="space-y-4">
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1">Nom d'utilisateur</label>
-                  <input
-                    type="text"
-                    placeholder="Nom d'utilisateur"
-                    value={adminUsername}
-                    onChange={(e) => setAdminUsername(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm bg-gray-950 border border-gray-800 rounded-lg focus:outline-none focus:border-amber-500 text-white placeholder-gray-700 font-sans"
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1">Mot de passe</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••••••"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm bg-gray-950 border border-gray-800 rounded-lg focus:outline-none focus:border-amber-500 text-white placeholder-gray-700 font-sans"
-                  />
-                </div>
-                {secretError && (
-                  <p className="mt-1.5 text-xs text-red-400 text-center">{secretError}</p>
-                )}
-              </div>
-
-              {unlockSuccess ? (
-                <div className="flex items-center justify-center space-x-2 py-2.5 text-green-400 bg-green-500/10 rounded-lg border border-green-500/20 text-xs font-semibold">
-                  <Check className="h-4 w-4" />
-                  <span>Accès Déverrouillé !</span>
-                </div>
-              ) : (
-                <div className="flex space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowSecretModal(false)}
-                    className="flex-1 py-2 text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors font-medium"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 text-xs bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg transition-colors shadow-lg shadow-amber-500/10"
-                  >
-                    Valider
-                  </button>
-                </div>
-              )}
-            </form>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

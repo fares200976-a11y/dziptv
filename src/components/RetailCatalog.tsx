@@ -460,13 +460,20 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 
                 {/* Product Badge */}
                 <span className={`absolute top-4 left-4 px-2.5 py-1 text-[10px] uppercase font-bold rounded ${
-                  product.type === "iptv" 
+                  product.type === "iptv" || product.type === "code iptv"
                     ? "bg-blue-50 text-blue-600 border border-blue-200" 
                     : product.type === "adsl"
                     ? "bg-amber-50 text-amber-700 border border-amber-200"
                     : "bg-purple-50 text-purple-600 border border-purple-200"
                 }`}>
-                  {product.type === "iptv" ? "Abonnement" : product.type === "adsl" ? "Recharge ADSL" : "Matériel"}
+                  {product.type === "iptv" || product.type === "code iptv"
+                    ? "Code IPTV" 
+                    : product.type === "adsl" 
+                    ? "Recharge ADSL" 
+                    : product.type === "device" || product.type === "demodulateur"
+                    ? "Matériel"
+                    : product.type
+                  }
                 </span>
 
                 {/* Popular Badge */}
@@ -832,13 +839,13 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                         <span>Paiement à la livraison (Yalidine Express)</span>
                       </div>
                       <p className="leading-relaxed text-slate-600">
-                        {selectedProduct.type === "device" ? (
+                        {selectedProduct.type === "device" || selectedProduct.type === "demodulateur" || selectedProduct.type === "televiseur" ? (
                           <>
-                            Pour l'achat du boîtier <strong>{selectedProduct.name}</strong>, l'envoi se fera via <strong className="text-slate-900">Yalidine Express</strong>. Vous paierez en espèces à la livraison. Notre agent vous appellera pour confirmer l'adresse de livraison (Wilaya/Commune).
+                            Pour l'achat du produit physique <strong>{selectedProduct.name}</strong>, l'envoi se fera via <strong className="text-slate-900">Yalidine Express</strong>. Vous paierez en espèces à la livraison. Notre agent vous appellera pour confirmer l'adresse de livraison (Wilaya/Commune).
                           </>
                         ) : (
                           <>
-                            Pour l'abonnement IPTV, nous pouvons nous rencontrer ou vous appeler pour valider votre code et recevoir le paiement. Nous vous contacterons sous peu pour fixer les modalités.
+                            Pour l'abonnement IPTV ou le service <strong>{selectedProduct.name}</strong>, nous pouvons nous rencontrer ou vous appeler pour valider votre code et recevoir le paiement. Nous vous contacterons sous peu pour fixer les modalités.
                           </>
                         )}
                       </p>

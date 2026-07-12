@@ -492,12 +492,15 @@ app.get("/api/catalog-categories", (req, res) => {
 });
 
 app.post("/api/admin/catalog-categories", (req, res) => {
-  const { name } = req.body;
+  const { name, description, icon, color } = req.body;
   if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
   const db = readDB();
   const newCat: CatalogCategory = {
     id: "cat-" + Math.random().toString(36).substr(2, 9),
-    name
+    name,
+    description: description || "",
+    icon: icon || "Tv",
+    color: color || "indigo"
   };
   if (!db.catalogCategories) db.catalogCategories = [];
   db.catalogCategories.push(newCat);
@@ -507,12 +510,15 @@ app.post("/api/admin/catalog-categories", (req, res) => {
 
 app.put("/api/admin/catalog-categories/:id", (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { name, description, icon, color } = req.body;
   if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
   const db = readDB();
   const cat = db.catalogCategories?.find(c => c.id === id);
   if (!cat) return res.status(404).json({ error: "Catalogue introuvable." });
   cat.name = name;
+  if (description !== undefined) cat.description = description;
+  if (icon !== undefined) cat.icon = icon;
+  if (color !== undefined) cat.color = color;
   writeDB(db);
   res.json(cat);
 });
@@ -637,9 +643,10 @@ app.post("/api/auth/wholesaler/register", (req, res) => {
       return res.status(400).json({ error: "Ce nom d'utilisateur ou cet email est déjà enregistré." });
     }
 
-    const newWholesaler: Wholesaler = {
+    const newWholesaler: any = {
       id: "w-" + Math.random().toString(36).substr(2, 9),
       username,
+      password, // Save password
       businessName,
       phone,
       email,
@@ -697,6 +704,11 @@ app.post("/api/auth/wholesaler/login", (req, res) => {
 
     if (!wholesaler) {
       return res.status(401).json({ error: "Identifiants invalides." });
+    }
+
+    // Check password if it is set on the wholesaler
+    if (wholesaler.password && wholesaler.password !== password) {
+      return res.status(401).json({ error: "Mot de passe incorrect." });
     }
 
     if (wholesaler.status === "pending") {
@@ -1060,10 +1072,10 @@ app.get("/api/admin/wholesalers", (req, res) => {
   res.json(db.wholesalers);
 });
 
-// Update Wholesaler status / balance by Admin
+// Update Wholesaler status / balance / credentials by Admin
 app.put("/api/admin/wholesalers/:id", (req, res) => {
   const { id } = req.params;
-  const { status, creditBalance } = req.body;
+  const { status, creditBalance, username, password, businessName, email, phone } = req.body;
 
   const db = readDB();
   const wholesalerIndex = db.wholesalers.findIndex(w => w.id === id);
@@ -1075,6 +1087,11 @@ app.put("/api/admin/wholesalers/:id", (req, res) => {
   const updated = { ...db.wholesalers[wholesalerIndex] };
   if (status !== undefined) updated.status = status;
   if (creditBalance !== undefined) updated.creditBalance = Number(creditBalance);
+  if (username !== undefined) updated.username = username;
+  if (password !== undefined) updated.password = password;
+  if (businessName !== undefined) updated.businessName = businessName;
+  if (email !== undefined) updated.email = email;
+  if (phone !== undefined) updated.phone = phone;
 
   db.wholesalers[wholesalerIndex] = updated;
   writeDB(db);
@@ -1412,7 +1429,7 @@ app.delete(["/api/admin/products/:id", "/api/products/:id"], (req, res) => {
 
 // --- DIRECT WHOLESALER CREATION BY ADMIN ---
 app.post("/api/admin/wholesalers", (req, res) => {
-  const { username, businessName, phone, email, creditBalance } = req.body;
+  const { username, password, businessName, phone, email, creditBalance } = req.body;
   if (!username || !businessName || !phone || !email) {
     return res.status(400).json({ error: "Tous les champs sont requis." });
   }
@@ -1423,9 +1440,10 @@ app.post("/api/admin/wholesalers", (req, res) => {
   if (exists) {
     return res.status(400).json({ error: "Ce nom d'utilisateur ou email existe déjà." });
   }
-  const newWholesaler: Wholesaler = {
+  const newWholesaler: any = {
     id: "w-" + Math.random().toString(36).substr(2, 9),
     username,
+    password: password || "123456", // Default password if empty
     businessName,
     phone,
     email,

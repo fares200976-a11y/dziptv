@@ -27,7 +27,9 @@ import {
   LogOut,
   Truck,
   Key,
-  FolderOpen
+  FolderOpen,
+  Box,
+  Zap
 } from "lucide-react";
 
 interface AdminSimulatorProps {
@@ -47,8 +49,8 @@ interface AdminSimulatorProps {
   onUpdateOrderStatus: (id: string, status: "completed" | "cancelled") => Promise<void>;
   onProcessCreditRequest: (id: string, action: "approve" | "reject") => Promise<void>;
   onProcessPanelRequest?: (id: string, status: "approved" | "rejected", notes?: string) => Promise<void>;
-  onAddCategory?: (name: string) => Promise<void>;
-  onUpdateCategory?: (id: string, name: string) => Promise<void>;
+  onAddCategory?: (payload: { name: string; description?: string; icon?: string; color?: string }) => Promise<void>;
+  onUpdateCategory?: (id: string, payload: { name: string; description?: string; icon?: string; color?: string }) => Promise<void>;
   onDeleteCategory?: (id: string) => Promise<void>;
   onMarkNotificationRead: (id: string) => Promise<void>;
   onDeleteNotification: (id: string) => Promise<void>;
@@ -56,6 +58,10 @@ interface AdminSimulatorProps {
   refreshAllData: () => void;
   onLogoutAdmin?: () => void;
 }
+
+const isStandardType = (t: string) => {
+  return ["code iptv", "televiseur", "application", "demodulateur", "code sat"].includes(t);
+};
 
 export default function AdminSimulator({
   stats,
@@ -89,6 +95,10 @@ export default function AdminSimulator({
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [newCategoryIcon, setNewCategoryIcon] = useState("Tv");
+  const [newCategoryColor, setNewCategoryColor] = useState("indigo");
+  const [editingCategory, setEditingCategory] = useState<CatalogCategory | null>(null);
   const [panelActionNotes, setPanelActionNotes] = useState<Record<string, string>>({});
 
   // Deliverers (Livreurs) state and CRUD
@@ -266,7 +276,7 @@ export default function AdminSimulator({
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [productForm, setProductForm] = useState({
     name: "",
-    type: "iptv" as "iptv" | "device" | "adsl",
+    type: "code iptv" as string,
     priceRetail: 0,
     priceWholesale: 0,
     description: "",
@@ -289,6 +299,7 @@ export default function AdminSimulator({
 
   // Wholesaler Direct Form States
   const [showAddWholesaler, setShowAddWholesaler] = useState(false);
+  const [editingWholesaler, setEditingWholesaler] = useState<any | null>(null);
   const [wholesalerForm, setWholesalerForm] = useState({
     username: "",
     password: "",
@@ -344,6 +355,39 @@ export default function AdminSimulator({
     }
   };
 
+  // Edit Wholesaler Credentials & Profile Submit
+  const handleEditWholesalerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWholesaler) return;
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await fetch(`/api/admin/wholesalers/${editingWholesaler.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: editingWholesaler.username,
+          password: editingWholesaler.password || "",
+          businessName: editingWholesaler.businessName,
+          email: editingWholesaler.email,
+          phone: editingWholesaler.phone,
+          creditBalance: Number(editingWholesaler.creditBalance),
+          status: editingWholesaler.status
+        })
+      });
+      if (res.ok) {
+        setSuccessMessage(`Compte revendeur "${editingWholesaler.businessName}" mis à jour avec succès !`);
+        setEditingWholesaler(null);
+        refreshAllData();
+      } else {
+        const data = await res.json();
+        setErrorMessage(data.error || "Une erreur est survenue lors de la mise à jour.");
+      }
+    } catch (err: any) {
+      setErrorMessage("Erreur réseau: " + err.message);
+    }
+  };
+
   // Product CRUD Submits
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean, field: "imageUrl" | "imageUrl2") => {
     const file = e.target.files?.[0];
@@ -379,7 +423,7 @@ export default function AdminSimulator({
         setSuccessMessage(`Produit "${productForm.name}" ajouté avec succès !`);
         setProductForm({
           name: "",
-          type: "iptv",
+          type: "code iptv",
           priceRetail: 0,
           priceWholesale: 0,
           description: "",
@@ -925,8 +969,9 @@ export default function AdminSimulator({
                       <tr key={wholesaler.id} className="hover:bg-gray-900/10">
                         <td className="p-3 font-bold text-white">{wholesaler.businessName}</td>
                         <td className="p-3">
-                          <span className="font-mono text-gray-300 block">{wholesaler.username}</span>
-                          <span className="text-gray-500">{wholesaler.email}</span>
+                          <span className="font-mono text-gray-300 block">User: {wholesaler.username}</span>
+                          <span className="text-gray-500 block">{wholesaler.email}</span>
+                          <span className="text-amber-400 font-mono text-[10px] block">MDP: {wholesaler.password || "123456"}</span>
                         </td>
                         <td className="p-3 font-mono">{wholesaler.phone}</td>
                         <td className="p-3 text-gray-400">{new Date(wholesaler.createdAt).toLocaleDateString("fr-FR")}</td>
@@ -1009,6 +1054,16 @@ export default function AdminSimulator({
                                 Valider
                               </button>
                             )}
+
+                            <button
+                              type="button"
+                              onClick={() => setEditingWholesaler({ ...wholesaler, password: wholesaler.password || "123456" })}
+                              className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-100 font-bold text-[9px] rounded cursor-pointer flex items-center gap-1"
+                              title="Modifier les identifiants et mot de passe"
+                            >
+                              <Edit2 className="h-2.5 w-2.5" />
+                              <span>Gérer</span>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1016,6 +1071,128 @@ export default function AdminSimulator({
                   </tbody>
                 </table>
               </div>
+
+              {/* Modal de modification Grossiste */}
+              {editingWholesaler && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                  <div className="w-full max-w-lg p-6 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl space-y-4 text-left">
+                    <div className="flex justify-between items-center border-b border-gray-800 pb-3">
+                      <h3 className="font-display font-bold text-base text-white flex items-center gap-2">
+                        <Users className="h-5 w-5 text-amber-500" />
+                        <span>Gérer le Revendeur : {editingWholesaler.businessName}</span>
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setEditingWholesaler(null)}
+                        className="p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleEditWholesalerSubmit} className="space-y-4 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-gray-400 mb-1.5 font-bold font-sans">Nom du Commerce</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingWholesaler.businessName}
+                            onChange={e => setEditingWholesaler({ ...editingWholesaler, businessName: e.target.value })}
+                            className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-white text-xs focus:border-amber-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-400 mb-1.5 font-bold font-sans">Nom d'utilisateur (Username)</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingWholesaler.username}
+                            onChange={e => setEditingWholesaler({ ...editingWholesaler, username: e.target.value })}
+                            className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-white text-xs focus:border-amber-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-amber-400 mb-1.5 font-bold font-sans">Mot de Passe (Password)</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Entrez un nouveau mot de passe"
+                            value={editingWholesaler.password || ""}
+                            onChange={e => setEditingWholesaler({ ...editingWholesaler, password: e.target.value })}
+                            className="w-full bg-black border border-amber-500/30 rounded-xl px-3 py-2 text-amber-400 font-mono font-bold text-xs focus:border-amber-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-400 mb-1.5 font-bold font-sans">Téléphone WhatsApp</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingWholesaler.phone}
+                            onChange={e => setEditingWholesaler({ ...editingWholesaler, phone: e.target.value })}
+                            className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-white text-xs focus:border-amber-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-gray-400 mb-1.5 font-bold font-sans">Email</label>
+                          <input
+                            type="email"
+                            required
+                            value={editingWholesaler.email}
+                            onChange={e => setEditingWholesaler({ ...editingWholesaler, email: e.target.value })}
+                            className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-white text-xs focus:border-amber-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-400 mb-1.5 font-bold font-sans">Solde de Crédit (DA)</label>
+                          <input
+                            type="number"
+                            required
+                            value={editingWholesaler.creditBalance}
+                            onChange={e => setEditingWholesaler({ ...editingWholesaler, creditBalance: parseInt(e.target.value) || 0 })}
+                            className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-white text-xs focus:border-amber-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-gray-400 mb-1.5 font-bold font-sans">Statut du Compte</label>
+                        <select
+                          value={editingWholesaler.status}
+                          onChange={e => setEditingWholesaler({ ...editingWholesaler, status: e.target.value as any })}
+                          className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-white text-xs focus:border-amber-500 focus:outline-none"
+                        >
+                          <option value="approved">Approuvé (Actif)</option>
+                          <option value="pending">En attente</option>
+                          <option value="suspended">Suspendu (Inactif)</option>
+                        </select>
+                      </div>
+
+                      <div className="flex space-x-2 pt-3 border-t border-gray-800">
+                        <button
+                          type="button"
+                          onClick={() => setEditingWholesaler(null)}
+                          className="flex-1 py-2.5 text-xs bg-gray-800 hover:bg-gray-750 text-gray-300 rounded-xl transition-colors font-semibold cursor-pointer text-center"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex-1 py-2.5 text-xs bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-xl transition-colors shadow-lg shadow-amber-500/10 cursor-pointer text-center"
+                        >
+                          Enregistrer les Modifications
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1244,16 +1421,38 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div>
-                      <label className="block text-gray-400 mb-1">Type</label>
+                      <label className="block text-gray-400 mb-1">Type de Produit</label>
                       <select
-                        value={productForm.type}
-                        onChange={e => setProductForm({ ...productForm, type: e.target.value as any })}
+                        value={isStandardType(productForm.type) ? productForm.type : "autre"}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === "autre") {
+                            setProductForm({ ...productForm, type: "" });
+                          } else {
+                            setProductForm({ ...productForm, type: val });
+                          }
+                        }}
                         className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white"
                       >
-                        <option value="iptv">IPTV (Abonnement)</option>
-                        <option value="device">Device (Box Android / Firestick)</option>
-                        <option value="adsl">Carte ADSL Idoom (Recharge)</option>
+                        <option value="televiseur">Téléviseur</option>
+                        <option value="application">Application</option>
+                        <option value="demodulateur">Démodulateur</option>
+                        <option value="code sat">Code Sat</option>
+                        <option value="code iptv">Code IPTV</option>
+                        <option value="autre">Autre (Saisir un type personnalisé...)</option>
                       </select>
+                      {!isStandardType(productForm.type) && (
+                        <div className="mt-2 animate-in fade-in duration-200">
+                          <input
+                            type="text"
+                            placeholder="Saisissez un type de produit personnalisé..."
+                            value={productForm.type}
+                            onChange={e => setProductForm({ ...productForm, type: e.target.value })}
+                            className="w-full bg-black border border-indigo-500/50 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                            required
+                          />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-gray-400 mb-1">Catégorie du Catalogue</label>
@@ -1375,16 +1574,38 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div>
-                      <label className="block text-gray-400 mb-1">Type</label>
+                      <label className="block text-gray-400 mb-1">Type de Produit</label>
                       <select
-                        value={editingProduct.type}
-                        onChange={e => setEditingProduct({ ...editingProduct, type: e.target.value as any })}
+                        value={isStandardType(editingProduct.type) ? editingProduct.type : "autre"}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === "autre") {
+                            setEditingProduct({ ...editingProduct, type: "" });
+                          } else {
+                            setEditingProduct({ ...editingProduct, type: val });
+                          }
+                        }}
                         className="w-full bg-black border border-gray-800 rounded-lg px-3 py-1.5 text-white"
                       >
-                        <option value="iptv">IPTV</option>
-                        <option value="device">Device / Android Box</option>
-                        <option value="adsl">Carte ADSL Idoom</option>
+                        <option value="televiseur">Téléviseur</option>
+                        <option value="application">Application</option>
+                        <option value="demodulateur">Démodulateur</option>
+                        <option value="code sat">Code Sat</option>
+                        <option value="code iptv">Code IPTV</option>
+                        <option value="autre">Autre (Saisir un type personnalisé...)</option>
                       </select>
+                      {!isStandardType(editingProduct.type) && (
+                        <div className="mt-2 animate-in fade-in duration-200">
+                          <input
+                            type="text"
+                            placeholder="Saisissez un type de produit personnalisé..."
+                            value={editingProduct.type}
+                            onChange={e => setEditingProduct({ ...editingProduct, type: e.target.value })}
+                            className="w-full bg-black border border-amber-500/50 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-amber-500"
+                            required
+                          />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-gray-400 mb-1">Catégorie du Catalogue</label>
@@ -2266,90 +2487,407 @@ export default function AdminSimulator({
 
           {/* TAB 10: CATALOG CATEGORIES MANAGEMENT */}
           {activeTab === "categories" && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="flex justify-between items-center">
+            <div className="space-y-6 animate-in fade-in duration-300 text-left">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
                   <h3 className="font-display font-black text-lg text-white">Gestion des Catégories du Catalogue</h3>
-                  <p className="text-xs text-gray-400 mt-1">Créez et supprimez des catégories personnalisées pour structurer votre catalogue.</p>
+                  <p className="text-xs text-gray-400 mt-1">Créez des catégories personnalisées pour votre boutique avec icône, couleur et description.</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Form to Add Category */}
-                <div className="md:col-span-1 p-5 bg-gray-900/60 rounded-2xl border border-gray-800 space-y-4">
-                  <h4 className="font-bold text-white uppercase text-[10px] tracking-wider text-indigo-400">➕ Nouvelle Catégorie</h4>
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-gray-300">Nom de la catégorie</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Abonnements VIP, Box Android, ADSL..."
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    />
+              {/* Ready-to-use Predefined Templates (Grand Choix) */}
+              <div className="p-5 bg-gradient-to-r from-indigo-950/40 via-slate-900/40 to-indigo-950/20 rounded-2xl border border-indigo-500/15">
+                <h4 className="font-bold text-indigo-400 uppercase text-[10px] tracking-wider mb-3 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                  <span>Grand Choix de Catégories Prêtes à l'Emploi (Ajout en 1 clic)</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[
+                    { name: "Abonnements IPTV", description: "Abonnements Premium 12 mois, 6 mois et 3 mois.", icon: "Tv", color: "indigo" },
+                    { name: "Codes de Recharge", description: "Codes de recharge et d'activation instantanés.", icon: "Key", color: "amber" },
+                    { name: "Boîtiers & Box Android", description: "Matériel, clés Fire TV Stick et accessoires.", icon: "Box", color: "emerald" },
+                    { name: "Serveurs Satellite", description: "Décryptage satellite (Cccam, G-Share, Orca).", icon: "Flame", color: "rose" },
+                    { name: "Applications & APKs", description: "Lecteurs officiels Premium et APK de visionnage.", icon: "Sparkles", color: "blue" },
+                    { name: "Abonnement VIP Premium", description: "Haute performance 4K sans latence avec serveurs dédiés.", icon: "Zap", color: "purple" }
+                  ].map((tpl) => {
+                    // check color styles
+                    const isAmber = tpl.color === "amber";
+                    const isEmerald = tpl.color === "emerald";
+                    const isBlue = tpl.color === "blue";
+                    const isRose = tpl.color === "rose";
+                    const isPurple = tpl.color === "purple";
+                    const colorStyles = 
+                      isAmber ? { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/20" } :
+                      isEmerald ? { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" } :
+                      isBlue ? { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/20" } :
+                      isRose ? { bg: "bg-rose-500/10", text: "text-rose-400", border: "border-rose-500/20" } :
+                      isPurple ? { bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/20" } :
+                      { bg: "bg-indigo-500/10", text: "text-indigo-400", border: "border-indigo-500/20" };
+
+                    return (
+                      <button
+                        key={tpl.name}
+                        type="button"
+                        onClick={async () => {
+                          if (onAddCategory) {
+                            await onAddCategory({
+                              name: tpl.name,
+                              description: tpl.description,
+                              icon: tpl.icon,
+                              color: tpl.color
+                            });
+                          }
+                        }}
+                        className="p-3 bg-black/40 hover:bg-black/70 rounded-xl border border-gray-800 hover:border-indigo-500/30 text-left transition-all cursor-pointer flex items-start gap-3 group"
+                      >
+                        <div className={`p-2 rounded-lg ${colorStyles.bg} ${colorStyles.text} ${colorStyles.border} border group-hover:scale-105 transition-transform shrink-0`}>
+                          {tpl.icon === "Key" && <Key className="h-4 w-4" />}
+                          {tpl.icon === "Box" && <Box className="h-4 w-4" />}
+                          {tpl.icon === "Flame" && <Flame className="h-4 w-4" />}
+                          {tpl.icon === "Sparkles" && <Sparkles className="h-4 w-4" />}
+                          {tpl.icon === "Zap" && <Zap className="h-4 w-4" />}
+                          {tpl.icon === "Tv" && <Tv className="h-4 w-4" />}
+                        </div>
+                        <div className="space-y-1 overflow-hidden">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-white text-xs group-hover:text-indigo-400 transition-colors">{tpl.name}</span>
+                            <span className="text-[8px] bg-indigo-500/10 text-indigo-400 px-1 rounded uppercase font-semibold">Pret</span>
+                          </div>
+                          <p className="text-[10px] text-gray-500 line-clamp-2 leading-relaxed">{tpl.description}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Advanced Form to Add Category */}
+                <div className="lg:col-span-1 p-5 bg-gray-900/60 rounded-2xl border border-gray-800 space-y-4">
+                  <h4 className="font-bold text-white uppercase text-[10px] tracking-wider text-indigo-400">➕ Créer Catégorie sur-mesure</h4>
+                  
+                  <div className="space-y-3.5 text-xs">
+                    <div>
+                      <label className="block text-gray-400 mb-1 font-semibold">Nom de la catégorie</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Serveur 8K Premium"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder-gray-700"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-400 mb-1 font-semibold">Description courte</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Ex: Serveur haute définition idéal pour Smart TV..."
+                        value={newCategoryDescription}
+                        onChange={(e) => setNewCategoryDescription(e.target.value)}
+                        className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder-gray-700 resize-none"
+                      />
+                    </div>
+
+                    {/* Icon Selection */}
+                    <div>
+                      <label className="block text-gray-400 mb-1.5 font-semibold">Icône de la catégorie</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { val: "Tv", label: "Tv" },
+                          { val: "Key", label: "Clef" },
+                          { val: "Box", label: "Box" },
+                          { val: "Flame", label: "Feu" },
+                          { val: "Sparkles", label: "Nouv" },
+                          { val: "Zap", label: "Vip" },
+                          { val: "FolderOpen", label: "Doss" }
+                        ].map((item) => (
+                          <button
+                            key={item.val}
+                            type="button"
+                            onClick={() => setNewCategoryIcon(item.val)}
+                            className={`p-2 rounded-lg border flex flex-col items-center gap-1 cursor-pointer transition-colors ${
+                              newCategoryIcon === item.val
+                                ? "bg-indigo-600/20 border-indigo-500 text-indigo-400 font-bold"
+                                : "bg-black border-gray-800 hover:border-gray-700 text-gray-400"
+                            }`}
+                          >
+                            {item.val === "Tv" && <Tv className="h-4 w-4" />}
+                            {item.val === "Key" && <Key className="h-4 w-4" />}
+                            {item.val === "Box" && <Box className="h-4 w-4" />}
+                            {item.val === "Flame" && <Flame className="h-4 w-4" />}
+                            {item.val === "Sparkles" && <Sparkles className="h-4 w-4" />}
+                            {item.val === "Zap" && <Zap className="h-4 w-4" />}
+                            {item.val === "FolderOpen" && <FolderOpen className="h-4 w-4" />}
+                            <span className="text-[8px] truncate max-w-full">{item.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Color Accent Selection */}
+                    <div>
+                      <label className="block text-gray-400 mb-1.5 font-semibold">Couleur d'accentuation</label>
+                      <div className="flex gap-2">
+                        {[
+                          { val: "indigo", bg: "bg-indigo-500" },
+                          { val: "amber", bg: "bg-amber-500" },
+                          { val: "emerald", bg: "bg-emerald-500" },
+                          { val: "blue", bg: "bg-blue-500" },
+                          { val: "rose", bg: "bg-rose-500" },
+                          { val: "purple", bg: "bg-purple-500" }
+                        ].map((col) => (
+                          <button
+                            key={col.val}
+                            type="button"
+                            onClick={() => setNewCategoryColor(col.val)}
+                            className={`w-6 h-6 rounded-full ${col.bg} relative transition-all cursor-pointer ${
+                              newCategoryColor === col.val
+                                ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110"
+                                : "opacity-60 hover:opacity-100"
+                            }`}
+                            title={col.val}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!newCategoryName.trim()) return;
+                        if (onAddCategory) {
+                          await onAddCategory({
+                            name: newCategoryName,
+                            description: newCategoryDescription,
+                            icon: newCategoryIcon,
+                            color: newCategoryColor
+                          });
+                          setNewCategoryName("");
+                          setNewCategoryDescription("");
+                          setNewCategoryIcon("Tv");
+                          setNewCategoryColor("indigo");
+                        }
+                      }}
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/15 transition-all cursor-pointer mt-2"
+                    >
+                      Ajouter au Catalogue
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!newCategoryName.trim()) return;
-                      if (onAddCategory) {
-                        await onAddCategory(newCategoryName);
-                        setNewCategoryName("");
-                      }
-                    }}
-                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/10 transition-all cursor-pointer"
-                  >
-                    Ajouter au Catalogue
-                  </button>
                 </div>
 
-                {/* Categories List */}
-                <div className="md:col-span-2 space-y-4">
+                {/* Categories Grid List */}
+                <div className="lg:col-span-2 space-y-4">
                   <div className="bg-gray-950 rounded-2xl border border-gray-800 p-5 space-y-4">
                     <h4 className="font-bold text-white text-xs">Catégories existantes ({catalogCategories.length})</h4>
+                    
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {catalogCategories.map((cat) => (
-                        <div key={cat.id} className="p-3.5 bg-gray-900/40 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
-                          <div>
-                            <span className="font-bold text-white">{cat.name}</span>
-                            <span className="text-[10px] text-gray-500 block mt-0.5">ID: {cat.id}</span>
+                      {catalogCategories.map((cat) => {
+                        // check color styles
+                        const isAmber = cat.color === "amber";
+                        const isEmerald = cat.color === "emerald";
+                        const isBlue = cat.color === "blue";
+                        const isRose = cat.color === "rose";
+                        const isPurple = cat.color === "purple";
+                        const colorStyles = 
+                          isAmber ? { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/20" } :
+                          isEmerald ? { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" } :
+                          isBlue ? { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/20" } :
+                          isRose ? { bg: "bg-rose-500/10", text: "text-rose-400", border: "border-rose-500/20" } :
+                          isPurple ? { bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/20" } :
+                          { bg: "bg-indigo-500/10", text: "text-indigo-400", border: "border-indigo-500/20" };
+
+                        return (
+                          <div key={cat.id} className="p-4 bg-gray-900/40 rounded-xl border border-gray-800 hover:border-gray-700/80 transition-all flex justify-between items-start text-xs gap-3">
+                            <div className="flex items-start gap-3 min-w-0">
+                              <div className={`p-2 rounded-lg ${colorStyles.bg} ${colorStyles.text} ${colorStyles.border} border shrink-0`}>
+                                {cat.icon === "Key" && <Key className="h-4 w-4" />}
+                                {cat.icon === "Box" && <Box className="h-4 w-4" />}
+                                {cat.icon === "Flame" && <Flame className="h-4 w-4" />}
+                                {cat.icon === "Sparkles" && <Sparkles className="h-4 w-4" />}
+                                {cat.icon === "Zap" && <Zap className="h-4 w-4" />}
+                                {cat.icon === "FolderOpen" && <FolderOpen className="h-4 w-4" />}
+                                {(!cat.icon || cat.icon === "Tv") && <Tv className="h-4 w-4" />}
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-bold text-white block truncate">{cat.name}</span>
+                                {cat.description && (
+                                  <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1">{cat.description}</p>
+                                )}
+                                <span className="text-[9px] text-gray-600 block mt-1 font-mono">ID: {cat.id}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setEditingCategory(cat)}
+                                className="p-1.5 bg-gray-800 hover:bg-gray-700 text-amber-400 rounded cursor-pointer transition-colors"
+                                title="Modifier"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?") && onDeleteCategory) {
+                                    onDeleteCategory(cat.id);
+                                  }
+                                }}
+                                className="p-1.5 bg-gray-800 hover:bg-red-500/20 text-red-400 rounded cursor-pointer transition-colors"
+                                title="Supprimer"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newName = prompt("Nouveau nom de la catégorie :", cat.name);
-                                if (newName && newName.trim() && onUpdateCategory) {
-                                  onUpdateCategory(cat.id, newName.trim());
-                                }
-                              }}
-                              className="p-1.5 bg-gray-800 hover:bg-gray-700 text-amber-400 rounded cursor-pointer"
-                              title="Modifier"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?") && onDeleteCategory) {
-                                  onDeleteCategory(cat.id);
-                                }
-                              }}
-                              className="p-1.5 bg-gray-800 hover:bg-red-500/20 text-red-400 rounded cursor-pointer"
-                              title="Supprimer"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {catalogCategories.length === 0 && (
-                        <p className="text-xs text-gray-500 col-span-2 text-center py-2">Aucune catégorie personnalisée.</p>
+                        <p className="text-xs text-gray-500 col-span-2 text-center py-6">Aucune catégorie personnalisée dans votre catalogue.</p>
                       )}
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Edit Category Modal */}
+              {editingCategory && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 text-left">
+                  <div className="w-full max-w-md p-6 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl space-y-4">
+                    <div className="flex justify-between items-center border-b border-gray-800 pb-3">
+                      <h3 className="font-display font-bold text-base text-white flex items-center gap-2">
+                        <Edit2 className="h-4 w-4 text-amber-500" />
+                        <span>Modifier la Catégorie</span>
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setEditingCategory(null)}
+                        className="p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (editingCategory && onUpdateCategory) {
+                          await onUpdateCategory(editingCategory.id, {
+                            name: editingCategory.name,
+                            description: editingCategory.description || "",
+                            icon: editingCategory.icon || "Tv",
+                            color: editingCategory.color || "indigo"
+                          });
+                          setEditingCategory(null);
+                        }
+                      }}
+                      className="space-y-4 text-xs"
+                    >
+                      <div>
+                        <label className="block text-gray-400 mb-1 font-semibold">Nom de la catégorie</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingCategory.name}
+                          onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                          className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-gray-400 mb-1 font-semibold">Description courte</label>
+                        <textarea
+                          rows={2}
+                          value={editingCategory.description || ""}
+                          onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                          className="w-full bg-black border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"
+                        />
+                      </div>
+
+                      {/* Icon Selection */}
+                      <div>
+                        <label className="block text-gray-400 mb-1.5 font-semibold">Icône de la catégorie</label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {[
+                            { val: "Tv", label: "Tv" },
+                            { val: "Key", label: "Clef" },
+                            { val: "Box", label: "Box" },
+                            { val: "Flame", label: "Feu" },
+                            { val: "Sparkles", label: "Nouv" },
+                            { val: "Zap", label: "Vip" },
+                            { val: "FolderOpen", label: "Doss" }
+                          ].map((item) => (
+                            <button
+                              key={item.val}
+                              type="button"
+                              onClick={() => setEditingCategory({ ...editingCategory, icon: item.val })}
+                              className={`p-2 rounded-lg border flex flex-col items-center gap-1 cursor-pointer transition-colors ${
+                                editingCategory.icon === item.val
+                                  ? "bg-amber-500/20 border-amber-500 text-amber-400 font-bold"
+                                  : "bg-black border-gray-800 hover:border-gray-700 text-gray-400"
+                              }`}
+                            >
+                              {item.val === "Tv" && <Tv className="h-4 w-4" />}
+                              {item.val === "Key" && <Key className="h-4 w-4" />}
+                              {item.val === "Box" && <Box className="h-4 w-4" />}
+                              {item.val === "Flame" && <Flame className="h-4 w-4" />}
+                              {item.val === "Sparkles" && <Sparkles className="h-4 w-4" />}
+                              {item.val === "Zap" && <Zap className="h-4 w-4" />}
+                              {item.val === "FolderOpen" && <FolderOpen className="h-4 w-4" />}
+                              <span className="text-[8px] truncate max-w-full">{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Color Accent Selection */}
+                      <div>
+                        <label className="block text-gray-400 mb-1.5 font-semibold">Couleur d'accentuation</label>
+                        <div className="flex gap-2">
+                          {[
+                            { val: "indigo", bg: "bg-indigo-500" },
+                            { val: "amber", bg: "bg-amber-500" },
+                            { val: "emerald", bg: "bg-emerald-500" },
+                            { val: "blue", bg: "bg-blue-500" },
+                            { val: "rose", bg: "bg-rose-500" },
+                            { val: "purple", bg: "bg-purple-500" }
+                          ].map((col) => (
+                            <button
+                              key={col.val}
+                              type="button"
+                              onClick={() => setEditingCategory({ ...editingCategory, color: col.val })}
+                              className={`w-6 h-6 rounded-full ${col.bg} relative transition-all cursor-pointer ${
+                                editingCategory.color === col.val
+                                  ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110"
+                                  : "opacity-60 hover:opacity-100"
+                              }`}
+                              title={col.val}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex space-x-2 pt-3 border-t border-gray-800">
+                        <button
+                          type="button"
+                          onClick={() => setEditingCategory(null)}
+                          className="flex-1 py-2 bg-gray-800 hover:bg-gray-750 text-gray-300 rounded-xl transition-colors font-semibold cursor-pointer"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-xl transition-colors shadow-lg shadow-amber-500/10 cursor-pointer"
+                        >
+                          Enregistrer
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -16,7 +16,8 @@ import {
   Key, 
   FileText,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  ArrowLeft
 } from "lucide-react";
 
 interface WholesalerDashboardProps {
@@ -31,6 +32,7 @@ interface WholesalerDashboardProps {
   onRequestPanel?: (data: any) => Promise<any>;
   refreshWholesalerData: () => void;
   onLogoutWholesaler?: () => void;
+  onBackToHome?: () => void;
 }
 
 export default function WholesalerDashboard({
@@ -44,7 +46,8 @@ export default function WholesalerDashboard({
   onRequestCredit,
   onRequestPanel,
   refreshWholesalerData,
-  onLogoutWholesaler
+  onLogoutWholesaler,
+  onBackToHome
 }: WholesalerDashboardProps) {
   // Login / Register Views
   const [isRegistering, setIsRegistering] = useState(false);
@@ -249,7 +252,16 @@ export default function WholesalerDashboard({
   // Authentication Screen
   if (!loggedWholesaler) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto px-4 py-12 space-y-6 text-left">
+        {onBackToHome && (
+          <button
+            onClick={onBackToHome}
+            className="flex items-center space-x-2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer bg-gray-900/40 hover:bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-800 self-start"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>← Retour à l'Accueil</span>
+          </button>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           {/* Info Column */}
           <div className="space-y-6">

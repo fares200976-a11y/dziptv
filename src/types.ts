@@ -3,12 +3,15 @@ export type SubscriptionServer = 'Dino' | '8K' | 'V12' | 'Golden OTT';
 export interface CatalogCategory {
   id: string;
   name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
 }
 
 export interface Product {
   id: string;
   name: string;
-  type: 'iptv' | 'device' | 'adsl';
+  type: string;
   priceRetail: number; // in DA (Algerian Dinar)
   priceWholesale: number; // in DA
   description: string;
@@ -22,6 +25,7 @@ export interface Product {
 export interface Wholesaler {
   id: string;
   username: string;
+  password?: string;
   businessName: string;
   phone: string;
   email: string;
@@ -65,7 +69,7 @@ export interface Order {
   customerPhone: string;
   productId: string;
   productName: string;
-  productType: 'iptv' | 'device' | 'adsl';
+  productType: string;
   priceDA: number;
   paymentMethod: 'baridimob' | 'ccp' | 'card' | 'hand';
   paymentDetails?: string; // proof ID, transaction ID, etc.
