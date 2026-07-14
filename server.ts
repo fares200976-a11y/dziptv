@@ -1,8 +1,7 @@
 // Local development server only.
 // In production on Vercel, api/index.ts is used instead (see vercel.json).
 import { createServer as createViteServer } from "vite";
-import app from "./src/apiApp";
-
+import app from "./src/apiApp.js";
 const PORT = 3000;
 
 async function startServer() {
