@@ -12,7 +12,7 @@ import {
   Livreur,
   CatalogCategory,
   PanelRequest
-} from "./types";
+} from "./types.js";
 
 const app = express();
 
