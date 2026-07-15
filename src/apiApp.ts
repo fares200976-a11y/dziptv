@@ -35,7 +35,7 @@ const DB_FILE = process.env.VERCEL
 const UPSTASH_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const redis = (UPSTASH_URL && UPSTASH_TOKEN)
-  ? new Redis({ url: UPSTASH_URL, token: UPSTASH_TOKEN })
+  ? new Redis({ url: UPSTASH_URL, token: UPSTASH_TOKEN, automaticDeserialization: false })
   : null;
 const REDIS_DB_KEY = "dziptv:db";
 
