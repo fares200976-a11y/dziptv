@@ -22,14 +22,13 @@ import { Tv, Sparkles, ShieldCheck, Flame, HelpCircle } from "lucide-react";
 
 export default function App() {
   const [currentView, setView] = useState<"retail" | "wholesaler" | "admin">("retail");
-  const [isAdminUnlocked, setAdminUnlocked] = useState(() => {
-    return localStorage.getItem("adminUnlocked") === "true";
-  });
+  // La vraie source de vérité est le cookie HttpOnly "admin_token" côté serveur,
+  // vérifié au chargement via /api/auth/admin/session (voir useEffect plus bas).
+  // Ne JAMAIS se fier à un flag localStorage pour une décision de sécurité.
+  const [isAdminUnlocked, setAdminUnlocked] = useState(false);
 
   // Secret Admin modal states
   const [showSecretModal, setShowSecretModal] = useState(false);
-  const [secretStep, setSecretStep] = useState<1 | 2>(1);
-  const [securityCode, setSecurityCode] = useState("");
   const [adminUsername, setAdminUsername] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [secretError, setSecretError] = useState("");
@@ -81,6 +80,19 @@ export default function App() {
         }
       } catch (e) {
         // Pas de session valide, l'utilisateur devra se connecter normalement.
+      }
+    })();
+
+    // Idem pour le panneau administrateur : vérifie le cookie admin_token
+    // (HttpOnly, signé serveur) au lieu de l'ancien flag localStorage non sécurisé.
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/admin/session", {
+          credentials: "include"
+        });
+        setAdminUnlocked(res.ok);
+      } catch (e) {
+        setAdminUnlocked(false);
       }
     })();
   }, []);
@@ -325,36 +337,47 @@ export default function App() {
     refreshAllData();
   };
 
-  const handleSecretSubmit = (e: React.FormEvent) => {
+  const handleSecretSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSecretError("");
 
-    if (secretStep === 1) {
-      if (securityCode.trim() === "14081976") {
-        setSecretStep(2);
-        setSecretError("");
-      } else {
-        setSecretError("Code de sécurité secret incorrect.");
-      }
-    } else {
-      const isCredentials = adminUsername.trim().toLowerCase() === "fares2026" && adminPassword === "Fares14081976";
+    try {
+      const res = await fetch("/api/auth/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username: adminUsername, password: adminPassword })
+      });
 
-      if (isCredentials) {
-        setUnlockSuccess(true);
-        setTimeout(() => {
-          setAdminUnlocked(true);
-          localStorage.setItem("adminUnlocked", "true");
-          setShowSecretModal(false);
-          setView("admin");
-        }, 1000);
-      } else {
-        setSecretError("Nom d'utilisateur ou mot de passe incorrect.");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSecretError(data.error || "Nom d'utilisateur ou mot de passe incorrect.");
+        return;
       }
+
+      setUnlockSuccess(true);
+      setTimeout(() => {
+        setAdminUnlocked(true);
+        setShowSecretModal(false);
+        setUnlockSuccess(false);
+        setAdminUsername("");
+        setAdminPassword("");
+        setView("admin");
+      }, 1000);
+    } catch (err) {
+      setSecretError("Impossible de contacter le serveur. Réessayez.");
     }
   };
 
-  const handleAdminLogout = () => {
-    localStorage.removeItem("adminUnlocked");
+  const handleAdminLogout = async () => {
+    try {
+      await fetch("/api/auth/admin/logout-complete", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (e) {
+      console.error("Error during admin logout:", e);
+    }
     setAdminUnlocked(false);
     setView("retail");
   };
@@ -528,7 +551,9 @@ export default function App() {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
+        const newCategory = await res.json();
         refreshAllData();
+        return newCategory;
       }
     } catch (e) {
       console.error(e);
@@ -785,8 +810,6 @@ export default function App() {
                   handleSetView("admin");
                 } else {
                   setShowSecretModal(true);
-                  setSecretStep(1);
-                  setSecurityCode("");
                   setAdminUsername("");
                   setAdminPassword("");
                   setSecretError("");
@@ -801,7 +824,7 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Secret Admin Unlock Modal with Double Security */}
+      {/* Admin Unlock Modal — authentification vérifiée côté serveur */}
       {showSecretModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-sm p-6 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl space-y-4 text-gray-200">
@@ -810,61 +833,32 @@ export default function App() {
                 <ShieldCheck className="h-6 w-6" />
               </div>
               <h3 className="font-display font-bold text-lg text-white">KURTAL IPTV Administrateur</h3>
-              
-              {/* Step indicator */}
-              <div className="flex items-center justify-center gap-1.5 py-1">
-                <span className={`w-6 h-1.5 rounded-full ${secretStep >= 1 ? 'bg-amber-500' : 'bg-gray-800'}`} />
-                <span className={`w-6 h-1.5 rounded-full ${secretStep >= 2 ? 'bg-amber-500' : 'bg-gray-800'}`} />
-              </div>
-
-              <p className="text-xs text-gray-400">
-                {secretStep === 1 
-                  ? "Double Sécurité : Étape 1 - Saisir le code secret principal" 
-                  : "Double Sécurité : Étape 2 - Saisir les identifiants d'accès"
-                }
-              </p>
+              <p className="text-xs text-gray-400">Connexion réservée à l'administrateur</p>
             </div>
 
             <form onSubmit={handleSecretSubmit} className="space-y-4">
               <div className="space-y-3 text-left">
-                {secretStep === 1 ? (
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-wider font-semibold text-amber-400 mb-1">Code Secret Principal</label>
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      value={securityCode}
-                      onChange={(e) => setSecurityCode(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-center text-sm bg-gray-950 border border-gray-800 rounded-lg focus:outline-none focus:border-amber-500 text-white placeholder-gray-700 font-mono tracking-widest"
-                      autoFocus
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1">Nom d'utilisateur</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: fares2026"
-                        value={adminUsername}
-                        onChange={(e) => setAdminUsername(e.target.value)}
-                        className="w-full px-3.5 py-2.5 text-sm bg-gray-950 border border-gray-800 rounded-lg focus:outline-none focus:border-amber-500 text-white placeholder-gray-700 font-sans"
-                        autoFocus
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1">Mot de passe</label>
-                      <input
-                        type="password"
-                        placeholder="••••••••••••"
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        className="w-full px-3.5 py-2.5 text-sm bg-gray-950 border border-gray-800 rounded-lg focus:outline-none focus:border-amber-500 text-white placeholder-gray-700 font-sans"
-                      />
-                    </div>
-                  </>
-                )}
-                
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1">Nom d'utilisateur</label>
+                  <input
+                    type="text"
+                    value={adminUsername}
+                    onChange={(e) => setAdminUsername(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-sm bg-gray-950 border border-gray-800 rounded-lg focus:outline-none focus:border-amber-500 text-white placeholder-gray-700 font-sans"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1">Mot de passe</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••••••"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-sm bg-gray-950 border border-gray-800 rounded-lg focus:outline-none focus:border-amber-500 text-white placeholder-gray-700 font-sans"
+                  />
+                </div>
+
                 {secretError && (
                   <p className="mt-1.5 text-xs text-red-400 text-center">{secretError}</p>
                 )}
@@ -880,22 +874,20 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (secretStep === 2) {
-                        setSecretStep(1);
-                        setSecretError("");
-                      } else {
-                        setShowSecretModal(false);
-                      }
+                      setShowSecretModal(false);
+                      setSecretError("");
+                      setAdminUsername("");
+                      setAdminPassword("");
                     }}
                     className="flex-1 py-2 text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors font-medium cursor-pointer"
                   >
-                    {secretStep === 2 ? "Retour" : "Annuler"}
+                    Annuler
                   </button>
                   <button
                     type="submit"
                     className="flex-1 py-2 text-xs bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg transition-colors shadow-lg shadow-amber-500/10 cursor-pointer"
                   >
-                    {secretStep === 1 ? "Continuer" : "Valider"}
+                    Se connecter
                   </button>
                 </div>
               )}
