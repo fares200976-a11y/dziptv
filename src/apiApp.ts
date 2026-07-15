@@ -1,10 +1,12 @@
 import express from "express";
+import "express-async-errors";
 import path from "path";
 import fs from "fs";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { Redis } from "@upstash/redis";
 import {
   Product,
   Wholesaler,
@@ -21,12 +23,58 @@ import {
 const app = express();
 
 // IMPORTANT: On Vercel, the filesystem is read-only except for /tmp, and /tmp
-// is wiped between cold starts / deployments — so this is NOT persistent
-// storage in production. It will let registration work during a session,
-// but data can disappear later. See the note at the bottom of this file.
+// is wiped between cold starts / deployments — so it is NOT persistent
+// storage in production. It's used ONLY as a local dev fallback below.
 const DB_FILE = process.env.VERCEL
   ? path.join("/tmp", "db.json")
   : path.join(process.cwd(), "db.json");
+
+// Stockage persistant : Upstash Redis (via l'intégration Vercel Marketplace).
+// Toute la base est stockée sous une seule clé, sous forme de JSON — la
+// structure de données (DBStructure) ne change pas, seule l'IO change.
+const UPSTASH_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const redis = (UPSTASH_URL && UPSTASH_TOKEN)
+  ? new Redis({ url: UPSTASH_URL, token: UPSTASH_TOKEN })
+  : null;
+const REDIS_DB_KEY = "dziptv:db";
+
+if (!redis) {
+  console.warn(
+    "[DB WARNING] Aucune base Upstash Redis détectée (variables KV_REST_API_URL / " +
+    "KV_REST_API_TOKEN ou UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN absentes). " +
+    "Utilisation du fichier local db.json en secours — sur Vercel, cela signifie que " +
+    "les données NE SERONT PAS persistantes. Installez l'intégration Upstash depuis " +
+    "le Vercel Marketplace pour activer le stockage persistant."
+  );
+}
+
+async function storageReadRaw(): Promise<string | null> {
+  if (redis) {
+    const value = await redis.get<string>(REDIS_DB_KEY);
+    return value ?? null;
+  }
+  if (!fs.existsSync(DB_FILE)) return null;
+  return fs.readFileSync(DB_FILE, "utf-8");
+}
+
+async function storageWriteRaw(json: string): Promise<void> {
+  if (redis) {
+    await redis.set(REDIS_DB_KEY, json);
+    return;
+  }
+  fs.writeFileSync(DB_FILE, json, "utf-8");
+}
+
+async function storageDeleteRaw(): Promise<void> {
+  if (redis) {
+    await redis.del(REDIS_DB_KEY);
+    return;
+  }
+  if (fs.existsSync(DB_FILE)) {
+    fs.unlinkSync(DB_FILE);
+  }
+}
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -69,34 +117,34 @@ function wholesalerCookieOptions() {
   };
 }
 
-function isTokenRevoked(jti: string): boolean {
-  const db = readDB();
+async function isTokenRevoked(jti: string): Promise<boolean> {
+  const db = await readDB();
   const list = db.revokedTokens || [];
   const nowSeconds = Math.floor(Date.now() / 1000);
   return list.some(t => t.jti === jti && t.exp > nowSeconds);
 }
 
-function revokeToken(jti: string, exp: number) {
-  const db = readDB();
+async function revokeToken(jti: string, exp: number) {
+  const db = await readDB();
   if (!db.revokedTokens) db.revokedTokens = [];
   const nowSeconds = Math.floor(Date.now() / 1000);
   // On profite de l'opération pour nettoyer les entrées déjà expirées.
   db.revokedTokens = db.revokedTokens.filter(t => t.exp > nowSeconds);
   db.revokedTokens.push({ jti, exp });
-  writeDB(db);
+  await writeDB(db);
 }
 
 // Middleware : protège les routes de l'espace revendeur.
 // Si le cookie JWT est valide et non révoqué, la session est restaurée
 // automatiquement (pas de ressaisie des identifiants).
-function requireWholesalerAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+async function requireWholesalerAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const token = req.cookies?.[WHOLESALER_TOKEN_COOKIE];
   if (!token) {
     return res.status(401).json({ error: "Non autorisé." });
   }
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { sub: string; jti: string; exp: number };
-    if (isTokenRevoked(payload.jti)) {
+    if (await isTokenRevoked(payload.jti)) {
       res.clearCookie(WHOLESALER_TOKEN_COOKIE, wholesalerCookieOptions());
       return res.status(401).json({ error: "Session invalidée. Veuillez vous reconnecter." });
     }
@@ -323,9 +371,10 @@ interface DBStructure {
 }
 
 // Read database
-function readDB(): DBStructure {
+async function readDB(): Promise<DBStructure> {
   try {
-    if (!fs.existsSync(DB_FILE)) {
+    const raw = await storageReadRaw();
+    if (!raw) {
       const initialDB: DBStructure = {
         products: DEFAULT_PRODUCTS,
         wholesalers: [
@@ -470,11 +519,10 @@ function readDB(): DBStructure {
         panelRequests: [],
         revokedTokens: []
       };
-      fs.writeFileSync(DB_FILE, JSON.stringify(initialDB, null, 2), "utf-8");
+      await storageWriteRaw(JSON.stringify(initialDB, null, 2));
       return initialDB;
     }
-    const data = fs.readFileSync(DB_FILE, "utf-8");
-    const parsed = JSON.parse(data);
+    const parsed = JSON.parse(raw);
     let changed = false;
     if (!parsed.tutorials) {
       parsed.tutorials = DEFAULT_TUTORIALS;
@@ -518,11 +566,11 @@ function readDB(): DBStructure {
       changed = true;
     }
     if (changed) {
-      fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), "utf-8");
+      await storageWriteRaw(JSON.stringify(parsed, null, 2));
     }
     return parsed;
   } catch (err) {
-    console.error("Error reading database file, using fallback mock database:", err);
+    console.error("Error reading database, using fallback mock database:", err);
     return {
       products: DEFAULT_PRODUCTS,
       wholesalers: [],
@@ -544,11 +592,11 @@ function readDB(): DBStructure {
 }
 
 // Write database
-function writeDB(data: DBStructure) {
+async function writeDB(data: DBStructure) {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
+    await storageWriteRaw(JSON.stringify(data, null, 2));
   } catch (err) {
-    console.error("Error writing database file:", err);
+    console.error("Error writing database:", err);
   }
 }
 
@@ -556,8 +604,8 @@ const ALERT_EMAIL = "fares200976@gmail.com";
 const ALERT_WHATSAPP = "00213667719761";
 
 // Send Admin Email and WhatsApp Simulation Helper
-function sendAdminEmail(subject: string, body: string, type: EmailNotification['type']) {
-  const db = readDB();
+async function sendAdminEmail(subject: string, body: string, type: EmailNotification['type']) {
+  const db = await readDB();
   const fullBody = `${body}\n\n[Notification WhatsApp envoyée automatiquement au numéro ${ALERT_WHATSAPP}]`;
 
   const newEmail: EmailNotification = {
@@ -570,7 +618,7 @@ function sendAdminEmail(subject: string, body: string, type: EmailNotification['
     type
   };
   db.notifications.unshift(newEmail);
-  writeDB(db);
+  await writeDB(db);
   console.log(`[ALERT SYSTEM] Email alert sent to ${ALERT_EMAIL}\nSubject: ${subject}\nBody: ${fullBody}\n---`);
   console.log(`[WHATSAPP ALERT] WhatsApp alert dispatched to ${ALERT_WHATSAPP} successfully.\n---`);
 }
@@ -580,21 +628,21 @@ function sendAdminEmail(subject: string, body: string, type: EmailNotification['
 // ==========================================
 
 // Get Products
-app.get("/api/products", (req, res) => {
-  const db = readDB();
+app.get("/api/products", async (req, res) => {
+  const db = await readDB();
   res.json(db.products);
 });
 
 // --- CATALOG CATEGORY ENDPOINTS ---
-app.get("/api/catalog-categories", (req, res) => {
-  const db = readDB();
+app.get("/api/catalog-categories", async (req, res) => {
+  const db = await readDB();
   res.json(db.catalogCategories || []);
 });
 
-app.post("/api/admin/catalog-categories", (req, res) => {
+app.post("/api/admin/catalog-categories", async (req, res) => {
   const { name, description, icon, color } = req.body;
   if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
-  const db = readDB();
+  const db = await readDB();
   const newCat: CatalogCategory = {
     id: "cat-" + Math.random().toString(36).substr(2, 9),
     name,
@@ -604,42 +652,42 @@ app.post("/api/admin/catalog-categories", (req, res) => {
   };
   if (!db.catalogCategories) db.catalogCategories = [];
   db.catalogCategories.push(newCat);
-  writeDB(db);
+  await writeDB(db);
   res.json(newCat);
 });
 
-app.put("/api/admin/catalog-categories/:id", (req, res) => {
+app.put("/api/admin/catalog-categories/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, icon, color } = req.body;
   if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
-  const db = readDB();
+  const db = await readDB();
   const cat = db.catalogCategories?.find(c => c.id === id);
   if (!cat) return res.status(404).json({ error: "Catalogue introuvable." });
   cat.name = name;
   if (description !== undefined) cat.description = description;
   if (icon !== undefined) cat.icon = icon;
   if (color !== undefined) cat.color = color;
-  writeDB(db);
+  await writeDB(db);
   res.json(cat);
 });
 
-app.delete("/api/admin/catalog-categories/:id", (req, res) => {
+app.delete("/api/admin/catalog-categories/:id", async (req, res) => {
   const { id } = req.params;
-  const db = readDB();
+  const db = await readDB();
   db.catalogCategories = (db.catalogCategories || []).filter(c => c.id !== id);
-  writeDB(db);
+  await writeDB(db);
   res.json({ success: true });
 });
 
 // --- PANEL REQUEST ENDPOINTS ---
-app.get("/api/wholesaler/panel-requests", requireWholesalerAuth, (req, res) => {
+app.get("/api/wholesaler/panel-requests", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
-  const db = readDB();
+  const db = await readDB();
   const reqs = (db.panelRequests || []).filter(r => r.wholesalerId === wholesalerId);
   res.json(reqs);
 });
 
-app.post("/api/wholesaler/panel-requests", requireWholesalerAuth, (req, res) => {
+app.post("/api/wholesaler/panel-requests", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
   const { server, codesCount, notes } = req.body;
   if (!server || !codesCount) return res.status(400).json({ error: "Serveur et quantité requis." });
@@ -649,7 +697,7 @@ app.post("/api/wholesaler/panel-requests", requireWholesalerAuth, (req, res) => 
     return res.status(400).json({ error: "Le nombre de codes minimum requis pour la création d'un panel est de 10 codes." });
   }
 
-  const db = readDB();
+  const db = await readDB();
   const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
   if (!wholesaler) return res.status(404).json({ error: "Revendeur introuvable." });
 
@@ -666,10 +714,10 @@ app.post("/api/wholesaler/panel-requests", requireWholesalerAuth, (req, res) => 
 
   if (!db.panelRequests) db.panelRequests = [];
   db.panelRequests.push(newRequest);
-  writeDB(db);
+  await writeDB(db);
 
   try {
-    sendAdminEmail(
+    await sendAdminEmail(
       `Nouvelle demande de panel revendeur par ${wholesaler.businessName}`,
       `Le revendeur grossiste '${wholesaler.businessName}' a soumis une demande de création de panel revendeur.\n\n` +
       `- Serveur IPTV: ${server}\n` +
@@ -685,34 +733,32 @@ app.post("/api/wholesaler/panel-requests", requireWholesalerAuth, (req, res) => 
   res.json(newRequest);
 });
 
-app.get("/api/admin/panel-requests", (req, res) => {
-  const db = readDB();
+app.get("/api/admin/panel-requests", async (req, res) => {
+  const db = await readDB();
   res.json(db.panelRequests || []);
 });
 
-app.put("/api/admin/panel-requests/:id", (req, res) => {
+app.put("/api/admin/panel-requests/:id", async (req, res) => {
   const { id } = req.params;
   const { status, notes } = req.body;
   if (!status) return res.status(400).json({ error: "Le statut est requis." });
 
-  const db = readDB();
+  const db = await readDB();
   const reqItem = db.panelRequests?.find(r => r.id === id);
   if (!reqItem) return res.status(404).json({ error: "Demande de panel introuvable." });
 
   reqItem.status = status;
   if (notes !== undefined) reqItem.notes = notes;
 
-  writeDB(db);
+  await writeDB(db);
   res.json(reqItem);
 });
 
 // Reset database to default
-app.post("/api/admin/reset", (req, res) => {
+app.post("/api/admin/reset", async (req, res) => {
   try {
-    if (fs.existsSync(DB_FILE)) {
-      fs.unlinkSync(DB_FILE);
-    }
-    const db = readDB();
+    await storageDeleteRaw();
+    const db = await readDB();
     res.json({ message: "Base de données réinitialisée avec succès.", db });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -720,14 +766,14 @@ app.post("/api/admin/reset", (req, res) => {
 });
 
 // Wholesaler Registration
-app.post("/api/auth/wholesaler/register", (req, res) => {
+app.post("/api/auth/wholesaler/register", async (req, res) => {
   try {
     const { username, password, businessName, phone, email } = req.body;
     if (!username || !password || !businessName || !phone || !email) {
       return res.status(400).json({ error: "Tous les champs sont requis." });
     }
 
-    const db = readDB();
+    const db = await readDB();
     if (!db.wholesalers) {
       db.wholesalers = [];
     }
@@ -753,10 +799,10 @@ app.post("/api/auth/wholesaler/register", (req, res) => {
     };
 
     db.wholesalers.push(newWholesaler);
-    writeDB(db);
+    await writeDB(db);
 
     try {
-      sendAdminEmail(
+      await sendAdminEmail(
         `Nouveau grossiste inscrit : ${businessName}`,
         `Un nouveau grossiste s'est inscrit sur la plateforme !\n\n` +
         `- Nom d'utilisateur: ${username}\n` +
@@ -782,14 +828,14 @@ app.post("/api/auth/wholesaler/register", (req, res) => {
 });
 
 // Wholesaler Login
-app.post("/api/auth/wholesaler/login", (req, res) => {
+app.post("/api/auth/wholesaler/login", async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
       return res.status(400).json({ error: "Nom d'utilisateur et mot de passe requis." });
     }
 
-    const db = readDB();
+    const db = await readDB();
     if (!db.wholesalers) {
       db.wholesalers = [];
     }
@@ -815,7 +861,7 @@ app.post("/api/auth/wholesaler/login", (req, res) => {
           return res.status(401).json({ error: "Mot de passe incorrect." });
         }
         wholesaler.password = bcrypt.hashSync(password, 10);
-        writeDB(db);
+        await writeDB(db);
       }
     }
 
@@ -843,9 +889,9 @@ app.post("/api/auth/wholesaler/login", (req, res) => {
 // Vérifie si une session revendeur valide existe déjà (cookie JWT) et restaure
 // automatiquement le profil, sans ressaisie des identifiants. Utilisé au
 // chargement de l'app pour reconnecter silencieusement le revendeur.
-app.get("/api/auth/wholesaler/session", requireWholesalerAuth, (req, res) => {
+app.get("/api/auth/wholesaler/session", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
-  const db = readDB();
+  const db = await readDB();
   const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
   if (!wholesaler) {
     return res.status(404).json({ error: "Grossiste introuvable." });
@@ -856,12 +902,12 @@ app.get("/api/auth/wholesaler/session", requireWholesalerAuth, (req, res) => {
 // Déconnexion COMPLÈTE : révoque le token et supprime le cookie.
 // À la différence de "quitter le panneau" (front-end only), ceci force une
 // reconnexion avec identifiant + mot de passe.
-app.post("/api/auth/wholesaler/logout-complete", (req, res) => {
+app.post("/api/auth/wholesaler/logout-complete", async (req, res) => {
   const token = req.cookies?.[WHOLESALER_TOKEN_COOKIE];
   if (token) {
     try {
       const payload = jwt.verify(token, JWT_SECRET) as { jti: string; exp: number };
-      revokeToken(payload.jti, payload.exp);
+      await revokeToken(payload.jti, payload.exp);
     } catch (err) {
       // Token déjà invalide/expiré : rien à révoquer, on nettoie simplement le cookie.
     }
@@ -871,10 +917,10 @@ app.post("/api/auth/wholesaler/logout-complete", (req, res) => {
 });
 
 // Get Wholesaler Profile
-app.get("/api/wholesaler/profile", requireWholesalerAuth, (req, res) => {
+app.get("/api/wholesaler/profile", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
 
-  const db = readDB();
+  const db = await readDB();
   const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
   if (!wholesaler) {
     return res.status(404).json({ error: "Grossiste introuvable." });
@@ -884,16 +930,16 @@ app.get("/api/wholesaler/profile", requireWholesalerAuth, (req, res) => {
 });
 
 // Get Wholesaler Clients
-app.get("/api/wholesaler/clients", requireWholesalerAuth, (req, res) => {
+app.get("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
 
-  const db = readDB();
+  const db = await readDB();
   const clients = db.clients.filter(c => c.wholesalerId === wholesalerId);
   res.json(clients);
 });
 
 // Wholesaler Activate / Add IPTV Client (INSTANT ACTIVATION)
-app.post("/api/wholesaler/clients", requireWholesalerAuth, (req, res) => {
+app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
   const { clientName, server, durationMonths, notes } = req.body;
 
@@ -901,7 +947,7 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, (req, res) => {
     return res.status(400).json({ error: "Nom, serveur et durée requis." });
   }
 
-  const db = readDB();
+  const db = await readDB();
   const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
   if (!wholesaler) {
     return res.status(404).json({ error: "Grossiste introuvable." });
@@ -970,10 +1016,10 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, (req, res) => {
   wholesaler.creditBalance -= pricePaid;
 
   db.clients.push(newClient);
-  writeDB(db);
+  await writeDB(db);
 
   try {
-    sendAdminEmail(
+    await sendAdminEmail(
       `Activation IPTV instantanée par ${wholesaler.businessName} : ${clientName}`,
       `Le revendeur grossiste '${wholesaler.businessName}' a activé instantanément un abonnement IPTV.\n\n` +
       `- Client: ${clientName}\n` +
@@ -999,7 +1045,7 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, (req, res) => {
 });
 
 // Wholesaler Credit Recharge Request
-app.post("/api/wholesaler/credit-requests", requireWholesalerAuth, (req, res) => {
+app.post("/api/wholesaler/credit-requests", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
   const { amountDA, paymentMethod, receiptReference } = req.body;
 
@@ -1007,7 +1053,7 @@ app.post("/api/wholesaler/credit-requests", requireWholesalerAuth, (req, res) =>
     return res.status(400).json({ error: "Tous les champs de recharge sont requis." });
   }
 
-  const db = readDB();
+  const db = await readDB();
   const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
   if (!wholesaler) {
     return res.status(404).json({ error: "Grossiste introuvable." });
@@ -1025,9 +1071,9 @@ app.post("/api/wholesaler/credit-requests", requireWholesalerAuth, (req, res) =>
   };
 
   db.creditRequests.push(newRequest);
-  writeDB(db);
+  await writeDB(db);
 
-  sendAdminEmail(
+  await sendAdminEmail(
     `Demande de recharge crédit : ${wholesaler.businessName} (${amountDA} DA)`,
     `Le grossiste '${wholesaler.businessName}' a envoyé une demande de recharge de crédit.\n\n` +
     `- Montant: ${amountDA} DA\n` +
@@ -1044,16 +1090,16 @@ app.post("/api/wholesaler/credit-requests", requireWholesalerAuth, (req, res) =>
 });
 
 // Get wholesaler's own credit requests
-app.get("/api/wholesaler/credit-requests", requireWholesalerAuth, (req, res) => {
+app.get("/api/wholesaler/credit-requests", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
 
-  const db = readDB();
+  const db = await readDB();
   const requests = db.creditRequests.filter(r => r.wholesalerId === wholesalerId);
   res.json(requests);
 });
 
 // Submit Retail (Détail) User Order
-app.post("/api/orders", (req, res) => {
+app.post("/api/orders", async (req, res) => {
   const {
     customerName,
     customerEmail,
@@ -1071,7 +1117,7 @@ app.post("/api/orders", (req, res) => {
     return res.status(400).json({ error: "Les champs nom, téléphone, produit et méthode de paiement sont obligatoires." });
   }
 
-  const db = readDB();
+  const db = await readDB();
   const product = db.products.find(p => p.id === productId);
   if (!product) {
     return res.status(404).json({ error: "Produit ou abonnement introuvable." });
@@ -1097,9 +1143,9 @@ app.post("/api/orders", (req, res) => {
   };
 
   db.orders.unshift(newOrder);
-  writeDB(db);
+  await writeDB(db);
 
-  sendAdminEmail(
+  await sendAdminEmail(
     `Nouvelle commande Client : ${product.name} (${product.priceRetail} DA)`,
     `Nouvelle commande reçue au détail !\n\n` +
     `- Client: ${customerName}\n` +
@@ -1125,14 +1171,14 @@ app.post("/api/orders", (req, res) => {
 });
 
 // Track Retail Order Status
-app.get("/api/orders/track", (req, res) => {
+app.get("/api/orders/track", async (req, res) => {
   const { query } = req.query;
   if (!query) {
     return res.status(400).json({ error: "Veuillez fournir un numéro de téléphone ou un ID de commande." });
   }
 
   const searchStr = (query as string).trim().toLowerCase();
-  const db = readDB();
+  const db = await readDB();
 
   const foundOrders = db.orders.filter(o =>
     o.id.toLowerCase() === searchStr ||
@@ -1158,8 +1204,8 @@ app.get("/api/orders/track", (req, res) => {
 // ADMIN API ROUTES
 // ==========================================
 
-app.get("/api/admin/stats", (req, res) => {
-  const db = readDB();
+app.get("/api/admin/stats", async (req, res) => {
+  const db = await readDB();
 
   const totalRetailSales = db.orders
     .filter(o => o.status === "completed")
@@ -1180,16 +1226,16 @@ app.get("/api/admin/stats", (req, res) => {
   });
 });
 
-app.get("/api/admin/wholesalers", (req, res) => {
-  const db = readDB();
+app.get("/api/admin/wholesalers", async (req, res) => {
+  const db = await readDB();
   res.json(db.wholesalers.map(sanitizeWholesaler));
 });
 
-app.put("/api/admin/wholesalers/:id", (req, res) => {
+app.put("/api/admin/wholesalers/:id", async (req, res) => {
   const { id } = req.params;
   const { status, creditBalance, username, password, businessName, email, phone } = req.body;
 
-  const db = readDB();
+  const db = await readDB();
   const wholesalerIndex = db.wholesalers.findIndex(w => w.id === id);
 
   if (wholesalerIndex === -1) {
@@ -1206,21 +1252,21 @@ app.put("/api/admin/wholesalers/:id", (req, res) => {
   if (phone !== undefined) updated.phone = phone;
 
   db.wholesalers[wholesalerIndex] = updated;
-  writeDB(db);
+  await writeDB(db);
 
   res.json({ message: "Compte grossiste mis à jour.", wholesaler: sanitizeWholesaler(updated) });
 });
 
-app.get("/api/admin/orders", (req, res) => {
-  const db = readDB();
+app.get("/api/admin/orders", async (req, res) => {
+  const db = await readDB();
   res.json(db.orders);
 });
 
-app.put("/api/admin/orders/:id", (req, res) => {
+app.put("/api/admin/orders/:id", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  const db = readDB();
+  const db = await readDB();
   const orderIndex = db.orders.findIndex(o => o.id === id);
 
   if (orderIndex === -1) {
@@ -1228,17 +1274,17 @@ app.put("/api/admin/orders/:id", (req, res) => {
   }
 
   db.orders[orderIndex].status = status;
-  writeDB(db);
+  await writeDB(db);
 
   res.json({ message: "Statut de la commande mis à jour.", order: db.orders[orderIndex] });
 });
 
-app.get("/api/admin/credit-requests", (req, res) => {
-  const db = readDB();
+app.get("/api/admin/credit-requests", async (req, res) => {
+  const db = await readDB();
   res.json(db.creditRequests);
 });
 
-app.put("/api/admin/credit-requests/:id", (req, res) => {
+app.put("/api/admin/credit-requests/:id", async (req, res) => {
   const { id } = req.params;
   const { action } = req.body;
 
@@ -1246,7 +1292,7 @@ app.put("/api/admin/credit-requests/:id", (req, res) => {
     return res.status(400).json({ error: "Action invalide. Doit être 'approve' ou 'reject'." });
   }
 
-  const db = readDB();
+  const db = await readDB();
   const requestIndex = db.creditRequests.findIndex(r => r.id === id);
 
   if (requestIndex === -1) {
@@ -1271,47 +1317,47 @@ app.put("/api/admin/credit-requests/:id", (req, res) => {
     request.status = "rejected";
   }
 
-  writeDB(db);
+  await writeDB(db);
   res.json({
     message: action === "approve" ? "Recharge crédit approuvée et crédit ajouté au grossiste." : "Demande de recharge rejetée.",
     request
   });
 });
 
-app.get("/api/admin/notifications", (req, res) => {
-  const db = readDB();
+app.get("/api/admin/notifications", async (req, res) => {
+  const db = await readDB();
   res.json(db.notifications);
 });
 
-app.put("/api/admin/notifications/:id/read", (req, res) => {
+app.put("/api/admin/notifications/:id/read", async (req, res) => {
   const { id } = req.params;
-  const db = readDB();
+  const db = await readDB();
   const notif = db.notifications.find(n => n.id === id);
   if (notif) {
     notif.read = true;
-    writeDB(db);
+    await writeDB(db);
   }
   res.json({ success: true });
 });
 
-app.delete("/api/admin/notifications/:id", (req, res) => {
+app.delete("/api/admin/notifications/:id", async (req, res) => {
   const { id } = req.params;
-  const db = readDB();
+  const db = await readDB();
   db.notifications = db.notifications.filter(n => n.id !== id);
-  writeDB(db);
+  await writeDB(db);
   res.json({ success: true });
 });
 
-app.get("/api/admin/clients", (req, res) => {
-  const db = readDB();
+app.get("/api/admin/clients", async (req, res) => {
+  const db = await readDB();
   res.json(db.clients || []);
 });
 
-app.put("/api/admin/clients/:id", (req, res) => {
+app.put("/api/admin/clients/:id", async (req, res) => {
   const { id } = req.params;
   const { credentials, clientName, server, notes, status, durationMonths } = req.body;
 
-  const db = readDB();
+  const db = await readDB();
   const clientIndex = db.clients.findIndex(c => c.id === id);
 
   if (clientIndex === -1) {
@@ -1342,22 +1388,22 @@ app.put("/api/admin/clients/:id", (req, res) => {
     client.expirationDate = expirationDate.toISOString();
   }
 
-  writeDB(db);
+  await writeDB(db);
   res.json({ message: "Informations d'abonnement du client mises à jour.", client });
 });
 
 // --- DELIVERERS (LIVREURS) ENDPOINTS ---
-app.get("/api/admin/livreurs", (req, res) => {
-  const db = readDB();
+app.get("/api/admin/livreurs", async (req, res) => {
+  const db = await readDB();
   res.json(db.livreurs || []);
 });
 
-app.post("/api/admin/livreurs", (req, res) => {
+app.post("/api/admin/livreurs", async (req, res) => {
   const { name, phone, wilaya, status } = req.body;
   if (!name || !phone) {
     return res.status(400).json({ error: "Le nom et le numéro de téléphone sont requis." });
   }
-  const db = readDB();
+  const db = await readDB();
   const newLivreur = {
     id: "liv-" + Math.random().toString(36).substr(2, 9),
     name,
@@ -1368,14 +1414,14 @@ app.post("/api/admin/livreurs", (req, res) => {
   };
   if (!db.livreurs) db.livreurs = [];
   db.livreurs.push(newLivreur);
-  writeDB(db);
+  await writeDB(db);
   res.json(newLivreur);
 });
 
-app.put("/api/admin/livreurs/:id", (req, res) => {
+app.put("/api/admin/livreurs/:id", async (req, res) => {
   const { id } = req.params;
   const { name, phone, wilaya, status } = req.body;
-  const db = readDB();
+  const db = await readDB();
   const index = db.livreurs.findIndex(l => l.id === id);
   if (index === -1) {
     return res.status(404).json({ error: "Livreur introuvable." });
@@ -1387,22 +1433,22 @@ app.put("/api/admin/livreurs/:id", (req, res) => {
     wilaya: wilaya !== undefined ? wilaya : db.livreurs[index].wilaya,
     status: status !== undefined ? status : db.livreurs[index].status
   };
-  writeDB(db);
+  await writeDB(db);
   res.json(db.livreurs[index]);
 });
 
-app.delete("/api/admin/livreurs/:id", (req, res) => {
+app.delete("/api/admin/livreurs/:id", async (req, res) => {
   const { id } = req.params;
-  const db = readDB();
+  const db = await readDB();
   db.livreurs = (db.livreurs || []).filter(l => l.id !== id);
-  writeDB(db);
+  await writeDB(db);
   res.json({ success: true });
 });
 
-app.put("/api/admin/orders/:id/delivery", (req, res) => {
+app.put("/api/admin/orders/:id/delivery", async (req, res) => {
   const { id } = req.params;
   const { assignedLivreurId, deliveryStatus, status } = req.body;
-  const db = readDB();
+  const db = await readDB();
   const index = db.orders.findIndex(o => o.id === id);
   if (index === -1) {
     return res.status(404).json({ error: "Commande introuvable." });
@@ -1411,22 +1457,22 @@ app.put("/api/admin/orders/:id/delivery", (req, res) => {
   if (assignedLivreurId !== undefined) order.assignedLivreurId = assignedLivreurId;
   if (deliveryStatus !== undefined) order.deliveryStatus = deliveryStatus;
   if (status !== undefined) order.status = status;
-  writeDB(db);
+  await writeDB(db);
   res.json({ message: "Livraison de la commande mise à jour.", order });
 });
 
 // --- TUTORIALS ENDPOINTS ---
-app.get("/api/tutorials", (req, res) => {
-  const db = readDB();
+app.get("/api/tutorials", async (req, res) => {
+  const db = await readDB();
   res.json(db.tutorials || []);
 });
 
-app.post("/api/admin/tutorials", (req, res) => {
+app.post("/api/admin/tutorials", async (req, res) => {
   const { title, url, description, category, downloaderCode } = req.body;
   if (!title || !url) {
     return res.status(400).json({ error: "Le titre et le lien sont obligatoires." });
   }
-  const db = readDB();
+  const db = await readDB();
   const newTutorial: VideoTutorial = {
     id: "tut-" + Math.random().toString(36).substr(2, 9),
     title,
@@ -1438,14 +1484,14 @@ app.post("/api/admin/tutorials", (req, res) => {
   };
   if (!db.tutorials) db.tutorials = [];
   db.tutorials.push(newTutorial);
-  writeDB(db);
+  await writeDB(db);
   res.json(newTutorial);
 });
 
-app.put("/api/admin/tutorials/:id", (req, res) => {
+app.put("/api/admin/tutorials/:id", async (req, res) => {
   const { id } = req.params;
   const { title, url, description, category, downloaderCode } = req.body;
-  const db = readDB();
+  const db = await readDB();
   const index = db.tutorials.findIndex(t => t.id === id);
   if (index === -1) {
     return res.status(404).json({ error: "Tutoriel introuvable." });
@@ -1458,25 +1504,25 @@ app.put("/api/admin/tutorials/:id", (req, res) => {
     category: category !== undefined ? category : db.tutorials[index].category,
     downloaderCode: downloaderCode !== undefined ? downloaderCode : db.tutorials[index].downloaderCode
   };
-  writeDB(db);
+  await writeDB(db);
   res.json(db.tutorials[index]);
 });
 
-app.delete("/api/admin/tutorials/:id", (req, res) => {
+app.delete("/api/admin/tutorials/:id", async (req, res) => {
   const { id } = req.params;
-  const db = readDB();
+  const db = await readDB();
   db.tutorials = (db.tutorials || []).filter(t => t.id !== id);
-  writeDB(db);
+  await writeDB(db);
   res.json({ success: true });
 });
 
 // --- PRODUCTS MANAGEMENT (CRUD) ---
-app.post(["/api/admin/products", "/api/products"], (req, res) => {
+app.post(["/api/admin/products", "/api/products"], async (req, res) => {
   const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
   if (!name || !type || priceRetail === undefined || priceWholesale === undefined) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
-  const db = readDB();
+  const db = await readDB();
   const newProduct: Product = {
     id: "p-" + Math.random().toString(36).substr(2, 9),
     name,
@@ -1490,14 +1536,14 @@ app.post(["/api/admin/products", "/api/products"], (req, res) => {
     isPopular: !!isPopular
   };
   db.products.push(newProduct);
-  writeDB(db);
+  await writeDB(db);
   res.json(newProduct);
 });
 
-app.put(["/api/admin/products/:id", "/api/products/:id"], (req, res) => {
+app.put(["/api/admin/products/:id", "/api/products/:id"], async (req, res) => {
   const { id } = req.params;
   const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
-  const db = readDB();
+  const db = await readDB();
   const index = db.products.findIndex(p => p.id === id);
   if (index === -1) {
     return res.status(404).json({ error: "Produit introuvable." });
@@ -1514,25 +1560,25 @@ app.put(["/api/admin/products/:id", "/api/products/:id"], (req, res) => {
     imageUrl2: imageUrl2 !== undefined ? imageUrl2 : db.products[index].imageUrl2,
     isPopular: isPopular !== undefined ? !!isPopular : db.products[index].isPopular
   };
-  writeDB(db);
+  await writeDB(db);
   res.json(db.products[index]);
 });
 
-app.delete(["/api/admin/products/:id", "/api/products/:id"], (req, res) => {
+app.delete(["/api/admin/products/:id", "/api/products/:id"], async (req, res) => {
   const { id } = req.params;
-  const db = readDB();
+  const db = await readDB();
   db.products = db.products.filter(p => p.id !== id);
-  writeDB(db);
+  await writeDB(db);
   res.json({ success: true });
 });
 
 // --- DIRECT WHOLESALER CREATION BY ADMIN ---
-app.post("/api/admin/wholesalers", (req, res) => {
+app.post("/api/admin/wholesalers", async (req, res) => {
   const { username, password, businessName, phone, email, creditBalance } = req.body;
   if (!username || !businessName || !phone || !email) {
     return res.status(400).json({ error: "Tous les champs sont requis." });
   }
-  const db = readDB();
+  const db = await readDB();
   const exists = db.wholesalers.some(
     w => w.username.toLowerCase() === username.toLowerCase() || w.email.toLowerCase() === email.toLowerCase()
   );
@@ -1551,8 +1597,19 @@ app.post("/api/admin/wholesalers", (req, res) => {
     createdAt: new Date().toISOString()
   };
   db.wholesalers.push(newWholesaler);
-  writeDB(db);
+  await writeDB(db);
   res.json(sanitizeWholesaler(newWholesaler));
+});
+
+// Filet de sécurité global : capture toute erreur non gérée dans une route
+// async (ex: panne réseau Redis) et répond proprement au lieu de laisser la
+// requête du client rester bloquée indéfiniment. Nécessite "express-async-errors"
+// importé en haut du fichier, car Express 4 ne route pas nativement les
+// rejets de promesses vers ce middleware.
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Unhandled API error:", err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: "Une erreur serveur est survenue. Veuillez réessayer dans un instant." });
 });
 
 export default app;
