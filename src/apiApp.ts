@@ -52,8 +52,12 @@ if (!redis) {
 async function storageReadRaw(): Promise<string | null> {
   if (redis) {
     const value = await redis.get<string>(REDIS_DB_KEY);
-    return value ?? null;
+    if (value === null || value === undefined) return null;
+    return typeof value === "string" ? value : JSON.stringify(value);
   }
+  if (!fs.existsSync(DB_FILE)) return null;
+  return fs.readFileSync(DB_FILE, "utf-8");
+}
   if (!fs.existsSync(DB_FILE)) return null;
   return fs.readFileSync(DB_FILE, "utf-8");
 }
