@@ -81,6 +81,12 @@ export interface Order {
   downloaderCode?: string;
   assignedLivreurId?: string; // assigned deliverer ID
   deliveryStatus?: 'pending' | 'preparing' | 'shipped' | 'delivered' | 'returned';
+  // Livraison (produits physiques uniquement : box android, démodulateur, TV...)
+  shippingWilaya?: string;
+  shippingType?: 'domicile' | 'bureau';
+  shippingAddress?: string;
+  shippingPriceDA?: number;
+  shippingDelay?: string; // ex: "J+1"
 }
 
 export interface VideoTutorial {
