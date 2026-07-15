@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Product, Order, CatalogCategory } from "../types";
+import { DELIVERY_TARIFFS, getTariffForWilaya } from "../data/deliveryTariffs";
 import { 
   Check, 
   Tv, 
@@ -18,6 +19,12 @@ import {
   MapPin,
   AlertTriangle
 } from "lucide-react";
+
+// Types de produits considérés comme "physiques" : nécessitent une livraison
+// (Box Android, Démodulateur, TV, Accessoire...) — à la différence des codes
+// IPTV / Code Sat / Abonnements qui sont livrés numériquement (aucune expédition).
+const PHYSICAL_PRODUCT_TYPES = ["device", "demodulateur", "televiseur", "boitier android", "accessoire"];
+const isPhysicalProduct = (type: string) => PHYSICAL_PRODUCT_TYPES.includes(type);
 
 interface RetailCatalogProps {
   products: Product[];
@@ -45,6 +52,11 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
   const [installedApp, setInstalledApp] = useState("");
   const [hasAndroidBox, setHasAndroidBox] = useState(false);
   const [downloaderCode, setDownloaderCode] = useState("");
+
+  // Livraison (produits physiques uniquement)
+  const [shippingWilaya, setShippingWilaya] = useState("");
+  const [shippingType, setShippingType] = useState<"domicile" | "bureau">("domicile");
+  const [shippingAddress, setShippingAddress] = useState("");
 
   // Order Tracking States
   const [trackQuery, setTrackQuery] = useState("");
@@ -99,12 +111,25 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
     setInstalledApp("");
     setHasAndroidBox(false);
     setDownloaderCode("");
+    setShippingWilaya("");
+    setShippingType("domicile");
+    setShippingAddress("");
   };
+
+  // Tarif de livraison correspondant à la wilaya/type choisis (produits physiques)
+  const selectedTariff = shippingWilaya ? getTariffForWilaya(shippingWilaya) : undefined;
+  const shippingPrice = selectedTariff ? (shippingType === "domicile" ? selectedTariff.domicile : selectedTariff.bureau) : 0;
+  const isPhysicalCheckout = selectedProduct ? isPhysicalProduct(selectedProduct.type) : false;
+  const totalWithShipping = (selectedProduct?.priceRetail || 0) + (isPhysicalCheckout ? shippingPrice : 0);
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone) {
       setFormError("Le nom complet et le numéro de téléphone sont obligatoires.");
+      return;
+    }
+    if (isPhysicalCheckout && (!shippingWilaya || !shippingAddress)) {
+      setFormError("Veuillez sélectionner votre wilaya et indiquer votre adresse pour la livraison.");
       return;
     }
 
@@ -124,7 +149,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
         details = "Livraison contre remboursement (Yalidine) / Main à main.";
       }
 
-      const orderPayload = {
+      const orderPayload: any = {
         customerName: name,
         customerEmail: email,
         customerPhone: phone,
@@ -136,6 +161,14 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
         hasAndroidBox,
         downloaderCode
       };
+
+      if (isPhysicalCheckout) {
+        orderPayload.shippingWilaya = shippingWilaya;
+        orderPayload.shippingType = shippingType;
+        orderPayload.shippingAddress = shippingAddress;
+        orderPayload.shippingPriceDA = shippingPrice;
+        orderPayload.shippingDelay = selectedTariff?.delai || "";
+      }
 
       const result = await onOrderSubmit(orderPayload);
       setSuccessOrder(result.order);
@@ -470,8 +503,8 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     ? "Code IPTV" 
                     : product.type === "adsl" 
                     ? "Recharge ADSL" 
-                    : product.type === "device" || product.type === "demodulateur"
-                    ? "Matériel"
+                    : isPhysicalProduct(product.type)
+                    ? "Matériel (Livraison)"
                     : product.type
                   }
                 </span>
@@ -556,15 +589,23 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 )}
 
                 {/* Selected Item Recap Card */}
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 flex justify-between items-center">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Produit choisi :</span>
-                    <h4 className="font-bold text-slate-800 text-base font-display">{selectedProduct.name}</h4>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Produit choisi :</span>
+                      <h4 className="font-bold text-slate-800 text-base font-display">{selectedProduct.name}</h4>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total à payer :</span>
+                      <p className="text-xl font-extrabold text-blue-600 font-display">{totalWithShipping.toLocaleString()} DA</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total à payer :</span>
-                    <p className="text-xl font-extrabold text-blue-600 font-display">{selectedProduct.priceRetail.toLocaleString()} DA</p>
-                  </div>
+                  {isPhysicalCheckout && shippingWilaya && (
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-200 text-[11px] text-slate-500">
+                      <span>Produit : {selectedProduct.priceRetail.toLocaleString()} DA + Livraison ({shippingType === "domicile" ? "à domicile" : "au bureau"}) : {shippingPrice.toLocaleString()} DA</span>
+                      {selectedTariff && <span className="font-semibold text-slate-600">Délai estimé : {selectedTariff.delai}</span>}
+                    </div>
+                  )}
                 </div>
 
                 {/* Grid Input */}
@@ -604,7 +645,76 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                   />
                 </div>
 
-                {/* Configuration Client Specifics (TV Model, App Installed, Android Box, Downloader Code) */}
+                {isPhysicalCheckout ? (
+                  /* Formulaire LIVRAISON — produits physiques (Box Android, Démodulateur, TV...) */
+                  <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-4">
+                    <h4 className="text-xs font-bold uppercase text-emerald-700 tracking-wider flex items-center space-x-1.5">
+                      <Truck className="h-3.5 w-3.5" />
+                      <span>Informations de Livraison</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Wilaya de livraison <span className="text-red-500">*</span></label>
+                        <select
+                          required
+                          value={shippingWilaya}
+                          onChange={(e) => setShippingWilaya(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
+                        >
+                          <option value="">-- Choisir votre wilaya --</option>
+                          {DELIVERY_TARIFFS.map(t => (
+                            <option key={t.wilaya} value={t.wilaya}>{t.wilaya}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Mode de livraison <span className="text-red-500">*</span></label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShippingType("domicile")}
+                            className={`py-2.5 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
+                              shippingType === "domicile"
+                                ? "bg-emerald-50 border-emerald-500 text-emerald-700"
+                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                            }`}
+                          >
+                            À domicile{selectedTariff ? ` (${selectedTariff.domicile.toLocaleString()} DA)` : ""}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShippingType("bureau")}
+                            className={`py-2.5 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
+                              shippingType === "bureau"
+                                ? "bg-emerald-50 border-emerald-500 text-emerald-700"
+                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                            }`}
+                          >
+                            Au bureau / agence{selectedTariff ? ` (${selectedTariff.bureau.toLocaleString()} DA)` : ""}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Adresse complète (Commune, Quartier...) <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Cité 500 logts, Bt 12, Draria, Alger"
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                      />
+                    </div>
+                    {selectedTariff && (
+                      <div className="flex items-center space-x-1.5 text-[11px] text-emerald-700 bg-emerald-100/60 border border-emerald-200 rounded-lg px-3 py-2">
+                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                        <span>Délai de livraison estimé pour {shippingWilaya} : <strong>{selectedTariff.delai}</strong></span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                /* Configuration Client Specifics (TV Model, App Installed, Android Box, Downloader Code) */
                 <div className="p-4 bg-blue-50/40 rounded-xl border border-blue-100/75 space-y-4">
                   <h4 className="text-xs font-bold uppercase text-indigo-700 tracking-wider">
                     Informations de Configuration (Recommandé pour activation rapide)
@@ -684,6 +794,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Payment Method Selector */}
                 <div>
@@ -839,9 +950,9 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                         <span>Paiement à la livraison (Yalidine Express)</span>
                       </div>
                       <p className="leading-relaxed text-slate-600">
-                        {selectedProduct.type === "device" || selectedProduct.type === "demodulateur" || selectedProduct.type === "televiseur" ? (
+                        {isPhysicalCheckout ? (
                           <>
-                            Pour l'achat du produit physique <strong>{selectedProduct.name}</strong>, l'envoi se fera via <strong className="text-slate-900">Yalidine Express</strong>. Vous paierez en espèces à la livraison. Notre agent vous appellera pour confirmer l'adresse de livraison (Wilaya/Commune).
+                            Pour l'achat du produit physique <strong>{selectedProduct.name}</strong>, l'envoi se fera via <strong className="text-slate-900">Yalidine Express</strong> vers <strong className="text-slate-900">{shippingWilaya || "votre wilaya"}</strong> ({shippingType === "domicile" ? "à domicile" : "au bureau"}). Vous paierez <strong className="text-slate-900">{totalWithShipping.toLocaleString()} DA</strong> en espèces à la livraison.
                           </>
                         ) : (
                           <>
@@ -868,7 +979,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        <span>Confirmer ma Commande ({selectedProduct.priceRetail.toLocaleString()} DA)</span>
+                        <span>Confirmer ma Commande ({totalWithShipping.toLocaleString()} DA)</span>
                       </>
                     )}
                   </button>
