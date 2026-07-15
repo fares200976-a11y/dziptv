@@ -53,11 +53,10 @@ async function storageReadRaw(): Promise<string | null> {
   if (redis) {
     const value = await redis.get<string>(REDIS_DB_KEY);
     if (value === null || value === undefined) return null;
+    // Sécurité : si le SDK renvoie malgré tout un objet déjà désérialisé
+    // (plutôt que la chaîne JSON brute attendue), on le re-sérialise.
     return typeof value === "string" ? value : JSON.stringify(value);
   }
-  if (!fs.existsSync(DB_FILE)) return null;
-  return fs.readFileSync(DB_FILE, "utf-8");
-}
   if (!fs.existsSync(DB_FILE)) return null;
   return fs.readFileSync(DB_FILE, "utf-8");
 }
