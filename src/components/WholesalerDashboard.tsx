@@ -17,7 +17,9 @@ import {
   FileText,
   AlertCircle,
   HelpCircle,
-  ArrowLeft
+  ArrowLeft,
+  Settings,
+  ShieldAlert
 } from "lucide-react";
 
 interface WholesalerDashboardProps {
@@ -32,6 +34,7 @@ interface WholesalerDashboardProps {
   onRequestPanel?: (data: any) => Promise<any>;
   refreshWholesalerData: () => void;
   onLogoutWholesaler?: () => void;
+  onLogoutComplete?: () => void;
   onBackToHome?: () => void;
 }
 
@@ -47,12 +50,17 @@ export default function WholesalerDashboard({
   onRequestPanel,
   refreshWholesalerData,
   onLogoutWholesaler,
+  onLogoutComplete,
   onBackToHome
 }: WholesalerDashboardProps) {
   // Login / Register Views
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  // Paramètres du compte / déconnexion complète
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [confirmFullLogout, setConfirmFullLogout] = useState(false);
   
   // Register Fields
   const [regUsername, setRegUsername] = useState("");
@@ -515,17 +523,99 @@ export default function WholesalerDashboard({
             <span>Nouvelle Activation</span>
           </button>
 
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs rounded-xl border border-gray-700 transition-all flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Paramètres du compte</span>
+          </button>
+
           {onLogoutWholesaler && (
             <button
               onClick={onLogoutWholesaler}
+              title="Quitte le panneau, votre session reste active"
               className="px-4 py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-400 font-bold text-xs rounded-xl border border-red-500/20 transition-all flex items-center space-x-1.5 cursor-pointer"
             >
               <LogIn className="h-4 w-4 rotate-180" />
-              <span>Se déconnecter</span>
+              <span>Quitter le panneau</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* PARAMÈTRES DU COMPTE MODAL */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => {
+                setShowSettingsModal(false);
+                setConfirmFullLogout(false);
+              }}
+              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="space-y-1.5 mb-6 border-b border-gray-800 pb-4">
+              <Settings className="h-7 w-7 text-gray-400 mb-1" />
+              <h3 className="font-display font-extrabold text-lg text-white">Paramètres du compte</h3>
+              <p className="text-gray-400 text-xs">{loggedWholesaler.businessName} — {loggedWholesaler.username}</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-900 border border-gray-800 rounded-xl text-xs text-gray-400 leading-relaxed">
+                Le bouton <strong className="text-gray-200">« Quitter le panneau »</strong> vous ramène simplement à la
+                boutique : votre session reste active jusqu'à 2 jours et vous retrouverez
+                votre espace revendeur automatiquement, sans ressaisir vos identifiants.
+              </div>
+
+              <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl space-y-3">
+                <div className="flex items-start space-x-2">
+                  <ShieldAlert className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-red-300 leading-relaxed">
+                    La déconnexion complète met fin à votre session sur cet appareil.
+                    Vous devrez ressaisir votre identifiant et votre mot de passe pour
+                    revenir sur votre espace revendeur.
+                  </p>
+                </div>
+
+                {!confirmFullLogout ? (
+                  <button
+                    onClick={() => setConfirmFullLogout(true)}
+                    className="w-full py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-400 border border-red-500/30 rounded-xl font-bold text-xs transition-all cursor-pointer"
+                  >
+                    Déconnexion complète
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-gray-300 font-semibold">Confirmer la déconnexion complète ?</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setShowSettingsModal(false);
+                          setConfirmFullLogout(false);
+                          onLogoutComplete && onLogoutComplete();
+                        }}
+                        className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-xs cursor-pointer"
+                      >
+                        Oui, déconnecter
+                      </button>
+                      <button
+                        onClick={() => setConfirmFullLogout(false)}
+                        className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-xs cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Alert states feedback */}
       {actionSuccess && (

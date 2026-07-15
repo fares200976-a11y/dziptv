@@ -66,17 +66,23 @@ export default function App() {
     fetchProducts();
     fetchTutorials();
     fetchCatalogCategories();
-    
-    // Check local storage for persistent login
-    const savedProfile = localStorage.getItem("wholesalerProfile");
-    if (savedProfile) {
+
+    // Reconnexion automatique : si un cookie JWT valide existe encore (session
+    // de 2 jours), on restaure le profil revendeur sans redemander les identifiants.
+    // Le mot de passe n'est plus jamais stocké côté client (localStorage).
+    (async () => {
       try {
-        const profile = JSON.parse(savedProfile);
-        setLoggedWholesaler(profile);
+        const res = await fetch("/api/auth/wholesaler/session", {
+          credentials: "include"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setLoggedWholesaler(data.wholesaler);
+        }
       } catch (e) {
-        localStorage.removeItem("wholesalerProfile");
+        // Pas de session valide, l'utilisateur devra se connecter normalement.
       }
-    }
+    })();
   }, []);
 
   // 2. Fetch wholesaler specific data if logged in
@@ -134,26 +140,23 @@ export default function App() {
     try {
       // Refresh profile to get updated balance
       const profRes = await fetch("/api/wholesaler/profile", {
-        headers: { "x-wholesaler-id": loggedWholesaler.id }
+        credentials: "include"
       });
       if (profRes.ok) {
         const freshProfile = await profRes.json();
         if (freshProfile.status === "suspended") {
-          localStorage.removeItem("wholesalerProfile");
           setLoggedWholesaler(null);
           alert("Votre compte grossiste a été suspendu par l'administration.");
           return;
         }
         setLoggedWholesaler(freshProfile);
-        localStorage.setItem("wholesalerProfile", JSON.stringify(freshProfile));
       } else if (profRes.status === 403 || profRes.status === 401) {
-        localStorage.removeItem("wholesalerProfile");
         setLoggedWholesaler(null);
       }
 
       // Fetch Clients
       const clientsRes = await fetch("/api/wholesaler/clients", {
-        headers: { "x-wholesaler-id": loggedWholesaler.id }
+        credentials: "include"
       });
       if (clientsRes.ok) {
         const clientsData = await clientsRes.json();
@@ -162,7 +165,7 @@ export default function App() {
 
       // Fetch Credit Requests
       const reqRes = await fetch("/api/wholesaler/credit-requests", {
-        headers: { "x-wholesaler-id": loggedWholesaler.id }
+        credentials: "include"
       });
       if (reqRes.ok) {
         const reqData = await reqRes.json();
@@ -171,7 +174,7 @@ export default function App() {
 
       // Fetch Panel Requests
       const panelRes = await fetch("/api/wholesaler/panel-requests", {
-        headers: { "x-wholesaler-id": loggedWholesaler.id }
+        credentials: "include"
       });
       if (panelRes.ok) {
         const panelData = await panelRes.json();
@@ -224,6 +227,7 @@ export default function App() {
     const res = await fetch("/api/auth/wholesaler/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ username: usernameInput, password: passwordInput })
     });
     
@@ -248,7 +252,6 @@ export default function App() {
 
     const data = await res.json();
     setLoggedWholesaler(data.wholesaler);
-    localStorage.setItem("wholesalerProfile", JSON.stringify(data.wholesaler));
     refreshAllData();
     return data;
   };
@@ -295,13 +298,30 @@ export default function App() {
     setView(view);
   };
 
+  // "Quitter le panneau" : ferme uniquement la vue revendeur et retourne à la
+  // boutique. La session (cookie JWT) N'EST PAS touchée : le revendeur reste
+  // connecté et retrouvera son panneau automatiquement pendant 2 jours.
   const handleWholesalerLogout = () => {
-    localStorage.removeItem("wholesalerProfile");
+    setView("retail");
+  };
+
+  // "Déconnexion complète" (paramètres du compte) : révoque le JWT côté serveur
+  // et supprime le cookie. Une reconnexion avec identifiant + mot de passe sera
+  // nécessaire ensuite.
+  const handleWholesalerLogoutComplete = async () => {
+    try {
+      await fetch("/api/auth/wholesaler/logout-complete", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (e) {
+      console.error("Error during full logout:", e);
+    }
     setLoggedWholesaler(null);
     setWholesalerClients([]);
     setWholesalerRequests([]);
     setWholesalerPanelRequests([]);
-    setView("retail"); // Exit the dashboard and go to home page
+    setView("retail");
     refreshAllData();
   };
 
@@ -344,10 +364,8 @@ export default function App() {
     if (!loggedWholesaler) return;
     const res = await fetch("/api/wholesaler/clients", {
       method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "x-wholesaler-id": loggedWholesaler.id 
-      },
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(payload)
     });
 
@@ -367,10 +385,8 @@ export default function App() {
     if (!loggedWholesaler) return;
     const res = await fetch("/api/wholesaler/credit-requests", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-wholesaler-id": loggedWholesaler.id
-      },
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(payload)
     });
 
@@ -389,10 +405,8 @@ export default function App() {
     if (!loggedWholesaler) return;
     const res = await fetch("/api/wholesaler/panel-requests", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-wholesaler-id": loggedWholesaler.id
-      },
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(payload)
     });
 
@@ -596,7 +610,12 @@ export default function App() {
         method: "POST"
       });
       if (res.ok) {
-        localStorage.removeItem("wholesalerProfile");
+        // La base est réinitialisée (les comptes/IDs revendeurs changent) :
+        // on invalide aussi la session en cours pour éviter un état incohérent.
+        await fetch("/api/auth/wholesaler/logout-complete", {
+          method: "POST",
+          credentials: "include"
+        });
         setLoggedWholesaler(null);
         refreshAllData();
       }
@@ -687,6 +706,7 @@ export default function App() {
               onRequestPanel={handleRequestPanel}
               refreshWholesalerData={fetchWholesalerData}
               onLogoutWholesaler={handleWholesalerLogout}
+              onLogoutComplete={handleWholesalerLogoutComplete}
               onBackToHome={() => setView("retail")}
             />
           </div>

@@ -123,7 +123,7 @@ export default function Header({
                   </span>
                   <button
                     onClick={onLogout}
-                    title="Se déconnecter"
+                    title="Quitter le panneau (reste connecté)"
                     className="p-1 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
                   >
                     <LogOut className="h-3.5 w-3.5" />

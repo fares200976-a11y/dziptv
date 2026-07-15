@@ -1,6 +1,10 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import cookieParser from "cookie-parser";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import {
   Product,
   Wholesaler,
@@ -26,6 +30,90 @@ const DB_FILE = process.env.VERCEL
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(cookieParser());
+
+// ============================================================================
+// AUTH: JWT + Cookie HttpOnly pour l'espace revendeur (grossiste)
+// ============================================================================
+// - Le JWT est valable 2 jours et vit dans un cookie HttpOnly ("wholesaler_token").
+// - "Quitter le panneau" (bouton Déconnexion du dashboard) ne touche PAS au cookie :
+//   c'est juste une navigation front-end vers la boutique. Le revendeur reste connecté.
+// - "Déconnexion complète" (paramètres du compte) supprime le cookie ET révoque le
+//   token (jti) côté serveur, pour empêcher sa réutilisation même s'il a été copié.
+const JWT_SECRET = process.env.JWT_SECRET || "dev-only-insecure-secret-change-me";
+if (!process.env.JWT_SECRET) {
+  console.warn(
+    "[AUTH WARNING] JWT_SECRET n'est pas défini dans les variables d'environnement. " +
+    "Une clé de développement non sécurisée est utilisée. Définissez JWT_SECRET en production."
+  );
+}
+const WHOLESALER_TOKEN_COOKIE = "wholesaler_token";
+const WHOLESALER_TOKEN_TTL_SECONDS = 2 * 24 * 60 * 60; // 2 jours
+
+function signWholesalerToken(wholesalerId: string): string {
+  const jti = crypto.randomUUID();
+  return jwt.sign(
+    { sub: wholesalerId, jti },
+    JWT_SECRET,
+    { expiresIn: WHOLESALER_TOKEN_TTL_SECONDS }
+  );
+}
+
+function wholesalerCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production" || !!process.env.VERCEL,
+    sameSite: "lax" as const,
+    maxAge: WHOLESALER_TOKEN_TTL_SECONDS * 1000,
+    path: "/"
+  };
+}
+
+function isTokenRevoked(jti: string): boolean {
+  const db = readDB();
+  const list = db.revokedTokens || [];
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return list.some(t => t.jti === jti && t.exp > nowSeconds);
+}
+
+function revokeToken(jti: string, exp: number) {
+  const db = readDB();
+  if (!db.revokedTokens) db.revokedTokens = [];
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  // On profite de l'opération pour nettoyer les entrées déjà expirées.
+  db.revokedTokens = db.revokedTokens.filter(t => t.exp > nowSeconds);
+  db.revokedTokens.push({ jti, exp });
+  writeDB(db);
+}
+
+// Middleware : protège les routes de l'espace revendeur.
+// Si le cookie JWT est valide et non révoqué, la session est restaurée
+// automatiquement (pas de ressaisie des identifiants).
+function requireWholesalerAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const token = req.cookies?.[WHOLESALER_TOKEN_COOKIE];
+  if (!token) {
+    return res.status(401).json({ error: "Non autorisé." });
+  }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { sub: string; jti: string; exp: number };
+    if (isTokenRevoked(payload.jti)) {
+      res.clearCookie(WHOLESALER_TOKEN_COOKIE, wholesalerCookieOptions());
+      return res.status(401).json({ error: "Session invalidée. Veuillez vous reconnecter." });
+    }
+    (req as any).wholesalerId = payload.sub;
+    (req as any).tokenJti = payload.jti;
+    (req as any).tokenExp = payload.exp;
+    next();
+  } catch (err) {
+    res.clearCookie(WHOLESALER_TOKEN_COOKIE, wholesalerCookieOptions());
+    return res.status(401).json({ error: "Session expirée. Veuillez vous reconnecter." });
+  }
+}
+
+function sanitizeWholesaler(w: Wholesaler): Wholesaler {
+  const { password, ...safe } = w as any;
+  return safe;
+}
 
 // Default Seed Data
 const DEFAULT_PRODUCTS: Product[] = [
@@ -231,6 +319,7 @@ interface DBStructure {
   livreurs: Livreur[];
   catalogCategories: CatalogCategory[];
   panelRequests: PanelRequest[];
+  revokedTokens?: { jti: string; exp: number }[];
 }
 
 // Read database
@@ -378,7 +467,8 @@ function readDB(): DBStructure {
           { id: "cat-device", name: "Boîtiers Android & Récepteurs" },
           { id: "cat-adsl", name: "Recharges ADSL & Fibre" }
         ],
-        panelRequests: []
+        panelRequests: [],
+        revokedTokens: []
       };
       fs.writeFileSync(DB_FILE, JSON.stringify(initialDB, null, 2), "utf-8");
       return initialDB;
@@ -423,6 +513,10 @@ function readDB(): DBStructure {
       parsed.panelRequests = [];
       changed = true;
     }
+    if (!parsed.revokedTokens) {
+      parsed.revokedTokens = [];
+      changed = true;
+    }
     if (changed) {
       fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), "utf-8");
     }
@@ -443,7 +537,8 @@ function readDB(): DBStructure {
         { id: "cat-device", name: "Boîtiers Android & Récepteurs" },
         { id: "cat-adsl", name: "Recharges ADSL & Fibre" }
       ],
-      panelRequests: []
+      panelRequests: [],
+      revokedTokens: []
     };
   }
 }
@@ -537,18 +632,16 @@ app.delete("/api/admin/catalog-categories/:id", (req, res) => {
 });
 
 // --- PANEL REQUEST ENDPOINTS ---
-app.get("/api/wholesaler/panel-requests", (req, res) => {
-  const wholesalerId = req.headers["x-wholesaler-id"] as string;
-  if (!wholesalerId) return res.status(401).json({ error: "Non autorisé." });
+app.get("/api/wholesaler/panel-requests", requireWholesalerAuth, (req, res) => {
+  const wholesalerId = (req as any).wholesalerId as string;
   const db = readDB();
   const reqs = (db.panelRequests || []).filter(r => r.wholesalerId === wholesalerId);
   res.json(reqs);
 });
 
-app.post("/api/wholesaler/panel-requests", (req, res) => {
-  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+app.post("/api/wholesaler/panel-requests", requireWholesalerAuth, (req, res) => {
+  const wholesalerId = (req as any).wholesalerId as string;
   const { server, codesCount, notes } = req.body;
-  if (!wholesalerId) return res.status(401).json({ error: "Non autorisé." });
   if (!server || !codesCount) return res.status(400).json({ error: "Serveur et quantité requis." });
 
   const count = Number(codesCount);
@@ -650,7 +743,7 @@ app.post("/api/auth/wholesaler/register", (req, res) => {
     const newWholesaler: any = {
       id: "w-" + Math.random().toString(36).substr(2, 9),
       username,
-      password,
+      password: bcrypt.hashSync(password, 10),
       businessName,
       phone,
       email,
@@ -680,7 +773,7 @@ app.post("/api/auth/wholesaler/register", (req, res) => {
 
     res.json({
       message: "Inscription réussie ! Votre compte est en attente d'approbation par l'administrateur.",
-      wholesaler: newWholesaler
+      wholesaler: sanitizeWholesaler(newWholesaler)
     });
   } catch (err: any) {
     console.error("Error in wholesaler register:", err);
@@ -709,8 +802,21 @@ app.post("/api/auth/wholesaler/login", (req, res) => {
       return res.status(401).json({ error: "Identifiants invalides." });
     }
 
-    if (wholesaler.password && wholesaler.password !== password) {
-      return res.status(401).json({ error: "Mot de passe incorrect." });
+    if (wholesaler.password) {
+      const isBcryptHash = wholesaler.password.startsWith("$2a$") || wholesaler.password.startsWith("$2b$") || wholesaler.password.startsWith("$2y$");
+      if (isBcryptHash) {
+        if (!bcrypt.compareSync(password, wholesaler.password)) {
+          return res.status(401).json({ error: "Mot de passe incorrect." });
+        }
+      } else {
+        // Compte créé avant la mise en place du hash : on compare en clair une
+        // dernière fois, puis on migre silencieusement vers un hash bcrypt.
+        if (wholesaler.password !== password) {
+          return res.status(401).json({ error: "Mot de passe incorrect." });
+        }
+        wholesaler.password = bcrypt.hashSync(password, 10);
+        writeDB(db);
+      }
     }
 
     if (wholesaler.status === "pending") {
@@ -721,9 +827,12 @@ app.post("/api/auth/wholesaler/login", (req, res) => {
       return res.status(403).json({ error: "Votre compte grossiste a été suspendu par l'administration." });
     }
 
+    const token = signWholesalerToken(wholesaler.id);
+    res.cookie(WHOLESALER_TOKEN_COOKIE, token, wholesalerCookieOptions());
+
     res.json({
       message: "Connexion réussie.",
-      wholesaler
+      wholesaler: sanitizeWholesaler(wholesaler)
     });
   } catch (err: any) {
     console.error("Error in wholesaler login:", err);
@@ -731,12 +840,39 @@ app.post("/api/auth/wholesaler/login", (req, res) => {
   }
 });
 
-// Get Wholesaler Profile
-app.get("/api/wholesaler/profile", (req, res) => {
-  const wholesalerId = req.headers["x-wholesaler-id"] as string;
-  if (!wholesalerId) {
-    return res.status(401).json({ error: "Non autorisé." });
+// Vérifie si une session revendeur valide existe déjà (cookie JWT) et restaure
+// automatiquement le profil, sans ressaisie des identifiants. Utilisé au
+// chargement de l'app pour reconnecter silencieusement le revendeur.
+app.get("/api/auth/wholesaler/session", requireWholesalerAuth, (req, res) => {
+  const wholesalerId = (req as any).wholesalerId as string;
+  const db = readDB();
+  const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
+  if (!wholesaler) {
+    return res.status(404).json({ error: "Grossiste introuvable." });
   }
+  res.json({ wholesaler: sanitizeWholesaler(wholesaler) });
+});
+
+// Déconnexion COMPLÈTE : révoque le token et supprime le cookie.
+// À la différence de "quitter le panneau" (front-end only), ceci force une
+// reconnexion avec identifiant + mot de passe.
+app.post("/api/auth/wholesaler/logout-complete", (req, res) => {
+  const token = req.cookies?.[WHOLESALER_TOKEN_COOKIE];
+  if (token) {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET) as { jti: string; exp: number };
+      revokeToken(payload.jti, payload.exp);
+    } catch (err) {
+      // Token déjà invalide/expiré : rien à révoquer, on nettoie simplement le cookie.
+    }
+  }
+  res.clearCookie(WHOLESALER_TOKEN_COOKIE, wholesalerCookieOptions());
+  res.json({ message: "Déconnexion complète effectuée." });
+});
+
+// Get Wholesaler Profile
+app.get("/api/wholesaler/profile", requireWholesalerAuth, (req, res) => {
+  const wholesalerId = (req as any).wholesalerId as string;
 
   const db = readDB();
   const wholesaler = db.wholesalers.find(w => w.id === wholesalerId);
@@ -744,15 +880,12 @@ app.get("/api/wholesaler/profile", (req, res) => {
     return res.status(404).json({ error: "Grossiste introuvable." });
   }
 
-  res.json(wholesaler);
+  res.json(sanitizeWholesaler(wholesaler));
 });
 
 // Get Wholesaler Clients
-app.get("/api/wholesaler/clients", (req, res) => {
-  const wholesalerId = req.headers["x-wholesaler-id"] as string;
-  if (!wholesalerId) {
-    return res.status(401).json({ error: "Non autorisé." });
-  }
+app.get("/api/wholesaler/clients", requireWholesalerAuth, (req, res) => {
+  const wholesalerId = (req as any).wholesalerId as string;
 
   const db = readDB();
   const clients = db.clients.filter(c => c.wholesalerId === wholesalerId);
@@ -760,13 +893,10 @@ app.get("/api/wholesaler/clients", (req, res) => {
 });
 
 // Wholesaler Activate / Add IPTV Client (INSTANT ACTIVATION)
-app.post("/api/wholesaler/clients", (req, res) => {
-  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+app.post("/api/wholesaler/clients", requireWholesalerAuth, (req, res) => {
+  const wholesalerId = (req as any).wholesalerId as string;
   const { clientName, server, durationMonths, notes } = req.body;
 
-  if (!wholesalerId) {
-    return res.status(401).json({ error: "Non autorisé." });
-  }
   if (!clientName || !server || !durationMonths) {
     return res.status(400).json({ error: "Nom, serveur et durée requis." });
   }
@@ -869,13 +999,10 @@ app.post("/api/wholesaler/clients", (req, res) => {
 });
 
 // Wholesaler Credit Recharge Request
-app.post("/api/wholesaler/credit-requests", (req, res) => {
-  const wholesalerId = req.headers["x-wholesaler-id"] as string;
+app.post("/api/wholesaler/credit-requests", requireWholesalerAuth, (req, res) => {
+  const wholesalerId = (req as any).wholesalerId as string;
   const { amountDA, paymentMethod, receiptReference } = req.body;
 
-  if (!wholesalerId) {
-    return res.status(401).json({ error: "Non autorisé." });
-  }
   if (!amountDA || !paymentMethod || !receiptReference) {
     return res.status(400).json({ error: "Tous les champs de recharge sont requis." });
   }
@@ -917,11 +1044,8 @@ app.post("/api/wholesaler/credit-requests", (req, res) => {
 });
 
 // Get wholesaler's own credit requests
-app.get("/api/wholesaler/credit-requests", (req, res) => {
-  const wholesalerId = req.headers["x-wholesaler-id"] as string;
-  if (!wholesalerId) {
-    return res.status(401).json({ error: "Non autorisé." });
-  }
+app.get("/api/wholesaler/credit-requests", requireWholesalerAuth, (req, res) => {
+  const wholesalerId = (req as any).wholesalerId as string;
 
   const db = readDB();
   const requests = db.creditRequests.filter(r => r.wholesalerId === wholesalerId);
@@ -1058,7 +1182,7 @@ app.get("/api/admin/stats", (req, res) => {
 
 app.get("/api/admin/wholesalers", (req, res) => {
   const db = readDB();
-  res.json(db.wholesalers);
+  res.json(db.wholesalers.map(sanitizeWholesaler));
 });
 
 app.put("/api/admin/wholesalers/:id", (req, res) => {
@@ -1076,7 +1200,7 @@ app.put("/api/admin/wholesalers/:id", (req, res) => {
   if (status !== undefined) updated.status = status;
   if (creditBalance !== undefined) updated.creditBalance = Number(creditBalance);
   if (username !== undefined) updated.username = username;
-  if (password !== undefined) updated.password = password;
+  if (password !== undefined) updated.password = bcrypt.hashSync(password, 10);
   if (businessName !== undefined) updated.businessName = businessName;
   if (email !== undefined) updated.email = email;
   if (phone !== undefined) updated.phone = phone;
@@ -1084,7 +1208,7 @@ app.put("/api/admin/wholesalers/:id", (req, res) => {
   db.wholesalers[wholesalerIndex] = updated;
   writeDB(db);
 
-  res.json({ message: "Compte grossiste mis à jour.", wholesaler: updated });
+  res.json({ message: "Compte grossiste mis à jour.", wholesaler: sanitizeWholesaler(updated) });
 });
 
 app.get("/api/admin/orders", (req, res) => {
@@ -1418,7 +1542,7 @@ app.post("/api/admin/wholesalers", (req, res) => {
   const newWholesaler: any = {
     id: "w-" + Math.random().toString(36).substr(2, 9),
     username,
-    password: password || "123456",
+    password: bcrypt.hashSync(password || "123456", 10),
     businessName,
     phone,
     email,
@@ -1428,7 +1552,7 @@ app.post("/api/admin/wholesalers", (req, res) => {
   };
   db.wholesalers.push(newWholesaler);
   writeDB(db);
-  res.json(newWholesaler);
+  res.json(sanitizeWholesaler(newWholesaler));
 });
 
 export default app;
