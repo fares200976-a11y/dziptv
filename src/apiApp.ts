@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { Redis } from "@upstash/redis";
+import { getTariffForWilaya } from "./data/deliveryTariffs.js";
 import {
   Product,
   Wholesaler,
@@ -1113,7 +1114,10 @@ app.post("/api/orders", async (req, res) => {
     tvModel,
     installedApp,
     hasAndroidBox,
-    downloaderCode
+    downloaderCode,
+    shippingWilaya,
+    shippingType,
+    shippingAddress
   } = req.body;
 
   if (!customerName || !customerPhone || !productId || !paymentMethod) {
@@ -1126,6 +1130,28 @@ app.post("/api/orders", async (req, res) => {
     return res.status(404).json({ error: "Produit ou abonnement introuvable." });
   }
 
+  // Produits physiques (Box Android, Démodulateur, TV...) : wilaya + adresse requises.
+  // Le prix de livraison est TOUJOURS recalculé côté serveur à partir de la grille
+  // tarifaire (jamais confiance dans une valeur envoyée par le client).
+  const PHYSICAL_PRODUCT_TYPES = ["device", "demodulateur", "televiseur", "boitier android", "accessoire"];
+  const isPhysical = PHYSICAL_PRODUCT_TYPES.includes(product.type);
+
+  let shippingPriceDA = 0;
+  let shippingDelay = "";
+  if (isPhysical) {
+    if (!shippingWilaya || !shippingAddress || (shippingType !== "domicile" && shippingType !== "bureau")) {
+      return res.status(400).json({ error: "Wilaya, adresse et mode de livraison sont obligatoires pour ce produit." });
+    }
+    const tariff = getTariffForWilaya(shippingWilaya);
+    if (!tariff) {
+      return res.status(400).json({ error: "Wilaya de livraison invalide." });
+    }
+    shippingPriceDA = shippingType === "domicile" ? tariff.domicile : tariff.bureau;
+    shippingDelay = tariff.delai;
+  }
+
+  const totalPrice = product.priceRetail + shippingPriceDA;
+
   const newOrder: Order = {
     id: "o-" + Math.random().toString(36).substr(2, 9),
     customerName,
@@ -1134,7 +1160,7 @@ app.post("/api/orders", async (req, res) => {
     productId,
     productName: product.name,
     productType: product.type,
-    priceDA: product.priceRetail,
+    priceDA: totalPrice,
     paymentMethod,
     paymentDetails: paymentDetails || "",
     status: "pending",
@@ -1142,20 +1168,29 @@ app.post("/api/orders", async (req, res) => {
     tvModel: tvModel || "",
     installedApp: installedApp || "",
     hasAndroidBox: !!hasAndroidBox,
-    downloaderCode: downloaderCode || ""
+    downloaderCode: downloaderCode || "",
+    ...(isPhysical ? {
+      shippingWilaya,
+      shippingType: shippingType as "domicile" | "bureau",
+      shippingAddress,
+      shippingPriceDA,
+      shippingDelay
+    } : {})
   };
 
   db.orders.unshift(newOrder);
   await writeDB(db);
 
   await sendAdminEmail(
-    `Nouvelle commande Client : ${product.name} (${product.priceRetail} DA)`,
+    `Nouvelle commande Client : ${product.name} (${totalPrice} DA)`,
     `Nouvelle commande reçue au détail !\n\n` +
     `- Client: ${customerName}\n` +
     `- Téléphone: ${customerPhone}\n` +
     `- Email: ${customerEmail || 'Non fourni'}\n` +
     `- Produit: ${product.name} (${product.type === "iptv" ? "Abonnement IPTV" : "Matériel Box/Firestick"})\n` +
-    `- Prix de vente: ${product.priceRetail} DA\n` +
+    `- Prix produit: ${product.priceRetail} DA\n` +
+    (isPhysical ? `- Livraison (${shippingType === "domicile" ? "domicile" : "bureau"}) vers ${shippingWilaya}: ${shippingPriceDA} DA (délai ${shippingDelay})\n- Adresse: ${shippingAddress}\n` : ``) +
+    `- Total: ${totalPrice} DA\n` +
     `- Méthode de paiement: ${paymentMethod.toUpperCase()}\n` +
     `- Détails paiement: ${paymentDetails || 'Aucun'}\n\n` +
     `Informations Configuration Client :\n` +
