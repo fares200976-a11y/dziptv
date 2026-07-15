@@ -167,6 +167,99 @@ function sanitizeWholesaler(w: Wholesaler): Wholesaler {
   return safe;
 }
 
+// ============================================================================
+// AUTH: JWT + Cookie HttpOnly pour le PANNEAU ADMINISTRATEUR
+// ============================================================================
+// Remplace l'ancien système où le mot de passe admin était écrit en clair
+// dans le code envoyé au navigateur (visible par n'importe qui via les
+// DevTools) et où AUCUNE route /api/admin/* ne vérifiait quoi que ce soit
+// côté serveur. Maintenant : identifiants dans des variables d'environnement
+// (jamais exposées au client), JWT signé + cookie HttpOnly, et chaque route
+// admin passe par le middleware requireAdminAuth ci-dessous.
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
+  console.warn(
+    "[ADMIN AUTH WARNING] ADMIN_USERNAME / ADMIN_PASSWORD ne sont pas définis dans les " +
+    "variables d'environnement. La connexion au panneau administrateur sera refusée " +
+    "tant qu'elles ne sont pas configurées. Définissez-les dans les paramètres Vercel."
+  );
+}
+const ADMIN_TOKEN_COOKIE = "admin_token";
+const ADMIN_TOKEN_TTL_SECONDS = 2 * 24 * 60 * 60; // 2 jours
+
+function signAdminToken(): string {
+  const jti = crypto.randomUUID();
+  return jwt.sign(
+    { role: "admin", jti },
+    JWT_SECRET,
+    { expiresIn: ADMIN_TOKEN_TTL_SECONDS }
+  );
+}
+
+function adminCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production" || !!process.env.VERCEL,
+    sameSite: "lax" as const,
+    maxAge: ADMIN_TOKEN_TTL_SECONDS * 1000,
+    path: "/"
+  };
+}
+
+// Protège toutes les routes /api/admin/*. Sans cookie admin_token valide
+// et non révoqué, la requête est rejetée AVANT d'atteindre la logique métier.
+async function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const token = req.cookies?.[ADMIN_TOKEN_COOKIE];
+  if (!token) {
+    return res.status(401).json({ error: "Accès administrateur non autorisé." });
+  }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { role: string; jti: string; exp: number };
+    if (payload.role !== "admin" || await isTokenRevoked(payload.jti)) {
+      res.clearCookie(ADMIN_TOKEN_COOKIE, adminCookieOptions());
+      return res.status(401).json({ error: "Session administrateur invalidée. Veuillez vous reconnecter." });
+    }
+    next();
+  } catch (err) {
+    res.clearCookie(ADMIN_TOKEN_COOKIE, adminCookieOptions());
+    return res.status(401).json({ error: "Session administrateur expirée. Veuillez vous reconnecter." });
+  }
+}
+
+// ----------------------------------------------------------------------------
+// RATE LIMITING (anti brute-force) — protège les routes de login (admin +
+// revendeur) contre les tentatives répétées de deviner un mot de passe.
+// Utilise Redis (partagé entre toutes les instances serverless) ; si Redis
+// n'est pas configuré (dev local sans Upstash), la limitation est ignorée.
+// ----------------------------------------------------------------------------
+function getClientIp(req: express.Request): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.length > 0) {
+    return forwarded.split(",")[0].trim();
+  }
+  return req.socket?.remoteAddress || "unknown";
+}
+
+async function checkRateLimit(key: string, maxAttempts: number, windowSeconds: number): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+  if (!redis) return { allowed: true, retryAfterSeconds: 0 }; // pas de Redis en dev local : pas de limitation
+  const rlKey = `ratelimit:${key}`;
+  try {
+    const current = await redis.incr(rlKey);
+    if (current === 1) {
+      await redis.expire(rlKey, windowSeconds);
+    }
+    if (current > maxAttempts) {
+      const ttl = await redis.ttl(rlKey);
+      return { allowed: false, retryAfterSeconds: ttl > 0 ? ttl : windowSeconds };
+    }
+    return { allowed: true, retryAfterSeconds: 0 };
+  } catch (err) {
+    console.error("Rate limit check failed, allowing request:", err);
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+}
+
 // Default Seed Data
 const DEFAULT_PRODUCTS: Product[] = [
   {
@@ -643,7 +736,7 @@ app.get("/api/catalog-categories", async (req, res) => {
   res.json(db.catalogCategories || []);
 });
 
-app.post("/api/admin/catalog-categories", async (req, res) => {
+app.post("/api/admin/catalog-categories", requireAdminAuth, async (req, res) => {
   const { name, description, icon, color } = req.body;
   if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
   const db = await readDB();
@@ -660,7 +753,7 @@ app.post("/api/admin/catalog-categories", async (req, res) => {
   res.json(newCat);
 });
 
-app.put("/api/admin/catalog-categories/:id", async (req, res) => {
+app.put("/api/admin/catalog-categories/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { name, description, icon, color } = req.body;
   if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
@@ -675,7 +768,7 @@ app.put("/api/admin/catalog-categories/:id", async (req, res) => {
   res.json(cat);
 });
 
-app.delete("/api/admin/catalog-categories/:id", async (req, res) => {
+app.delete("/api/admin/catalog-categories/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.catalogCategories = (db.catalogCategories || []).filter(c => c.id !== id);
@@ -737,12 +830,12 @@ app.post("/api/wholesaler/panel-requests", requireWholesalerAuth, async (req, re
   res.json(newRequest);
 });
 
-app.get("/api/admin/panel-requests", async (req, res) => {
+app.get("/api/admin/panel-requests", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   res.json(db.panelRequests || []);
 });
 
-app.put("/api/admin/panel-requests/:id", async (req, res) => {
+app.put("/api/admin/panel-requests/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { status, notes } = req.body;
   if (!status) return res.status(400).json({ error: "Le statut est requis." });
@@ -759,7 +852,7 @@ app.put("/api/admin/panel-requests/:id", async (req, res) => {
 });
 
 // Reset database to default
-app.post("/api/admin/reset", async (req, res) => {
+app.post("/api/admin/reset", requireAdminAuth, async (req, res) => {
   try {
     await storageDeleteRaw();
     const db = await readDB();
@@ -837,6 +930,12 @@ app.post("/api/auth/wholesaler/login", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
       return res.status(400).json({ error: "Nom d'utilisateur et mot de passe requis." });
+    }
+
+    // Anti brute-force : max 8 tentatives / 10 minutes, par IP + nom d'utilisateur.
+    const rl = await checkRateLimit(`wholesaler-login:${getClientIp(req)}:${username.toLowerCase()}`, 8, 10 * 60);
+    if (!rl.allowed) {
+      return res.status(429).json({ error: `Trop de tentatives. Réessayez dans ${Math.ceil(rl.retryAfterSeconds / 60)} minute(s).` });
     }
 
     const db = await readDB();
@@ -918,6 +1017,54 @@ app.post("/api/auth/wholesaler/logout-complete", async (req, res) => {
   }
   res.clearCookie(WHOLESALER_TOKEN_COOKIE, wholesalerCookieOptions());
   res.json({ message: "Déconnexion complète effectuée." });
+});
+
+// ============================================================================
+// AUTH ADMIN — remplace l'ancien contrôle d'accès purement client-side.
+// ============================================================================
+app.post("/api/auth/admin/login", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: "Nom d'utilisateur et mot de passe requis." });
+  }
+
+  // Anti brute-force : max 5 tentatives / 15 minutes, par IP.
+  const rl = await checkRateLimit(`admin-login:${getClientIp(req)}`, 5, 15 * 60);
+  if (!rl.allowed) {
+    return res.status(429).json({ error: `Trop de tentatives. Réessayez dans ${Math.ceil(rl.retryAfterSeconds / 60)} minute(s).` });
+  }
+
+  if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
+    return res.status(503).json({ error: "Le panneau administrateur n'est pas configuré (identifiants manquants côté serveur)." });
+  }
+
+  if (username.trim().toLowerCase() !== ADMIN_USERNAME.toLowerCase() || password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: "Nom d'utilisateur ou mot de passe incorrect." });
+  }
+
+  const token = signAdminToken();
+  res.cookie(ADMIN_TOKEN_COOKIE, token, adminCookieOptions());
+  res.json({ message: "Connexion administrateur réussie." });
+});
+
+// Reconnexion automatique au panneau admin tant que le cookie est valide
+// (même logique que pour l'espace revendeur).
+app.get("/api/auth/admin/session", requireAdminAuth, async (req, res) => {
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/admin/logout-complete", async (req, res) => {
+  const token = req.cookies?.[ADMIN_TOKEN_COOKIE];
+  if (token) {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET) as { jti: string; exp: number };
+      await revokeToken(payload.jti, payload.exp);
+    } catch (err) {
+      // Token déjà invalide/expiré : rien à révoquer.
+    }
+  }
+  res.clearCookie(ADMIN_TOKEN_COOKIE, adminCookieOptions());
+  res.json({ message: "Déconnexion administrateur effectuée." });
 });
 
 // Get Wholesaler Profile
@@ -1242,7 +1389,7 @@ app.get("/api/orders/track", async (req, res) => {
 // ADMIN API ROUTES
 // ==========================================
 
-app.get("/api/admin/stats", async (req, res) => {
+app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
   const db = await readDB();
 
   const totalRetailSales = db.orders
@@ -1264,12 +1411,12 @@ app.get("/api/admin/stats", async (req, res) => {
   });
 });
 
-app.get("/api/admin/wholesalers", async (req, res) => {
+app.get("/api/admin/wholesalers", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   res.json(db.wholesalers.map(sanitizeWholesaler));
 });
 
-app.put("/api/admin/wholesalers/:id", async (req, res) => {
+app.put("/api/admin/wholesalers/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { status, creditBalance, username, password, businessName, email, phone } = req.body;
 
@@ -1295,12 +1442,12 @@ app.put("/api/admin/wholesalers/:id", async (req, res) => {
   res.json({ message: "Compte grossiste mis à jour.", wholesaler: sanitizeWholesaler(updated) });
 });
 
-app.get("/api/admin/orders", async (req, res) => {
+app.get("/api/admin/orders", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   res.json(db.orders);
 });
 
-app.put("/api/admin/orders/:id", async (req, res) => {
+app.put("/api/admin/orders/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -1317,12 +1464,12 @@ app.put("/api/admin/orders/:id", async (req, res) => {
   res.json({ message: "Statut de la commande mis à jour.", order: db.orders[orderIndex] });
 });
 
-app.get("/api/admin/credit-requests", async (req, res) => {
+app.get("/api/admin/credit-requests", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   res.json(db.creditRequests);
 });
 
-app.put("/api/admin/credit-requests/:id", async (req, res) => {
+app.put("/api/admin/credit-requests/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { action } = req.body;
 
@@ -1362,12 +1509,12 @@ app.put("/api/admin/credit-requests/:id", async (req, res) => {
   });
 });
 
-app.get("/api/admin/notifications", async (req, res) => {
+app.get("/api/admin/notifications", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   res.json(db.notifications);
 });
 
-app.put("/api/admin/notifications/:id/read", async (req, res) => {
+app.put("/api/admin/notifications/:id/read", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   const notif = db.notifications.find(n => n.id === id);
@@ -1378,7 +1525,7 @@ app.put("/api/admin/notifications/:id/read", async (req, res) => {
   res.json({ success: true });
 });
 
-app.delete("/api/admin/notifications/:id", async (req, res) => {
+app.delete("/api/admin/notifications/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.notifications = db.notifications.filter(n => n.id !== id);
@@ -1386,12 +1533,12 @@ app.delete("/api/admin/notifications/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-app.get("/api/admin/clients", async (req, res) => {
+app.get("/api/admin/clients", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   res.json(db.clients || []);
 });
 
-app.put("/api/admin/clients/:id", async (req, res) => {
+app.put("/api/admin/clients/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { credentials, clientName, server, notes, status, durationMonths } = req.body;
 
@@ -1431,12 +1578,12 @@ app.put("/api/admin/clients/:id", async (req, res) => {
 });
 
 // --- DELIVERERS (LIVREURS) ENDPOINTS ---
-app.get("/api/admin/livreurs", async (req, res) => {
+app.get("/api/admin/livreurs", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   res.json(db.livreurs || []);
 });
 
-app.post("/api/admin/livreurs", async (req, res) => {
+app.post("/api/admin/livreurs", requireAdminAuth, async (req, res) => {
   const { name, phone, wilaya, status } = req.body;
   if (!name || !phone) {
     return res.status(400).json({ error: "Le nom et le numéro de téléphone sont requis." });
@@ -1456,7 +1603,7 @@ app.post("/api/admin/livreurs", async (req, res) => {
   res.json(newLivreur);
 });
 
-app.put("/api/admin/livreurs/:id", async (req, res) => {
+app.put("/api/admin/livreurs/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { name, phone, wilaya, status } = req.body;
   const db = await readDB();
@@ -1475,7 +1622,7 @@ app.put("/api/admin/livreurs/:id", async (req, res) => {
   res.json(db.livreurs[index]);
 });
 
-app.delete("/api/admin/livreurs/:id", async (req, res) => {
+app.delete("/api/admin/livreurs/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.livreurs = (db.livreurs || []).filter(l => l.id !== id);
@@ -1483,7 +1630,7 @@ app.delete("/api/admin/livreurs/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-app.put("/api/admin/orders/:id/delivery", async (req, res) => {
+app.put("/api/admin/orders/:id/delivery", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { assignedLivreurId, deliveryStatus, status } = req.body;
   const db = await readDB();
@@ -1505,7 +1652,7 @@ app.get("/api/tutorials", async (req, res) => {
   res.json(db.tutorials || []);
 });
 
-app.post("/api/admin/tutorials", async (req, res) => {
+app.post("/api/admin/tutorials", requireAdminAuth, async (req, res) => {
   const { title, url, description, category, downloaderCode } = req.body;
   if (!title || !url) {
     return res.status(400).json({ error: "Le titre et le lien sont obligatoires." });
@@ -1526,7 +1673,7 @@ app.post("/api/admin/tutorials", async (req, res) => {
   res.json(newTutorial);
 });
 
-app.put("/api/admin/tutorials/:id", async (req, res) => {
+app.put("/api/admin/tutorials/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { title, url, description, category, downloaderCode } = req.body;
   const db = await readDB();
@@ -1546,7 +1693,7 @@ app.put("/api/admin/tutorials/:id", async (req, res) => {
   res.json(db.tutorials[index]);
 });
 
-app.delete("/api/admin/tutorials/:id", async (req, res) => {
+app.delete("/api/admin/tutorials/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.tutorials = (db.tutorials || []).filter(t => t.id !== id);
@@ -1611,7 +1758,7 @@ app.delete(["/api/admin/products/:id", "/api/products/:id"], async (req, res) =>
 });
 
 // --- DIRECT WHOLESALER CREATION BY ADMIN ---
-app.post("/api/admin/wholesalers", async (req, res) => {
+app.post("/api/admin/wholesalers", requireAdminAuth, async (req, res) => {
   const { username, password, businessName, phone, email, creditBalance } = req.body;
   if (!username || !businessName || !phone || !email) {
     return res.status(400).json({ error: "Tous les champs sont requis." });
