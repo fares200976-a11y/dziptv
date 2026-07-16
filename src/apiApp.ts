@@ -1089,13 +1089,14 @@ app.get("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
   res.json(clients);
 });
 
-// Wholesaler Activate / Add IPTV Client (INSTANT ACTIVATION)
+// Wholesaler Activate / Add Client (INSTANT ACTIVATION) — IPTV, Code Sat ou Box Android
 app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
-  const { clientName, server, durationMonths, notes } = req.body;
+  const { clientName, server, durationMonths, notes, serviceType, productId } = req.body;
+  const type: "iptv" | "sat" | "box" = serviceType === "sat" || serviceType === "box" ? serviceType : "iptv";
 
-  if (!clientName || !server || !durationMonths) {
-    return res.status(400).json({ error: "Nom, serveur et durée requis." });
+  if (!clientName) {
+    return res.status(400).json({ error: "Le nom du client est requis." });
   }
 
   const db = await readDB();
@@ -1104,84 +1105,167 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
     return res.status(404).json({ error: "Grossiste introuvable." });
   }
 
-  const product = db.products.find(p => p.name.toLowerCase().includes(server.toLowerCase()) && p.type === "iptv");
+  // ------------------------------------------------------------------
+  // IPTV : comportement historique inchangé (serveur parmi Dino/8K/V12/Golden OTT)
+  // ------------------------------------------------------------------
+  if (type === "iptv") {
+    if (!server || !durationMonths) {
+      return res.status(400).json({ error: "Nom, serveur et durée requis." });
+    }
+
+    const product = db.products.find(p => p.name.toLowerCase().includes(server.toLowerCase()) && p.type === "iptv");
+    if (!product) {
+      return res.status(400).json({ error: "Serveur IPTV invalide." });
+    }
+
+    let pricePaid = product.priceWholesale;
+    if (durationMonths === 1) {
+      pricePaid = Math.round(product.priceWholesale * 0.15);
+    } else if (durationMonths === 6) {
+      pricePaid = Math.round(product.priceWholesale * 0.60);
+    } else if (durationMonths === 12) {
+      pricePaid = product.priceWholesale;
+    }
+
+    if (wholesaler.creditBalance < pricePaid) {
+      return res.status(400).json({
+        error: `Crédit insuffisant. Cette activation coûte ${pricePaid} DA. Votre solde actuel est de ${wholesaler.creditBalance} DA. Veuillez recharger votre solde.`
+      });
+    }
+
+    const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const username = `kt_${server.toLowerCase().replace(/[^a-z0-9]/g, "")}_${randomSuffix}`;
+    const password = Math.random().toString(36).substring(2, 10);
+
+    let host = "http://kurtal-server.xyz:8080";
+    if (server.toLowerCase().includes("dino")) {
+      host = "http://dino-ott.xyz:8080";
+    } else if (server.toLowerCase().includes("8k")) {
+      host = "http://8k-premium.co:8080";
+    } else if (server.toLowerCase().includes("v12")) {
+      host = "http://v12-pro.com:8080";
+    } else if (server.toLowerCase().includes("golden")) {
+      host = "http://golden-ott.net:8080";
+    }
+
+    const m3uUrl = `${host}/get.php?username=${username}&password=${password}&output=ts`;
+
+    const activationDate = new Date();
+    const expirationDate = new Date();
+    expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths));
+
+    const newClient: IptvClient = {
+      id: "c-" + Math.random().toString(36).substr(2, 9),
+      wholesalerId,
+      clientName,
+      serviceType: "iptv",
+      server: server as any,
+      durationMonths: Number(durationMonths),
+      pricePaid,
+      activationDate: activationDate.toISOString(),
+      expirationDate: expirationDate.toISOString(),
+      status: "active",
+      notes: notes || "",
+      credentials: {
+        m3uUrl,
+        xtreamUser: username,
+        xtreamPass: password,
+        xtreamHost: host
+      }
+    };
+
+    wholesaler.creditBalance -= pricePaid;
+    db.clients.push(newClient);
+    await writeDB(db);
+
+    try {
+      await sendAdminEmail(
+        `Activation IPTV instantanée par ${wholesaler.businessName} : ${clientName}`,
+        `Le revendeur grossiste '${wholesaler.businessName}' a activé instantanément un abonnement IPTV.\n\n` +
+        `- Client: ${clientName}\n` +
+        `- Serveur: ${server}\n` +
+        `- Durée: ${durationMonths} Mois\n` +
+        `- Prix: ${pricePaid} DA (déduit de son solde)\n` +
+        `- Identifiant: ${username}\n` +
+        `- Mot de passe: ${password}\n` +
+        `- Lien M3U: ${m3uUrl}\n` +
+        `- Nouveau solde du revendeur: ${wholesaler.creditBalance} DA\n\n` +
+        `L'activation a été effectuée de manière 100% autonome et instantanée. Les codes d'accès ont été générés pour le revendeur.`,
+        "client_activation"
+      );
+    } catch (err) {
+      console.error("Error sending admin notification email:", err);
+    }
+
+    return res.json({
+      message: `Activation effectuée de manière 100% autonome et instantanée ! Les codes d'accès ont été générés avec succès. ${pricePaid} DA ont été déduits de votre crédit.`,
+      client: newClient,
+      newBalance: wholesaler.creditBalance
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // CODE SAT / BOX ANDROID : sélection d'un produit du catalogue (ajouté
+  // par l'admin), prix fixe du tarif grossiste, pas de multiplicateur de durée.
+  // ------------------------------------------------------------------
+  if (!productId) {
+    return res.status(400).json({ error: "Veuillez sélectionner un produit dans le catalogue." });
+  }
+
+  const expectedCatalogType = type === "sat" ? "code sat" : "boitier android";
+  const product = db.products.find(p => p.id === productId && (p.type === expectedCatalogType || p.type === "device"));
   if (!product) {
-    return res.status(400).json({ error: "Serveur IPTV invalide." });
+    return res.status(400).json({ error: "Produit introuvable ou type invalide." });
   }
 
-  let pricePaid = product.priceWholesale;
-  if (durationMonths === 1) {
-    pricePaid = Math.round(product.priceWholesale * 0.15);
-  } else if (durationMonths === 6) {
-    pricePaid = Math.round(product.priceWholesale * 0.60);
-  } else if (durationMonths === 12) {
-    pricePaid = product.priceWholesale;
-  }
-
+  const pricePaid = product.priceWholesale;
   if (wholesaler.creditBalance < pricePaid) {
     return res.status(400).json({
       error: `Crédit insuffisant. Cette activation coûte ${pricePaid} DA. Votre solde actuel est de ${wholesaler.creditBalance} DA. Veuillez recharger votre solde.`
     });
   }
 
-  const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
-  const username = `kt_${server.toLowerCase().replace(/[^a-z0-9]/g, "")}_${randomSuffix}`;
-  const password = Math.random().toString(36).substring(2, 10);
-
-  let host = "http://kurtal-server.xyz:8080";
-  if (server.toLowerCase().includes("dino")) {
-    host = "http://dino-ott.xyz:8080";
-  } else if (server.toLowerCase().includes("8k")) {
-    host = "http://8k-premium.co:8080";
-  } else if (server.toLowerCase().includes("v12")) {
-    host = "http://v12-pro.com:8080";
-  } else if (server.toLowerCase().includes("golden")) {
-    host = "http://golden-ott.net:8080";
-  }
-
-  const m3uUrl = `${host}/get.php?username=${username}&password=${password}&output=ts`;
-
   const activationDate = new Date();
   const expirationDate = new Date();
-  expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths));
+  // Code Sat : durée choisie (par défaut 12 mois). Box Android : pas d'expiration
+  // réelle (vente matérielle), on fixe une échéance très lointaine pour ne pas
+  // apparaître comme "expiré" dans les tableaux de suivi.
+  if (type === "sat") {
+    expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths || 12));
+  } else {
+    expirationDate.setFullYear(expirationDate.getFullYear() + 50);
+  }
 
   const newClient: IptvClient = {
     id: "c-" + Math.random().toString(36).substr(2, 9),
     wholesalerId,
     clientName,
-    server: server as any,
-    durationMonths: Number(durationMonths),
+    serviceType: type,
+    server: product.name,
+    durationMonths: type === "sat" ? Number(durationMonths || 12) : 0,
     pricePaid,
     activationDate: activationDate.toISOString(),
     expirationDate: expirationDate.toISOString(),
     status: "active",
     notes: notes || "",
-    credentials: {
-      m3uUrl,
-      xtreamUser: username,
-      xtreamPass: password,
-      xtreamHost: host
-    }
+    credentials: type === "sat" ? {
+      satCode: Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase()
+    } : undefined
   };
 
   wholesaler.creditBalance -= pricePaid;
-
   db.clients.push(newClient);
   await writeDB(db);
 
   try {
     await sendAdminEmail(
-      `Activation IPTV instantanée par ${wholesaler.businessName} : ${clientName}`,
-      `Le revendeur grossiste '${wholesaler.businessName}' a activé instantanément un abonnement IPTV.\n\n` +
+      `Activation ${type === "sat" ? "Code Sat" : "Box Android"} par ${wholesaler.businessName} : ${clientName}`,
+      `Le revendeur grossiste '${wholesaler.businessName}' a activé un ${type === "sat" ? "code satellite" : "boîtier Android"}.\n\n` +
       `- Client: ${clientName}\n` +
-      `- Serveur: ${server}\n` +
-      `- Durée: ${durationMonths} Mois\n` +
+      `- Produit: ${product.name}\n` +
       `- Prix: ${pricePaid} DA (déduit de son solde)\n` +
-      `- Identifiant: ${username}\n` +
-      `- Mot de passe: ${password}\n` +
-      `- Lien M3U: ${m3uUrl}\n` +
-      `- Nouveau solde du revendeur: ${wholesaler.creditBalance} DA\n\n` +
-      `L'activation a été effectuée de manière 100% autonome et instantanée. Les codes d'accès ont été générés pour le revendeur.`,
+      (type === "sat" ? `- Code: ${newClient.credentials?.satCode}\n` : ``) +
+      `- Nouveau solde du revendeur: ${wholesaler.creditBalance} DA`,
       "client_activation"
     );
   } catch (err) {
@@ -1189,7 +1273,7 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
   }
 
   res.json({
-    message: `Activation effectuée de manière 100% autonome et instantanée ! Les codes d'accès ont été générés avec succès. ${pricePaid} DA ont été déduits de votre crédit.`,
+    message: `Activation effectuée avec succès ! ${pricePaid} DA ont été déduits de votre crédit.`,
     client: newClient,
     newBalance: wholesaler.creditBalance
   });
@@ -1702,7 +1786,11 @@ app.delete("/api/admin/tutorials/:id", requireAdminAuth, async (req, res) => {
 });
 
 // --- PRODUCTS MANAGEMENT (CRUD) ---
-app.post(["/api/admin/products", "/api/products"], async (req, res) => {
+// SÉCURITÉ : ces routes créent/modifient/suppriment le catalogue — protégées
+// par requireAdminAuth. L'alias public "/api/products" est retiré ici : il ne
+// doit rester accessible qu'en LECTURE (voir la route GET plus haut), jamais
+// en écriture.
+app.post("/api/admin/products", requireAdminAuth, async (req, res) => {
   const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
   if (!name || !type || priceRetail === undefined || priceWholesale === undefined) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
@@ -1725,7 +1813,7 @@ app.post(["/api/admin/products", "/api/products"], async (req, res) => {
   res.json(newProduct);
 });
 
-app.put(["/api/admin/products/:id", "/api/products/:id"], async (req, res) => {
+app.put("/api/admin/products/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
   const db = await readDB();
@@ -1749,10 +1837,23 @@ app.put(["/api/admin/products/:id", "/api/products/:id"], async (req, res) => {
   res.json(db.products[index]);
 });
 
-app.delete(["/api/admin/products/:id", "/api/products/:id"], async (req, res) => {
+app.delete("/api/admin/products/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.products = db.products.filter(p => p.id !== id);
+  await writeDB(db);
+  res.json({ success: true });
+});
+
+// --- ORDERS: suppression individuelle (admin) ---
+app.delete("/api/admin/orders/:id", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const db = await readDB();
+  const existed = db.orders.some(o => o.id === id);
+  if (!existed) {
+    return res.status(404).json({ error: "Commande introuvable." });
+  }
+  db.orders = db.orders.filter(o => o.id !== id);
   await writeDB(db);
   res.json({ success: true });
 });

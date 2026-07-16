@@ -38,7 +38,10 @@ export interface IptvClient {
   id: string;
   wholesalerId: string;
   clientName: string;
-  server: SubscriptionServer;
+  // Type de service activé. Absent = 'iptv' (rétrocompatibilité avec les
+  // activations existantes créées avant l'ajout de Code Sat / Box Android).
+  serviceType?: 'iptv' | 'sat' | 'box';
+  server: SubscriptionServer | string; // élargi : nom de produit libre pour Code Sat / Box Android
   durationMonths: number;
   pricePaid: number; // Wholesaler's cost
   activationDate: string;
@@ -50,6 +53,7 @@ export interface IptvClient {
     xtreamUser?: string;
     xtreamPass?: string;
     xtreamHost?: string;
+    satCode?: string; // pour les activations Code Sat
   };
 }
 

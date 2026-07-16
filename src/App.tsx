@@ -513,6 +513,19 @@ export default function App() {
     }
   };
 
+  const handleDeleteOrder = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/orders/${id}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        refreshAllData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleProcessCreditRequest = async (id: string, action: "approve" | "reject") => {
     try {
       const res = await fetch(`/api/admin/credit-requests/${id}`, {
@@ -726,6 +739,7 @@ export default function App() {
               wholesalerClients={wholesalerClients}
               wholesalerRequests={wholesalerRequests}
               panelRequests={wholesalerPanelRequests}
+              products={products}
               onActivateClient={handleActivateClient}
               onRequestCredit={handleRequestCredit}
               onRequestPanel={handleRequestPanel}
@@ -755,6 +769,7 @@ export default function App() {
                 onApproveWholesaler={handleApproveWholesaler}
                 onAddCreditManual={handleAddCreditManual}
                 onUpdateOrderStatus={handleUpdateOrderStatus}
+                onDeleteOrder={handleDeleteOrder}
                 onProcessCreditRequest={handleProcessCreditRequest}
                 onProcessPanelRequest={handleProcessPanelRequest}
                 onAddCategory={handleAddCategory}
