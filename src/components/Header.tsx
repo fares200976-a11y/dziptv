@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Tv, User, Settings, LogOut, Wallet, ShieldCheck, Lock, Check } from "lucide-react";
 import { Wholesaler } from "../types";
 import logoImg from "../assets/images/kurtal_logo_1783773370106.jpg";
+import { useTranslation } from "../i18n/LanguageContext";
+import LanguageToggle from "./LanguageToggle";
 
 interface HeaderProps {
   currentView: "retail" | "wholesaler" | "admin";
@@ -20,6 +22,7 @@ export default function Header({
   isAdminUnlocked,
   setAdminUnlocked
 }: HeaderProps) {
+  const { t } = useTranslation();
   const handleLogoClick = () => {
     setView("retail");
   };
@@ -76,7 +79,7 @@ export default function Header({
               }`}
             >
               <Tv className="h-4 w-4" />
-              <span>Boutique Détail</span>
+              <span>{t("nav.shop")}</span>
             </button>
 
             <button
@@ -91,9 +94,10 @@ export default function Header({
               }`}
             >
               <User className="h-4 w-4" />
-              <span>Espace Grossiste</span>
+              <span>{t("nav.wholesaler_space")}</span>
             </button>
 
+            <LanguageToggle variant={currentView === "retail" ? "light" : "dark"} className="ml-1" />
           </nav>
 
           {/* Right Session Status */}
@@ -123,7 +127,7 @@ export default function Header({
                   </span>
                   <button
                     onClick={onLogout}
-                    title="Quitter le panneau (reste connecté)"
+                    title={t("wholesaler.leave_panel")}
                     className="p-1 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
                   >
                     <LogOut className="h-3.5 w-3.5" />
@@ -136,7 +140,7 @@ export default function Header({
                 className="hidden md:flex items-center space-x-1.5 px-4 py-2 text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 rounded-lg shadow-md hover:shadow-blue-500/10 transition-all cursor-pointer"
               >
                 <User className="h-3.5 w-3.5" />
-                <span>Espace Client / Grossiste</span>
+                <span>{t("nav.wholesaler_login")}</span>
               </button>
             )}
           </div>

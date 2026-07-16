@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Product, Order, CatalogCategory } from "../types";
 import { DELIVERY_TARIFFS, getTariffForWilaya } from "../data/deliveryTariffs";
+import { useTranslation } from "../i18n/LanguageContext";
 import { 
   Check, 
   Tv, 
@@ -34,6 +35,7 @@ interface RetailCatalogProps {
 }
 
 export default function RetailCatalog({ products, catalogCategories = [], onOrderSubmit }: RetailCatalogProps) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<"all" | "iptv" | "device" | "adsl" | "track">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -186,8 +188,8 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
       {/* Category Tabs */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-200 pb-5 mb-10">
         <div>
-          <h2 className="font-display text-2xl font-bold text-slate-900">Nos Offres & Produits</h2>
-          <p className="text-slate-500 text-sm mt-1">Abonnements IPTV, recharges ADSL Idoom et boîtiers de streaming de dernière génération.</p>
+          <h2 className="font-display text-2xl font-bold text-slate-900">{t("shop.title")}</h2>
+          <p className="text-slate-500 text-sm mt-1">{t("shop.subtitle")}</p>
         </div>
         <div className="flex flex-wrap mt-4 md:mt-0 bg-slate-100 p-1.5 rounded-xl border border-slate-200 gap-1 self-start">
           <button
@@ -198,7 +200,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Tout Voir
+            {t("shop.filter_all")}
           </button>
           <button
             onClick={() => setFilter("iptv")}
@@ -208,7 +210,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Abonnements IPTV
+            {t("shop.filter_iptv")}
           </button>
           <button
             onClick={() => setFilter("device")}
@@ -218,7 +220,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Boîtiers Android & Firestick
+            {t("shop.filter_device")}
           </button>
           <button
             onClick={() => setFilter("adsl")}
@@ -228,7 +230,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Cartes ADSL Idoom
+            {t("shop.filter_adsl")}
           </button>
           <button
             onClick={() => {
@@ -244,7 +246,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
             }`}
           >
             <Search className="h-3.5 w-3.5" />
-            <span>Suivi de Commande</span>
+            <span>{t("shop.track_order")}</span>
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -469,7 +471,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
               <div
                 className="relative h-48 overflow-hidden bg-slate-50 cursor-zoom-in"
                 onClick={() => setZoomedProduct(product)}
-                title="Cliquer pour agrandir"
+                title={t("shop.click_to_enlarge")}
               >
                 {/* Secondary image hover transition if exists */}
                 {product.imageUrl2 ? (
@@ -517,7 +519,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     : product.type === "adsl" 
                     ? "Recharge ADSL" 
                     : isPhysicalProduct(product.type)
-                    ? "Matériel (Livraison)"
+                    ? t("shop.badge_material")
                     : product.type
                   }
                 </span>
@@ -525,7 +527,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 {/* Popular Badge */}
                 {product.isPopular && (
                   <span className="absolute top-4 right-4 bg-amber-500 text-black text-[9px] font-extrabold uppercase px-2 py-1 rounded shadow-md tracking-wider">
-                    Recommandé
+                    {t("shop.badge_popular")}
                   </span>
                 )}
               </div>
@@ -550,9 +552,9 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 {/* Pricing & Call to action */}
                 <div className="border-t border-slate-100 pt-4 mt-auto flex items-center justify-between">
                   <div>
-                    <span className="text-xs text-slate-400 block">Tarif Détail</span>
+                    <span className="text-xs text-slate-400 block">{t("shop.price_retail")}</span>
                     <span className="text-2xl font-black font-display text-indigo-600">{product.priceRetail.toLocaleString()} DA</span>
-                    {product.type === "iptv" && <span className="text-slate-400 text-[10px] block">/ 12 Mois</span>}
+                    {product.type === "iptv" && <span className="text-slate-400 text-[10px] block">{t("shop.per_year")}</span>}
                   </div>
                   <button
                     id={`btn-buy-${product.id}`}
@@ -560,7 +562,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-blue-500/15 transition-all flex items-center space-x-1 cursor-pointer font-sans"
                   >
                     <ShoppingBag className="h-3.5 w-3.5" />
-                    <span>Commander</span>
+                    <span>{t("shop.order_button")}</span>
                   </button>
                 </div>
               </div>
@@ -609,7 +611,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                       <h4 className="font-bold text-slate-800 text-base font-display">{selectedProduct.name}</h4>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total à payer :</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{t("checkout.total")}</span>
                       <p className="text-xl font-extrabold text-blue-600 font-display">{totalWithShipping.toLocaleString()} DA</p>
                     </div>
                   </div>
@@ -624,7 +626,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 {/* Grid Input */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Nom & Prénom <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.name")} <span className="text-red-500">*</span></label>
                     <input 
                       type="text" 
                       required
@@ -635,7 +637,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Numéro de Téléphone (Algeria) <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.phone")} <span className="text-red-500">*</span></label>
                     <input 
                       type="tel" 
                       required
@@ -648,7 +650,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Adresse Email (Optionnel)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.email")}</label>
                   <input 
                     type="email" 
                     placeholder="Ex: sofiane@gmail.com"
@@ -663,11 +665,11 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                   <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-4">
                     <h4 className="text-xs font-bold uppercase text-emerald-700 tracking-wider flex items-center space-x-1.5">
                       <Truck className="h-3.5 w-3.5" />
-                      <span>Informations de Livraison</span>
+                      <span>{t("checkout.delivery_info")}</span>
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Wilaya de livraison <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.wilaya")} <span className="text-red-500">*</span></label>
                         <select
                           required
                           value={shippingWilaya}
@@ -681,7 +683,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Mode de livraison <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.delivery_mode")} <span className="text-red-500">*</span></label>
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
@@ -692,7 +694,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                                 : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                             }`}
                           >
-                            À domicile{selectedTariff ? ` (${selectedTariff.domicile.toLocaleString()} DA)` : ""}
+                            {t("checkout.home_delivery")}{selectedTariff ? ` (${selectedTariff.domicile.toLocaleString()} DA)` : ""}
                           </button>
                           <button
                             type="button"
@@ -703,13 +705,13 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                                 : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                             }`}
                           >
-                            Au bureau / agence{selectedTariff ? ` (${selectedTariff.bureau.toLocaleString()} DA)` : ""}
+                            {t("checkout.office_delivery")}{selectedTariff ? ` (${selectedTariff.bureau.toLocaleString()} DA)` : ""}
                           </button>
                         </div>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Adresse complète (Commune, Quartier...) <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.address")} (Commune, Quartier...) <span className="text-red-500">*</span></label>
                       <input
                         type="text"
                         required
@@ -811,7 +813,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
 
                 {/* Payment Method Selector */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">Méthode de Paiement Préférée :</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">{t("checkout.payment_method")}</label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <button
                       type="button"
@@ -992,7 +994,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        <span>Confirmer ma Commande ({totalWithShipping.toLocaleString()} DA)</span>
+                        <span>{t("checkout.confirm")} ({totalWithShipping.toLocaleString()} DA)</span>
                       </>
                     )}
                   </button>
@@ -1029,7 +1031,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                   onClick={() => setSelectedProduct(null)}
                   className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold cursor-pointer border border-slate-250 transition-colors"
                 >
-                  Fermer la fenêtre
+                  {t("checkout.close")}
                 </button>
               </div>
             )}
@@ -1075,7 +1077,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-1.5 cursor-pointer shrink-0"
               >
                 <ShoppingBag className="h-3.5 w-3.5" />
-                <span>Commander</span>
+                <span>{t("shop.order_button")}</span>
               </button>
             </div>
           </div>

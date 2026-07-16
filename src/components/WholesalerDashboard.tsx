@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Wholesaler, IptvClient, CreditRequest, PanelRequest, SubscriptionServer, Product } from "../types";
+import { useTranslation } from "../i18n/LanguageContext";
+import LanguageToggle from "./LanguageToggle";
 import { 
   UserPlus, 
   LogIn, 
@@ -55,6 +57,7 @@ export default function WholesalerDashboard({
   onLogoutComplete,
   onBackToHome
 }: WholesalerDashboardProps) {
+  const { t } = useTranslation();
   // Login / Register Views
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState("");
@@ -282,71 +285,74 @@ export default function WholesalerDashboard({
   if (!loggedWholesaler) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12 space-y-6 text-left">
-        {onBackToHome && (
-          <button
-            onClick={onBackToHome}
-            className="flex items-center space-x-2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer bg-gray-900/40 hover:bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-800 self-start"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>← Retour à l'Accueil</span>
-          </button>
-        )}
+        <div className="flex items-center justify-between">
+          {onBackToHome ? (
+            <button
+              onClick={onBackToHome}
+              className="flex items-center space-x-2 text-sm text-slate-500 hover:text-slate-900 transition-colors cursor-pointer bg-white/40 hover:bg-slate-100/50 px-4 py-2 rounded-xl border border-slate-200 self-start"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>← Retour à l'Accueil</span>
+            </button>
+          ) : <div />}
+          <LanguageToggle variant="light" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           {/* Info Column */}
           <div className="space-y-6">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400">Programme Revendeur</span>
-              <h2 className="font-display text-3xl font-extrabold text-white mt-2 leading-tight">
+              <span className="text-sm font-semibold uppercase tracking-widest text-indigo-600">Programme Revendeur</span>
+              <h2 className="font-display text-3xl font-extrabold text-slate-900 mt-2 leading-tight">
                 Vendez de l'IPTV à vos clients et maximisez vos revenus !
               </h2>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <p className="text-slate-500 text-sm leading-relaxed">
               Devenez membre de notre réseau de distributeurs agréés en Algérie. Bénéficiez d'un panel réactif pour activer instantanément les codes de vos clients à prix de gros imbattable.
             </p>
 
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
-                <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg shrink-0 mt-0.5">
+                <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-lg shrink-0 mt-0.5">
                   <Wallet className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-white">Tarifs Réduits d'achat (Gros)</h4>
-                  <p className="text-xs text-gray-400 mt-1">Économisez de 500 à 1000 DA sur chaque abonnement activé.</p>
+                  <h4 className="text-sm font-semibold text-slate-900">Tarifs Réduits d'achat (Gros)</h4>
+                  <p className="text-sm text-slate-500 mt-1">Économisez de 500 à 1000 DA sur chaque abonnement activé.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg shrink-0 mt-0.5">
+                <div className="p-2 bg-blue-500/10 text-blue-600 rounded-lg shrink-0 mt-0.5">
                   <Clock className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-white">Activations Instantanées 24/7</h4>
-                  <p className="text-xs text-gray-400 mt-1">Pas besoin d'attendre. Activez et téléchargez les fichiers M3U et Xtream Codes immédiatement.</p>
+                  <h4 className="text-sm font-semibold text-slate-900">Activations Instantanées 24/7</h4>
+                  <p className="text-sm text-slate-500 mt-1">Pas besoin d'attendre. Activez et téléchargez les fichiers M3U et Xtream Codes immédiatement.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg shrink-0 mt-0.5">
+                <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0 mt-0.5">
                   <CheckCircle className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-white">Gestion Facile</h4>
-                  <p className="text-xs text-gray-400 mt-1">Suivez les dates d'expiration de vos abonnés pour les renouveler en un clic.</p>
+                  <h4 className="text-sm font-semibold text-slate-900">Gestion Facile</h4>
+                  <p className="text-sm text-slate-500 mt-1">Suivez les dates d'expiration de vos abonnés pour les renouveler en un clic.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Form Column */}
-          <div className="bg-gray-950 p-8 rounded-2xl border border-gray-800 shadow-xl relative overflow-hidden">
+          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 rounded-full blur-2xl"></div>
 
             {/* Form Toggle Tabs */}
-            <div className="flex border-b border-gray-800 pb-4 mb-6">
+            <div className="flex border-b border-slate-200 pb-4 mb-6">
               <button
                 onClick={() => { setIsRegistering(false); setAuthError(""); }}
                 className={`flex-1 pb-3 text-sm font-bold border-b-2 text-center transition-all cursor-pointer ${
                   !isRegistering
-                    ? "border-indigo-500 text-indigo-400"
-                    : "border-transparent text-gray-500 hover:text-gray-300"
+                    ? "border-indigo-500 text-indigo-600"
+                    : "border-transparent text-slate-400 hover:text-slate-600"
                 }`}
               >
                 <div className="flex items-center justify-center space-x-1.5">
@@ -358,24 +364,24 @@ export default function WholesalerDashboard({
                 onClick={() => { setIsRegistering(true); setAuthError(""); }}
                 className={`flex-1 pb-3 text-sm font-bold border-b-2 text-center transition-all cursor-pointer ${
                   isRegistering
-                    ? "border-indigo-500 text-indigo-400"
-                    : "border-transparent text-gray-500 hover:text-gray-300"
+                    ? "border-indigo-500 text-indigo-600"
+                    : "border-transparent text-slate-400 hover:text-slate-600"
                 }`}
               >
                 <div className="flex items-center justify-center space-x-1.5">
                   <UserPlus className="h-4 w-4" />
-                  <span>Créer un Compte</span>
+                  <span>{t("wholesaler.register_link")}</span>
                 </div>
               </button>
             </div>
 
             {authError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium mb-4">
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-600 rounded-lg text-sm font-medium mb-4">
                 {authError}
               </div>
             )}
             {authSuccess && (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-medium mb-4">
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-lg text-sm font-medium mb-4">
                 {authSuccess}
               </div>
             )}
@@ -384,106 +390,106 @@ export default function WholesalerDashboard({
             {!isRegistering ? (
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Nom d'utilisateur</label>
+                  <label className="block text-sm font-semibold text-slate-600 mb-1">{t("wholesaler.username")}</label>
                   <input
                     type="text"
                     required
                     placeholder="Ex: dino_pro"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Mot de passe</label>
+                  <label className="block text-sm font-semibold text-slate-600 mb-1">{t("wholesaler.password")}</label>
                   <input
                     type="password"
                     required
                     placeholder="Saisir votre mot de passe"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg shadow-indigo-600/10"
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all cursor-pointer shadow-lg shadow-indigo-600/10"
                 >
                   {loading ? "Connexion..." : "Se Connecter"}
                 </button>
-                <p className="text-[10px] text-center text-gray-500">
-                  Compte de démonstration : <strong className="text-indigo-400">dino_pro</strong> / <strong className="text-indigo-400">n'importe quel mot de passe</strong>
+                <p className="text-xs text-center text-slate-400">
+                  Compte de démonstration : <strong className="text-indigo-600">dino_pro</strong> / <strong className="text-indigo-600">n'importe quel mot de passe</strong>
                 </p>
               </form>
             ) : (
               /* Registration Form */
               <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Nom du Commerce / Magasin</label>
+                  <label className="block text-sm font-semibold text-slate-600 mb-1">Nom du Commerce / Magasin</label>
                   <input
                     type="text"
                     required
                     placeholder="Ex: Kamal Sat Alger"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">Nom d'utilisateur</label>
+                    <label className="block text-sm font-semibold text-slate-600 mb-1">{t("wholesaler.username")}</label>
                     <input
                       type="text"
                       required
                       placeholder="Ex: kamal_sat"
                       value={regUsername}
                       onChange={(e) => setRegUsername(e.target.value)}
-                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">Téléphone</label>
+                    <label className="block text-sm font-semibold text-slate-600 mb-1">Téléphone</label>
                     <input
                       type="tel"
                       required
                       placeholder="Ex: 0661987654"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Email professionnel</label>
+                  <label className="block text-sm font-semibold text-slate-600 mb-1">Email professionnel</label>
                   <input
                     type="email"
                     required
                     placeholder="Ex: kamal.sat@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Mot de passe</label>
+                  <label className="block text-sm font-semibold text-slate-600 mb-1">{t("wholesaler.password")}</label>
                   <input
                     type="password"
                     required
                     placeholder="Créez un mot de passe"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg shadow-indigo-600/10"
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all cursor-pointer shadow-lg shadow-indigo-600/10"
                 >
                   {loading ? "Création..." : "Soumettre ma Demande d'Inscription"}
                 </button>
-                <p className="text-[9px] text-gray-500 text-center leading-relaxed">
+                <p className="text-[11px] text-slate-400 text-center leading-relaxed">
                   * Après inscription, l'administrateur recevra une alerte email immédiate pour activer votre compte.
                 </p>
               </form>
@@ -498,13 +504,13 @@ export default function WholesalerDashboard({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Welcome Banner Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-gradient-to-r from-indigo-950 via-slate-900 to-gray-900 rounded-2xl border border-indigo-500/20 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-gradient-to-r from-indigo-50 via-white to-slate-50 rounded-2xl border border-indigo-200 shadow-sm">
         <div>
-          <span className="text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2.5 py-1 rounded font-bold uppercase tracking-wider">
+          <span className="text-xs bg-indigo-500/10 text-indigo-700 border border-indigo-500/30 px-2.5 py-1 rounded font-bold uppercase tracking-wider">
             Grossiste Agrée
           </span>
-          <h2 className="font-display text-2xl font-bold text-white mt-2">Console Revendeur : {loggedWholesaler.businessName}</h2>
-          <p className="text-gray-400 text-xs mt-1">Gérez votre stock de crédits, activez vos abonnés et suivez les expirations.</p>
+          <h2 className="font-display text-2xl font-bold text-slate-900 mt-2">{t("wholesaler.dashboard_title")} : {loggedWholesaler.businessName}</h2>
+          <p className="text-slate-500 text-sm mt-1">Gérez votre stock de crédits, activez vos abonnés et suivez les expirations.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -514,10 +520,10 @@ export default function WholesalerDashboard({
               setActionSuccess("");
               setShowRechargeModal(true);
             }}
-            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-indigo-400 font-bold text-xs rounded-xl border border-gray-700 transition-all flex items-center space-x-1.5 cursor-pointer"
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-indigo-600 font-bold text-sm rounded-xl border border-slate-300 transition-all flex items-center space-x-1.5 cursor-pointer"
           >
             <Wallet className="h-4 w-4" />
-            <span>Demander Crédit</span>
+            <span>{t("wholesaler.recharge")}</span>
           </button>
 
           <button
@@ -526,7 +532,7 @@ export default function WholesalerDashboard({
               setActionSuccess("");
               setShowPanelModal(true);
             }}
-            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-amber-400 font-bold text-xs rounded-xl border border-gray-700 transition-all flex items-center space-x-1.5 cursor-pointer"
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-amber-600 font-bold text-sm rounded-xl border border-slate-300 transition-all flex items-center space-x-1.5 cursor-pointer"
           >
             <Key className="h-4 w-4" />
             <span>Demander Panel (Min 10 codes)</span>
@@ -538,64 +544,66 @@ export default function WholesalerDashboard({
               setActionSuccess("");
               setShowActivateModal(true);
             }}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/15 transition-all flex items-center space-x-1.5 cursor-pointer"
+            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/15 transition-all flex items-center space-x-1.5 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            <span>Nouvelle Activation</span>
+            <span>{t("wholesaler.add_client")}</span>
           </button>
 
           <button
             onClick={() => setShowSettingsModal(true)}
-            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs rounded-xl border border-gray-700 transition-all flex items-center space-x-1.5 cursor-pointer"
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm rounded-xl border border-slate-300 transition-all flex items-center space-x-1.5 cursor-pointer"
           >
             <Settings className="h-4 w-4" />
-            <span>Paramètres du compte</span>
+            <span>{t("wholesaler.settings")}</span>
           </button>
 
           {onLogoutWholesaler && (
             <button
               onClick={onLogoutWholesaler}
               title="Quitte le panneau, votre session reste active"
-              className="px-4 py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-400 font-bold text-xs rounded-xl border border-red-500/20 transition-all flex items-center space-x-1.5 cursor-pointer"
+              className="px-4 py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-600 font-bold text-sm rounded-xl border border-red-500/20 transition-all flex items-center space-x-1.5 cursor-pointer"
             >
               <LogIn className="h-4 w-4 rotate-180" />
-              <span>Quitter le panneau</span>
+              <span>{t("wholesaler.leave_panel")}</span>
             </button>
           )}
+
+          <LanguageToggle variant="light" />
         </div>
       </div>
 
       {/* PARAMÈTRES DU COMPTE MODAL */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => {
                 setShowSettingsModal(false);
                 setConfirmFullLogout(false);
               }}
-              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"
+              className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <div className="space-y-1.5 mb-6 border-b border-gray-800 pb-4">
-              <Settings className="h-7 w-7 text-gray-400 mb-1" />
-              <h3 className="font-display font-extrabold text-lg text-white">Paramètres du compte</h3>
-              <p className="text-gray-400 text-xs">{loggedWholesaler.businessName} — {loggedWholesaler.username}</p>
+            <div className="space-y-1.5 mb-6 border-b border-slate-200 pb-4">
+              <Settings className="h-7 w-7 text-slate-500 mb-1" />
+              <h3 className="font-display font-extrabold text-lg text-slate-900">{t("wholesaler.settings")}</h3>
+              <p className="text-slate-500 text-sm">{loggedWholesaler.businessName} — {loggedWholesaler.username}</p>
             </div>
 
             <div className="space-y-4">
-              <div className="p-3 bg-gray-900 border border-gray-800 rounded-xl text-xs text-gray-400 leading-relaxed">
-                Le bouton <strong className="text-gray-200">« Quitter le panneau »</strong> vous ramène simplement à la
+              <div className="p-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-500 leading-relaxed">
+                Le bouton <strong className="text-slate-700">« Quitter le panneau »</strong> vous ramène simplement à la
                 boutique : votre session reste active jusqu'à 2 jours et vous retrouverez
                 votre espace revendeur automatiquement, sans ressaisir vos identifiants.
               </div>
 
               <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl space-y-3">
                 <div className="flex items-start space-x-2">
-                  <ShieldAlert className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-red-300 leading-relaxed">
+                  <ShieldAlert className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-300 leading-relaxed">
                     La déconnexion complète met fin à votre session sur cet appareil.
                     Vous devrez ressaisir votre identifiant et votre mot de passe pour
                     revenir sur votre espace revendeur.
@@ -605,13 +613,13 @@ export default function WholesalerDashboard({
                 {!confirmFullLogout ? (
                   <button
                     onClick={() => setConfirmFullLogout(true)}
-                    className="w-full py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-400 border border-red-500/30 rounded-xl font-bold text-xs transition-all cursor-pointer"
+                    className="w-full py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-600 border border-red-500/30 rounded-xl font-bold text-sm transition-all cursor-pointer"
                   >
-                    Déconnexion complète
+                    {t("wholesaler.full_logout")}
                   </button>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-[11px] text-gray-300 font-semibold">Confirmer la déconnexion complète ?</p>
+                    <p className="text-sm text-slate-600 font-semibold">Confirmer la déconnexion complète ?</p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
@@ -619,13 +627,13 @@ export default function WholesalerDashboard({
                           setConfirmFullLogout(false);
                           onLogoutComplete && onLogoutComplete();
                         }}
-                        className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-xs cursor-pointer"
+                        className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-sm cursor-pointer"
                       >
                         Oui, déconnecter
                       </button>
                       <button
                         onClick={() => setConfirmFullLogout(false)}
-                        className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-xs cursor-pointer"
+                        className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-sm cursor-pointer"
                       >
                         Annuler
                       </button>
@@ -640,63 +648,63 @@ export default function WholesalerDashboard({
 
       {/* Alert states feedback */}
       {actionSuccess && (
-        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-medium">
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-lg text-sm font-medium">
           {actionSuccess}
         </div>
       )}
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-6 rounded-2xl border border-gray-800 flex items-center justify-between">
+        <div className="glass-card p-6 rounded-2xl border border-slate-200 flex items-center justify-between">
           <div>
-            <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold block">Crédit Disponible</span>
-            <span className="text-3xl font-black font-display text-emerald-400 mt-1 block">
+            <span className="text-sm text-slate-400 uppercase tracking-widest font-semibold block">{t("wholesaler.credit_balance")}</span>
+            <span className="text-3xl font-black font-display text-emerald-600 mt-1 block">
               {loggedWholesaler.creditBalance.toLocaleString()} DA
             </span>
           </div>
-          <div className="p-3.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
+          <div className="p-3.5 bg-emerald-500/10 text-emerald-600 rounded-xl">
             <Wallet className="h-6 w-6" />
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl border border-gray-800 flex items-center justify-between">
+        <div className="glass-card p-6 rounded-2xl border border-slate-200 flex items-center justify-between">
           <div>
-            <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold block">Abonnements Actifs</span>
-            <span className="text-3xl font-black font-display text-blue-400 mt-1 block">
+            <span className="text-sm text-slate-400 uppercase tracking-widest font-semibold block">Abonnements Actifs</span>
+            <span className="text-3xl font-black font-display text-blue-600 mt-1 block">
               {wholesalerClients.filter(c => c.status === "active").length}
             </span>
           </div>
-          <div className="p-3.5 bg-blue-500/10 text-blue-400 rounded-xl">
+          <div className="p-3.5 bg-blue-500/10 text-blue-600 rounded-xl">
             <Users className="h-6 w-6" />
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl border border-gray-800 flex items-center justify-between">
+        <div className="glass-card p-6 rounded-2xl border border-slate-200 flex items-center justify-between">
           <div>
-            <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold block">Demandes Recharges</span>
-            <span className="text-3xl font-black font-display text-amber-400 mt-1 block">
+            <span className="text-sm text-slate-400 uppercase tracking-widest font-semibold block">Demandes Recharges</span>
+            <span className="text-3xl font-black font-display text-amber-600 mt-1 block">
               {wholesalerRequests.filter(r => r.status === "pending").length}
             </span>
           </div>
-          <div className="p-3.5 bg-amber-500/10 text-amber-400 rounded-xl">
+          <div className="p-3.5 bg-amber-500/10 text-amber-600 rounded-xl">
             <Clock className="h-6 w-6" />
           </div>
         </div>
       </div>
 
       {/* Core Table View */}
-      <div className="bg-gray-950 rounded-2xl border border-gray-800 overflow-hidden shadow-lg">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-lg">
         {/* Table Search & Filter header */}
-        <div className="p-5 border-b border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-900/20">
-          <h3 className="font-display font-bold text-base text-white self-start sm:self-center">Liste de vos Clients Activés</h3>
+        <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white/20">
+          <h3 className="font-display font-bold text-base text-slate-900 self-start sm:self-center">{t("wholesaler.clients_list")}</h3>
           <div className="relative w-full sm:max-w-xs">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
               placeholder="Rechercher par nom ou serveur..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
             />
           </div>
         </div>
@@ -704,10 +712,10 @@ export default function WholesalerDashboard({
         {/* Responsive Table */}
         <div className="overflow-x-auto">
           {filteredClients.length > 0 ? (
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-sm data-table-ltr">
               <thead>
-                <tr className="bg-gray-900/40 text-gray-400 border-b border-gray-800/80">
-                  <th className="p-4 font-semibold">Nom du Client</th>
+                <tr className="bg-white/40 text-slate-500 border-b border-slate-200/80">
+                  <th className="p-4 font-semibold">{t("wholesaler.client_name")}</th>
                   <th className="p-4 font-semibold">Serveur IPTV</th>
                   <th className="p-4 font-semibold">Durée</th>
                   <th className="p-4 font-semibold">Date Activation</th>
@@ -717,51 +725,51 @@ export default function WholesalerDashboard({
                   <th className="p-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800/40">
+              <tbody className="divide-y divide-slate-200/40">
                 {filteredClients.map((client) => {
                   const isExpired = client.expirationDate ? new Date(client.expirationDate) < new Date() : false;
                   const svcType = client.serviceType || "iptv";
                   const svcBadge = svcType === "sat"
-                    ? { label: "Code Sat", cls: "bg-purple-500/10 text-purple-400 border-purple-500/20" }
+                    ? { label: "Code Sat", cls: "bg-purple-500/10 text-purple-600 border-purple-500/20" }
                     : svcType === "box"
-                    ? { label: "Box Android", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" }
-                    : { label: "IPTV", cls: "bg-blue-500/10 text-blue-400 border-blue-500/20" };
+                    ? { label: "Box Android", cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" }
+                    : { label: "IPTV", cls: "bg-blue-500/10 text-blue-600 border-blue-500/20" };
                   return (
-                    <tr key={client.id} className="hover:bg-gray-900/10">
-                      <td className="p-4 font-bold text-white">{client.clientName}</td>
+                    <tr key={client.id} className="hover:bg-slate-50">
+                      <td className="p-4 font-bold text-slate-900">{client.clientName}</td>
                       <td className="p-4">
                         <div className="flex flex-col gap-1 items-start">
-                          <span className={`px-2 py-0.5 rounded font-semibold text-[9px] border ${svcBadge.cls}`}>
+                          <span className={`px-2 py-0.5 rounded font-semibold text-[11px] border ${svcBadge.cls}`}>
                             {svcBadge.label}
                           </span>
-                          <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded font-semibold text-[10px]">
+                          <span className="px-2 py-0.5 bg-blue-500/10 text-blue-600 border border-blue-500/20 rounded font-semibold text-xs">
                             {client.server}
                           </span>
                         </div>
                       </td>
                       <td className="p-4">{svcType === "box" ? "—" : `${client.durationMonths} Mois`}</td>
-                      <td className="p-4 text-gray-400">
+                      <td className="p-4 text-slate-500">
                         {client.activationDate 
                           ? new Date(client.activationDate).toLocaleDateString("fr-FR") 
                           : "En attente"}
                       </td>
-                      <td className="p-4 text-gray-400 font-mono">
+                      <td className="p-4 text-slate-500 font-mono">
                         {client.expirationDate 
                           ? new Date(client.expirationDate).toLocaleDateString("fr-FR") 
                           : "En attente"}
                       </td>
-                      <td className="p-4 font-bold text-emerald-400">{client.pricePaid.toLocaleString()} DA</td>
+                      <td className="p-4 font-bold text-emerald-600">{client.pricePaid.toLocaleString()} DA</td>
                       <td className="p-4 text-center">
                         {client.status === "pending" ? (
-                          <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-[9px] font-semibold animate-pulse">
+                          <span className="px-2 py-0.5 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded text-[11px] font-semibold animate-pulse">
                             En attente
                           </span>
                         ) : isExpired ? (
-                          <span className="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-[9px] font-semibold">
+                          <span className="px-2 py-0.5 bg-red-500/10 text-red-600 border border-red-500/20 rounded text-[11px] font-semibold">
                             Expiré
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-semibold">
+                          <span className="px-2 py-0.5 bg-green-500/10 text-green-600 border border-green-500/20 rounded text-[11px] font-semibold">
                             Actif
                           </span>
                         )}
@@ -769,10 +777,10 @@ export default function WholesalerDashboard({
                       <td className="p-4 text-right">
                         <button
                           onClick={() => setSelectedClientCredentials(client)}
-                          className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all cursor-pointer ${
+                          className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
                             client.status === "pending"
-                              ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20"
-                              : "bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                              ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"
+                              : "bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 border border-indigo-500/30"
                           }`}
                         >
                           {client.status === "pending" ? "Suivre l'Activation" : "Voir les Accès"}
@@ -784,38 +792,38 @@ export default function WholesalerDashboard({
               </tbody>
             </table>
           ) : (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-slate-400">
               <AlertCircle className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-              <p className="text-xs">Aucun client trouvé. Lancez votre première activation !</p>
+              <p className="text-sm">Aucun client trouvé. Lancez votre première activation !</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Credit Recharge Request History List */}
-      <div className="bg-gray-950 rounded-2xl border border-gray-800 p-5 space-y-4">
-        <h3 className="font-display font-bold text-base text-white">Suivi de vos demandes de recharge crédit</h3>
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+        <h3 className="font-display font-bold text-base text-slate-900">Suivi de vos demandes de recharge crédit</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {wholesalerRequests.map((req) => (
-            <div key={req.id} className="p-4 bg-gray-900/40 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
+            <div key={req.id} className="p-4 bg-white/40 rounded-xl border border-slate-200 flex justify-between items-center text-sm">
               <div>
-                <span className="text-[10px] text-gray-400 block">{new Date(req.createdAt).toLocaleString("fr-FR")}</span>
-                <span className="font-bold text-white text-sm">{req.amountDA.toLocaleString()} DA</span>
-                <span className="text-gray-400 block mt-1">Via {req.paymentMethod.toUpperCase()} (Ref: {req.receiptReference})</span>
+                <span className="text-xs text-slate-500 block">{new Date(req.createdAt).toLocaleString("fr-FR")}</span>
+                <span className="font-bold text-slate-900 text-sm">{req.amountDA.toLocaleString()} DA</span>
+                <span className="text-slate-500 block mt-1">Via {req.paymentMethod.toUpperCase()} (Ref: {req.receiptReference})</span>
               </div>
               <div>
                 {req.status === "pending" && (
-                  <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded font-semibold text-[10px]">
+                  <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded font-semibold text-xs">
                     En attente de validation
                   </span>
                 )}
                 {req.status === "approved" && (
-                  <span className="px-2.5 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded font-semibold text-[10px]">
+                  <span className="px-2.5 py-1 bg-green-500/10 text-green-600 border border-green-500/20 rounded font-semibold text-xs">
                     Approuvée & Créditée
                   </span>
                 )}
                 {req.status === "rejected" && (
-                  <span className="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded font-semibold text-[10px]">
+                  <span className="px-2.5 py-1 bg-red-500/10 text-red-600 border border-red-500/20 rounded font-semibold text-xs">
                     Rejetée
                   </span>
                 )}
@@ -823,46 +831,46 @@ export default function WholesalerDashboard({
             </div>
           ))}
           {wholesalerRequests.length === 0 && (
-            <p className="text-xs text-gray-500 col-span-2 text-center py-2">Aucune demande de recharge effectuée.</p>
+            <p className="text-sm text-slate-400 col-span-2 text-center py-2">Aucune demande de recharge effectuée.</p>
           )}
         </div>
       </div>
 
       {/* Panel Requests Followup List */}
-      <div className="bg-gray-950 rounded-2xl border border-gray-800 p-5 space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="font-display font-bold text-base text-white flex items-center space-x-2">
+          <h3 className="font-display font-bold text-base text-slate-900 flex items-center space-x-2">
             <Key className="h-4 w-4 text-amber-500" />
             <span>Suivi de vos demandes de Panels Revendeur (Min 10 codes)</span>
           </h3>
-          <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-bold uppercase">
+          <span className="text-xs bg-amber-500/15 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded font-bold uppercase">
             10 Codes Min.
           </span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {panelRequests.map((panelReq) => (
-            <div key={panelReq.id} className="p-4 bg-gray-900/40 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
+            <div key={panelReq.id} className="p-4 bg-white/40 rounded-xl border border-slate-200 flex justify-between items-center text-sm">
               <div>
-                <span className="text-[10px] text-gray-400 block">{new Date(panelReq.createdAt).toLocaleString("fr-FR")}</span>
-                <span className="font-bold text-white text-sm">Panel : {panelReq.server}</span>
-                <span className="text-gray-300 block mt-1 font-semibold">{panelReq.codesCount} codes demandés</span>
+                <span className="text-xs text-slate-500 block">{new Date(panelReq.createdAt).toLocaleString("fr-FR")}</span>
+                <span className="font-bold text-slate-900 text-sm">Panel : {panelReq.server}</span>
+                <span className="text-slate-600 block mt-1 font-semibold">{panelReq.codesCount} codes demandés</span>
                 {panelReq.notes && (
-                  <p className="text-[10px] text-amber-400 mt-1 italic">Note Admin: {panelReq.notes}</p>
+                  <p className="text-xs text-amber-600 mt-1 italic">Note Admin: {panelReq.notes}</p>
                 )}
               </div>
               <div>
                 {panelReq.status === "pending" && (
-                  <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded font-semibold text-[10px]">
+                  <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded font-semibold text-xs">
                     En attente de validation
                   </span>
                 )}
                 {panelReq.status === "approved" && (
-                  <span className="px-2.5 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded font-semibold text-[10px]">
+                  <span className="px-2.5 py-1 bg-green-500/10 text-green-600 border border-green-500/20 rounded font-semibold text-xs">
                     Panel Activé
                   </span>
                 )}
                 {panelReq.status === "rejected" && (
-                  <span className="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded font-semibold text-[10px]">
+                  <span className="px-2.5 py-1 bg-red-500/10 text-red-600 border border-red-500/20 rounded font-semibold text-xs">
                     Rejetée
                   </span>
                 )}
@@ -870,7 +878,7 @@ export default function WholesalerDashboard({
             </div>
           ))}
           {panelRequests.length === 0 && (
-            <p className="text-xs text-gray-500 col-span-2 text-center py-2">Aucune demande de panel effectuée.</p>
+            <p className="text-sm text-slate-400 col-span-2 text-center py-2">Aucune demande de panel effectuée.</p>
           )}
         </div>
       </div>
@@ -878,26 +886,26 @@ export default function WholesalerDashboard({
       {/* MODAL 3: REQUEST RESELLER PANEL */}
       {showPanelModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowPanelModal(false)}
-              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white cursor-pointer"
+              className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900 cursor-pointer"
             >
               <X className="h-5 w-5" />
             </button>
 
             <div className="space-y-1 mb-6">
-              <h3 className="font-display font-extrabold text-lg text-white">Demande de Panel Revendeur</h3>
-              <p className="text-gray-400 text-xs">Créez votre propre panel IPTV autonome pour gérer vos clients.</p>
+              <h3 className="font-display font-extrabold text-lg text-slate-900">Demande de Panel Revendeur</h3>
+              <p className="text-slate-500 text-sm">Créez votre propre panel IPTV autonome pour gérer vos clients.</p>
             </div>
 
             <form onSubmit={handlePanelRequestSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Serveur Panel IPTV</label>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Serveur Panel IPTV</label>
                 <select
                   value={panelServer}
                   onChange={(e) => setPanelServer(e.target.value as SubscriptionServer)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                 >
                   <option value="Dino">Dino OTT</option>
                   <option value="8K">8K OTT</option>
@@ -907,30 +915,30 @@ export default function WholesalerDashboard({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Nombre de codes (Minimum 10)</label>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Nombre de codes (Minimum 10)</label>
                 <input
                   type="number"
                   min="10"
                   required
                   value={panelCodesCount}
                   onChange={(e) => setPanelCodesCount(Number(e.target.value))}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                 />
-                <p className="text-[10px] text-gray-500 mt-1">Conformément aux règles de revente, les panels nécessitent un achat initial de minimum 10 codes d'activation.</p>
+                <p className="text-xs text-slate-400 mt-1">Conformément aux règles de revente, les panels nécessitent un achat initial de minimum 10 codes d'activation.</p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Note ou Message Optionnel</label>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Note ou Message Optionnel</label>
                 <textarea
                   placeholder="Informations supplémentaires pour l'admin..."
                   value={panelNotes}
                   onChange={(e) => setPanelNotes(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 h-20 resize-none"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 h-20 resize-none"
                 />
               </div>
 
               {actionError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-[10px] font-semibold">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-600 rounded-xl text-xs font-semibold">
                   {actionError}
                 </div>
               )}
@@ -938,7 +946,7 @@ export default function WholesalerDashboard({
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-black text-xs rounded-xl shadow-lg shadow-amber-600/10 transition-all cursor-pointer"
+                className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-black text-sm rounded-xl shadow-lg shadow-amber-600/10 transition-all cursor-pointer"
               >
                 {loading ? "Traitement..." : "Soumettre la Demande de Panel"}
               </button>
@@ -951,29 +959,29 @@ export default function WholesalerDashboard({
       {/* MODAL 1: NEW ACTIVATION */}
       {showActivateModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowActivateModal(false)}
-              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"
+              className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center space-x-2.5 mb-5 border-b border-gray-800 pb-3">
-              <Plus className="h-5 w-5 text-indigo-400" />
-              <h3 className="font-display font-bold text-lg text-white">Activer un Client</h3>
+            <div className="flex items-center space-x-2.5 mb-5 border-b border-slate-200 pb-3">
+              <Plus className="h-5 w-5 text-indigo-600" />
+              <h3 className="font-display font-bold text-lg text-slate-900">{t("wholesaler.add_client")}</h3>
             </div>
 
             {actionError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium mb-4">
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-600 rounded-lg text-sm font-medium mb-4">
                 {actionError}
               </div>
             )}
 
-            <form onSubmit={handleClientActivation} className="space-y-4 text-xs">
+            <form onSubmit={handleClientActivation} className="space-y-4 text-sm">
               {/* Sélecteur de type de service */}
               <div>
-                <label className="block text-gray-300 font-semibold mb-1.5">Type de Service</label>
+                <label className="block text-slate-600 font-semibold mb-1.5">{t("wholesaler.service_type")}</label>
                 <div className="grid grid-cols-3 gap-2">
                   {([
                     { key: "iptv", label: "IPTV" },
@@ -988,10 +996,10 @@ export default function WholesalerDashboard({
                         setSelectedProductId("");
                         setActionError("");
                       }}
-                      className={`py-2 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
+                      className={`py-2 rounded-xl border text-center text-sm font-bold transition-all cursor-pointer ${
                         activationServiceType === opt.key
                           ? "bg-indigo-500/15 border-indigo-500 text-indigo-300"
-                          : "bg-gray-900 border-gray-800 text-gray-400 hover:bg-gray-800"
+                          : "bg-white border-slate-200 text-slate-500 hover:bg-slate-100"
                       }`}
                     >
                       {opt.label}
@@ -1001,25 +1009,25 @@ export default function WholesalerDashboard({
               </div>
 
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">Nom du Client</label>
+                <label className="block text-slate-600 font-semibold mb-1">{t("wholesaler.client_name")}</label>
                 <input
                   type="text"
                   required
                   placeholder="Ex: Mohamed Belkaid"
                   value={newClientName}
                   onChange={(e) => setNewClientName(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900"
                 />
               </div>
 
               {activationServiceType === "iptv" && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-gray-300 font-semibold mb-1">Serveur IPTV</label>
+                    <label className="block text-slate-600 font-semibold mb-1">Serveur IPTV</label>
                     <select
                       value={selectedServer}
                       onChange={(e) => setSelectedServer(e.target.value)}
-                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
                     >
                       <option value="Dino">Dino IPTV (4,200 DA)</option>
                       <option value="8K">8K Premium (6,800 DA)</option>
@@ -1029,11 +1037,11 @@ export default function WholesalerDashboard({
                   </div>
 
                   <div>
-                    <label className="block text-gray-300 font-semibold mb-1">Durée d'abonnement</label>
+                    <label className="block text-slate-600 font-semibold mb-1">{t("wholesaler.duration")}</label>
                     <select
                       value={selectedDuration}
                       onChange={(e) => setSelectedDuration(Number(e.target.value))}
-                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
                     >
                       <option value={1}>1 Mois (15% du tarif)</option>
                       <option value={6}>6 Mois (60% du tarif)</option>
@@ -1046,17 +1054,17 @@ export default function WholesalerDashboard({
               {activationServiceType === "sat" && (
                 <div className="space-y-3">
                   {satProducts.length === 0 ? (
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg text-[11px]">
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-lg text-sm">
                       Aucun produit "Code Sat" n'est encore disponible dans le catalogue. Contactez l'administrateur pour qu'il en ajoute.
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-gray-300 font-semibold mb-1">Produit Code Sat</label>
+                        <label className="block text-slate-600 font-semibold mb-1">Produit Code Sat</label>
                         <select
                           value={selectedProductId}
                           onChange={(e) => setSelectedProductId(e.target.value)}
-                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
                         >
                           <option value="">-- Choisir --</option>
                           {satProducts.map(p => (
@@ -1065,11 +1073,11 @@ export default function WholesalerDashboard({
                         </select>
                       </div>
                       <div>
-                        <label className="block text-gray-300 font-semibold mb-1">Durée</label>
+                        <label className="block text-slate-600 font-semibold mb-1">Durée</label>
                         <select
                           value={selectedDuration}
                           onChange={(e) => setSelectedDuration(Number(e.target.value))}
-                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
                         >
                           <option value={6}>6 Mois</option>
                           <option value={12}>12 Mois</option>
@@ -1083,30 +1091,30 @@ export default function WholesalerDashboard({
               {activationServiceType === "box" && (
                 <div className="space-y-3">
                   {boxProducts.length === 0 ? (
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg text-[11px]">
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-lg text-sm">
                       Aucun produit "Box Android" n'est encore disponible dans le catalogue. Contactez l'administrateur pour qu'il en ajoute.
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-gray-300 font-semibold mb-1">Modèle de Box Android</label>
+                      <label className="block text-slate-600 font-semibold mb-1">Modèle de Box Android</label>
                       <select
                         value={selectedProductId}
                         onChange={(e) => setSelectedProductId(e.target.value)}
-                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
                       >
                         <option value="">-- Choisir --</option>
                         {boxProducts.map(p => (
                           <option key={p.id} value={p.id}>{p.name} ({p.priceWholesale.toLocaleString()} DA)</option>
                         ))}
                       </select>
-                      <p className="text-[10px] text-gray-500 mt-1">Vente matérielle : pas d'abonnement ni d'expiration.</p>
+                      <p className="text-xs text-slate-400 mt-1">Vente matérielle : pas d'abonnement ni d'expiration.</p>
                     </div>
                   )}
                 </div>
               )}
 
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">
+                <label className="block text-slate-600 font-semibold mb-1">
                   {activationServiceType === "box" ? "Notes / N° de série (Optionnel)" : "Notes / MAC Address (Optionnel)"}
                 </label>
                 <input
@@ -1114,13 +1122,13 @@ export default function WholesalerDashboard({
                   placeholder="Ex: SmartOne MAC: aa:bb:cc..."
                   value={clientNotes}
                   onChange={(e) => setClientNotes(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900"
                 />
               </div>
 
-              <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg">
-                <p className="font-semibold text-[11px]">Tarification Revendeur :</p>
-                <p className="text-[10px] text-gray-300 mt-1">
+              <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 rounded-lg">
+                <p className="font-semibold text-sm">Tarification Revendeur :</p>
+                <p className="text-xs text-slate-600 mt-1">
                   Cette activation sera déduite automatiquement de votre solde crédit. Assurez-vous d'avoir assez de fonds.
                 </p>
               </div>
@@ -1128,9 +1136,9 @@ export default function WholesalerDashboard({
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-bold text-xs"
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-bold text-sm"
               >
-                {loading ? "Activation en cours..." : "Confirmer l'activation"}
+                {loading ? "Activation en cours..." : t("wholesaler.confirm_activation")}
               </button>
             </form>
           </div>
@@ -1141,48 +1149,48 @@ export default function WholesalerDashboard({
       {/* MODAL 2: REQUEST RECHARGE */}
       {showRechargeModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowRechargeModal(false)}
-              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"
+              className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center space-x-2.5 mb-5 border-b border-gray-800 pb-3">
-              <Wallet className="h-5 w-5 text-indigo-400" />
-              <h3 className="font-display font-bold text-lg text-white">Recharger mon Crédit</h3>
+            <div className="flex items-center space-x-2.5 mb-5 border-b border-slate-200 pb-3">
+              <Wallet className="h-5 w-5 text-indigo-600" />
+              <h3 className="font-display font-bold text-lg text-slate-900">Recharger mon Crédit</h3>
             </div>
 
             {actionError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium mb-4">
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-600 rounded-lg text-sm font-medium mb-4">
                 {actionError}
               </div>
             )}
 
-            <form onSubmit={handleRechargeSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleRechargeSubmit} className="space-y-4 text-sm">
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">Montant à recharger (DA)</label>
+                <label className="block text-slate-600 font-semibold mb-1">Montant à recharger (DA)</label>
                 <input
                   type="number"
                   required
                   placeholder="Ex: 20000"
                   value={rechargeAmount}
                   onChange={(e) => setRechargeAmount(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">Mode de Paiement effectué</label>
+                <label className="block text-slate-600 font-semibold mb-1">Mode de Paiement effectué</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setRechargeMethod("baridimob")}
                     className={`p-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
                       rechargeMethod === "baridimob"
-                        ? "bg-indigo-500/10 border-indigo-500 text-indigo-400"
-                        : "bg-gray-900/50 border-gray-800 text-gray-400"
+                        ? "bg-indigo-500/10 border-indigo-500 text-indigo-600"
+                        : "bg-white/50 border-slate-200 text-slate-500"
                     }`}
                   >
                     BaridiMob
@@ -1192,8 +1200,8 @@ export default function WholesalerDashboard({
                     onClick={() => setRechargeMethod("ccp")}
                     className={`p-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
                       rechargeMethod === "ccp"
-                        ? "bg-indigo-500/10 border-indigo-500 text-indigo-400"
-                        : "bg-gray-900/50 border-gray-800 text-gray-400"
+                        ? "bg-indigo-500/10 border-indigo-500 text-indigo-600"
+                        : "bg-white/50 border-slate-200 text-slate-500"
                     }`}
                   >
                     Virement CCP
@@ -1202,8 +1210,8 @@ export default function WholesalerDashboard({
               </div>
 
               {/* Display payment details */}
-              <div className="p-3 bg-gray-900 border border-gray-800 rounded-xl space-y-1.5 text-gray-300">
-                <span className="font-bold text-amber-400">Coordonnées de virement :</span>
+              <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5 text-slate-600">
+                <span className="font-bold text-amber-600">Coordonnées de virement :</span>
                 {rechargeMethod === "baridimob" ? (
                   <p className="font-mono">
                     RIP : 007999990022334455 <br />
@@ -1218,7 +1226,7 @@ export default function WholesalerDashboard({
               </div>
 
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">Numéro de Reçu / Référence du Transfert</label>
+                <label className="block text-slate-600 font-semibold mb-1">Numéro de Reçu / Référence du Transfert</label>
                 <input
                   type="text"
                   required
@@ -1226,14 +1234,14 @@ export default function WholesalerDashboard({
                   value={rechargeRef}
                   onChange={(e) => setRegUsername(e.target.value)} // wait, let's fix this to setRechargeRef
                   onChangeCapture={(e) => setRechargeRef((e.target as HTMLInputElement).value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-bold text-xs"
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-bold text-sm"
               >
                 {loading ? "Soumission..." : "Soumettre la preuve de paiement"}
               </button>
@@ -1246,20 +1254,20 @@ export default function WholesalerDashboard({
       {/* CREDENTIALS VIEWER DRAWER / SHEET */}
       {selectedClientCredentials && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-gray-950 border border-indigo-500/30 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md bg-white border border-indigo-500/30 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setSelectedClientCredentials(null)}
-              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"
+              className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <div className="text-center space-y-1.5 mb-6 border-b border-gray-800 pb-4">
-              <Key className="h-8 w-8 text-amber-400 mx-auto" />
-              <h3 className="font-display font-extrabold text-lg text-white">
+            <div className="text-center space-y-1.5 mb-6 border-b border-slate-200 pb-4">
+              <Key className="h-8 w-8 text-amber-600 mx-auto" />
+              <h3 className="font-display font-extrabold text-lg text-slate-900">
                 {selectedClientCredentials.serviceType === "sat" ? "Accès Code Sat" : selectedClientCredentials.serviceType === "box" ? "Confirmation Box Android" : "Accès IPTV"} : {selectedClientCredentials.clientName}
               </h3>
-              <p className="text-gray-400 text-xs">
+              <p className="text-slate-500 text-sm">
                 {selectedClientCredentials.serviceType === "box"
                   ? `Produit : ${selectedClientCredentials.server}`
                   : `Serveur : ${selectedClientCredentials.server} (${selectedClientCredentials.durationMonths} Mois)`}
@@ -1275,113 +1283,113 @@ export default function WholesalerDashboard({
                       <span className="relative inline-flex rounded-full h-8 w-8 bg-amber-500 flex items-center justify-center text-black font-bold">⏱️</span>
                     </span>
                   </div>
-                  <h4 className="font-bold text-amber-400 uppercase tracking-wider text-[11px]">En attente d'activation</h4>
-                  <p className="text-[10px] leading-relaxed text-gray-300">
+                  <h4 className="font-bold text-amber-600 uppercase tracking-wider text-sm">En attente d'activation</h4>
+                  <p className="text-xs leading-relaxed text-slate-600">
                     Votre demande d'abonnement a été envoyée avec succès à l'administrateur et le coût de <strong>{selectedClientCredentials.pricePaid} DA</strong> a été déduit de votre solde.
                   </p>
-                  <p className="text-[10px] leading-relaxed text-gray-400">
+                  <p className="text-xs leading-relaxed text-slate-500">
                     L'administrateur génère actuellement votre accès sur le serveur. Les codes s'afficheront automatiquement ici dès validation. Merci pour votre patience !
                   </p>
                 </div>
 
                 <button
                   onClick={() => setSelectedClientCredentials(null)}
-                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-bold text-sm"
                 >
                   Fermer
                 </button>
               </div>
             ) : selectedClientCredentials.serviceType === "box" ? (
               /* BOX ANDROID : vente matérielle, pas de credentials à afficher */
-              <div className="space-y-4 text-xs">
+              <div className="space-y-4 text-sm">
                 <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-xl text-center space-y-2">
-                  <CheckCircle className="h-8 w-8 mx-auto text-emerald-400" />
+                  <CheckCircle className="h-8 w-8 mx-auto text-emerald-600" />
                   <p className="font-bold text-[12px]">Vente enregistrée avec succès</p>
-                  <p className="text-[10px] text-gray-300 leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     {selectedClientCredentials.pricePaid.toLocaleString()} DA ont été déduits de votre solde crédit. Remettez le boîtier à votre client.
                   </p>
                   {selectedClientCredentials.notes && (
-                    <p className="text-[10px] text-gray-400 pt-1 border-t border-emerald-500/20 mt-2">Note : {selectedClientCredentials.notes}</p>
+                    <p className="text-xs text-slate-500 pt-1 border-t border-emerald-500/20 mt-2">Note : {selectedClientCredentials.notes}</p>
                   )}
                 </div>
                 <button
                   onClick={() => setSelectedClientCredentials(null)}
-                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-bold text-sm"
                 >
                   Fermer
                 </button>
               </div>
             ) : selectedClientCredentials.serviceType === "sat" ? (
               /* CODE SAT : afficher uniquement le code généré */
-              <div className="space-y-4 text-xs">
+              <div className="space-y-4 text-sm">
                 {copiedField && (
-                  <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-400 rounded-lg text-[10px] text-center font-semibold mb-2">
+                  <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-600 rounded-lg text-xs text-center font-semibold mb-2">
                     Copié avec succès : {copiedField} !
                   </div>
                 )}
-                <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
-                  <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Code Satellite</span>
-                  <div className="flex items-center justify-between bg-black/30 p-3 rounded border border-gray-800 font-mono">
-                    <span className="text-gray-100 text-sm tracking-wider select-all">{selectedClientCredentials.credentials?.satCode}</span>
+                <div className="space-y-2 p-3.5 bg-white rounded-xl border border-slate-200">
+                  <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Code Satellite</span>
+                  <div className="flex items-center justify-between bg-black/30 p-3 rounded border border-slate-200 font-mono">
+                    <span className="text-slate-800 text-sm tracking-wider select-all">{selectedClientCredentials.credentials?.satCode}</span>
                     <button
                       onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.satCode || "", "Code Sat")}
-                      className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                      className="p-1 text-slate-400 hover:text-slate-900 shrink-0 ml-2"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-[10px] leading-relaxed">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-xs leading-relaxed">
                   💡 Transmettez ce code à votre client pour qu'il l'active sur son récepteur satellite.
                 </div>
                 <button
                   onClick={() => setSelectedClientCredentials(null)}
-                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-bold text-sm"
                 >
                   Fermer
                 </button>
               </div>
             ) : (
-              <div className="space-y-4 text-xs">
+              <div className="space-y-4 text-sm">
                 {copiedField && (
-                  <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-400 rounded-lg text-[10px] text-center font-semibold mb-4">
+                  <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-600 rounded-lg text-xs text-center font-semibold mb-4">
                     Copié avec succès : {copiedField} !
                   </div>
                 )}
 
                 {/* Xtream Codes format */}
-                <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
-                  <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Format Xtream Codes</span>
+                <div className="space-y-2 p-3.5 bg-white rounded-xl border border-slate-200">
+                  <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Format Xtream Codes</span>
                   
                   <div className="space-y-2 pt-1.5 font-mono">
-                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
-                      <span className="text-gray-400">Host:</span>
-                      <span className="text-gray-200 break-all">{selectedClientCredentials.credentials?.xtreamHost}</span>
+                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-slate-200">
+                      <span className="text-slate-500">Host:</span>
+                      <span className="text-slate-700 break-all">{selectedClientCredentials.credentials?.xtreamHost}</span>
                       <button 
                         onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamHost || "", "Host")}
-                        className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                        className="p-1 text-slate-400 hover:text-slate-900 shrink-0 ml-2"
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
                     </div>
 
-                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
-                      <span className="text-gray-400">User:</span>
-                      <span className="text-gray-200">{selectedClientCredentials.credentials?.xtreamUser}</span>
+                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-slate-200">
+                      <span className="text-slate-500">User:</span>
+                      <span className="text-slate-700">{selectedClientCredentials.credentials?.xtreamUser}</span>
                       <button 
                         onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamUser || "", "Username")}
-                        className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                        className="p-1 text-slate-400 hover:text-slate-900 shrink-0 ml-2"
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
                     </div>
 
-                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
-                      <span className="text-gray-400">Pass:</span>
-                      <span className="text-gray-200">{selectedClientCredentials.credentials?.xtreamPass}</span>
+                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-slate-200">
+                      <span className="text-slate-500">Pass:</span>
+                      <span className="text-slate-700">{selectedClientCredentials.credentials?.xtreamPass}</span>
                       <button 
                         onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamPass || "", "Password")}
-                        className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                        className="p-1 text-slate-400 hover:text-slate-900 shrink-0 ml-2"
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
@@ -1390,13 +1398,13 @@ export default function WholesalerDashboard({
                 </div>
 
                 {/* M3U Link Format */}
-                <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
-                  <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Lien M3U Complet</span>
-                  <div className="flex items-center justify-between bg-black/30 p-2 rounded border border-gray-800 font-mono">
-                    <span className="text-gray-200 truncate pr-2 select-all">{selectedClientCredentials.credentials?.m3uUrl}</span>
+                <div className="space-y-2 p-3.5 bg-white rounded-xl border border-slate-200">
+                  <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Lien M3U Complet</span>
+                  <div className="flex items-center justify-between bg-black/30 p-2 rounded border border-slate-200 font-mono">
+                    <span className="text-slate-700 truncate pr-2 select-all">{selectedClientCredentials.credentials?.m3uUrl}</span>
                     <button 
                       onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.m3uUrl || "", "Lien M3U")}
-                      className="p-1 text-gray-500 hover:text-white shrink-0"
+                      className="p-1 text-slate-400 hover:text-slate-900 shrink-0"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </button>
@@ -1405,7 +1413,7 @@ export default function WholesalerDashboard({
                     <button
                       type="button"
                       onClick={() => handleDownloadM3u(selectedClientCredentials)}
-                      className="w-full mt-2 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/40 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                      className="w-full mt-2 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 border border-indigo-500/20 hover:border-indigo-500/40 rounded-lg font-bold text-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
                     >
                       <Download className="h-3.5 w-3.5" />
                       <span>Télécharger le Fichier .m3u</span>
@@ -1413,13 +1421,13 @@ export default function WholesalerDashboard({
                   )}
                 </div>
 
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-[10px] leading-relaxed">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-xs leading-relaxed">
                   💡 Vous pouvez transmettre directement ces codes à votre client. Ils sont compatibles avec toutes les applications IPTV (Smarters Pro, NetIPTV, SmartOne, IBO Player, etc.).
                 </div>
 
                 <button
                   onClick={() => setSelectedClientCredentials(null)}
-                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-bold text-sm"
                 >
                   Fermer
                 </button>
