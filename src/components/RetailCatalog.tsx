@@ -1,1028 +1,1250 @@
-import React, { useState } from "react";
-import { Product, Order, CatalogCategory } from "../types";
-import { DELIVERY_TARIFFS, getTariffForWilaya } from "../data/deliveryTariffs";
+import React, { useState, useEffect } from "react";
+import { Wholesaler, IptvClient, CreditRequest, PanelRequest, SubscriptionServer } from "../types";
 import { 
-  Check, 
-  Tv, 
-  Smartphone, 
-  ShieldCheck, 
-  ShoppingBag, 
+  UserPlus, 
+  LogIn, 
+  Wallet, 
+  Users, 
+  Plus, 
+  Search, 
+  Copy, 
+  Download,
+  Clock, 
+  CheckCircle, 
   X, 
-  CreditCard, 
   Info, 
-  CheckCircle,
-  Truck,
-  Search,
-  Package,
-  RefreshCw,
-  Clock,
-  MapPin,
-  AlertTriangle
+  Key, 
+  FileText,
+  AlertCircle,
+  HelpCircle,
+  ArrowLeft,
+  Settings,
+  ShieldAlert
 } from "lucide-react";
 
-// Types de produits considérés comme "physiques" : nécessitent une livraison
-// (Box Android, Démodulateur, TV, Accessoire...) — à la différence des codes
-// IPTV / Code Sat / Abonnements qui sont livrés numériquement (aucune expédition).
-const PHYSICAL_PRODUCT_TYPES = ["device", "demodulateur", "televiseur", "boitier android", "accessoire"];
-const isPhysicalProduct = (type: string) => PHYSICAL_PRODUCT_TYPES.includes(type);
-
-interface RetailCatalogProps {
-  products: Product[];
-  catalogCategories?: CatalogCategory[];
-  onOrderSubmit: (orderData: any) => Promise<any>;
+interface WholesalerDashboardProps {
+  loggedWholesaler: Wholesaler | null;
+  onLogin: (username: string, password: string) => Promise<any>;
+  onRegister: (data: any) => Promise<any>;
+  wholesalerClients: IptvClient[];
+  wholesalerRequests: CreditRequest[];
+  panelRequests?: PanelRequest[];
+  onActivateClient: (data: any) => Promise<any>;
+  onRequestCredit: (data: any) => Promise<any>;
+  onRequestPanel?: (data: any) => Promise<any>;
+  refreshWholesalerData: () => void;
+  onLogoutWholesaler?: () => void;
+  onLogoutComplete?: () => void;
+  onBackToHome?: () => void;
 }
 
-export default function RetailCatalog({ products, catalogCategories = [], onOrderSubmit }: RetailCatalogProps) {
-  const [filter, setFilter] = useState<"all" | "iptv" | "device" | "adsl" | "track">("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+export default function WholesalerDashboard({
+  loggedWholesaler,
+  onLogin,
+  onRegister,
+  wholesalerClients,
+  wholesalerRequests,
+  panelRequests = [],
+  onActivateClient,
+  onRequestCredit,
+  onRequestPanel,
+  refreshWholesalerData,
+  onLogoutWholesaler,
+  onLogoutComplete,
+  onBackToHome
+}: WholesalerDashboardProps) {
+  // Login / Register Views
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Paramètres du compte / déconnexion complète
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [confirmFullLogout, setConfirmFullLogout] = useState(false);
   
-  // Checkout Form State
-  const [name, setName] = useState("");
+  // Register Fields
+  const [regUsername, setRegUsername] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"baridimob" | "ccp" | "card" | "hand">("baridimob");
-  const [paymentDetails, setPaymentDetails] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successOrder, setSuccessOrder] = useState<Order | null>(null);
-  const [formError, setFormError] = useState("");
 
-  // Configuration Client Fields
-  const [tvModel, setTvModel] = useState("");
-  const [installedApp, setInstalledApp] = useState("");
-  const [hasAndroidBox, setHasAndroidBox] = useState(false);
-  const [downloaderCode, setDownloaderCode] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authSuccess, setAuthSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Livraison (produits physiques uniquement)
-  const [shippingWilaya, setShippingWilaya] = useState("");
-  const [shippingType, setShippingType] = useState<"domicile" | "bureau">("domicile");
-  const [shippingAddress, setShippingAddress] = useState("");
+  // Dashboard Controls
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showActivateModal, setShowActivateModal] = useState(false);
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [showPanelModal, setShowPanelModal] = useState(false);
+  const [selectedClientCredentials, setSelectedClientCredentials] = useState<IptvClient | null>(null);
+  const [copiedField, setCopiedField] = useState("");
 
-  // Order Tracking States
-  const [trackQuery, setTrackQuery] = useState("");
-  const [isTracking, setIsTracking] = useState(false);
-  const [trackedOrders, setTrackedOrders] = useState<any[] | null>(null);
-  const [trackError, setTrackError] = useState("");
+  // New Client Form
+  const [newClientName, setNewClientName] = useState("");
+  const [selectedServer, setSelectedServer] = useState<string>("Dino");
+  const [selectedDuration, setSelectedDuration] = useState<number>(12);
+  const [clientNotes, setClientNotes] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
 
-  const filteredProducts = products.filter((p) => {
-    const matchesType = filter === "all" || p.type === filter;
-    const matchesCategory = selectedCategory === "all" || p.categoryId === selectedCategory;
-    return matchesType && matchesCategory;
-  });
+  // New Panel Form
+  const [panelServer, setPanelServer] = useState<SubscriptionServer>("Dino");
+  const [panelCodesCount, setPanelCodesCount] = useState<number>(10);
+  const [panelNotes, setPanelNotes] = useState("");
 
-  const handleTrackOrder = async (e: React.FormEvent) => {
+  // New Recharge Form
+  const [rechargeAmount, setRechargeAmount] = useState("");
+  const [rechargeMethod, setRechargeMethod] = useState<"baridimob" | "ccp">("baridimob");
+  const [rechargeRef, setRechargeRef] = useState("");
+
+  useEffect(() => {
+    if (loggedWholesaler) {
+      refreshWholesalerData();
+    }
+  }, [loggedWholesaler]);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!trackQuery.trim()) {
-      setTrackError("Veuillez saisir votre ID de commande ou numéro de téléphone.");
+    if (!username || !password) {
+      setAuthError("Veuillez saisir votre nom d'utilisateur et mot de passe.");
       return;
     }
-
-    setIsTracking(true);
-    setTrackError("");
+    setLoading(true);
+    setAuthError("");
     try {
-      const res = await fetch(`/api/orders/track?query=${encodeURIComponent(trackQuery.trim())}`);
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Une erreur est survenue lors du suivi.");
-      }
-      const data = await res.json();
-      setTrackedOrders(data.orders);
-      if (data.orders.length === 0) {
-        setTrackError("Aucune commande trouvée pour '" + trackQuery + "'.");
-      }
+      await onLogin(username, password);
     } catch (err: any) {
-      setTrackError(err.message || "Impossible de récupérer les informations de suivi.");
-      setTrackedOrders(null);
+      setAuthError(err.message || "Identifiants invalides.");
     } finally {
-      setIsTracking(false);
+      setLoading(false);
     }
   };
 
-  const handleOpenCheckout = (product: Product) => {
-    setSelectedProduct(product);
-    setName("");
-    setPhone("");
-    setEmail("");
-    setPaymentMethod("baridimob");
-    setPaymentDetails("");
-    setSuccessOrder(null);
-    setFormError("");
-    setTvModel("");
-    setInstalledApp("");
-    setHasAndroidBox(false);
-    setDownloaderCode("");
-    setShippingWilaya("");
-    setShippingType("domicile");
-    setShippingAddress("");
-  };
-
-  // Tarif de livraison correspondant à la wilaya/type choisis (produits physiques)
-  const selectedTariff = shippingWilaya ? getTariffForWilaya(shippingWilaya) : undefined;
-  const shippingPrice = selectedTariff ? (shippingType === "domicile" ? selectedTariff.domicile : selectedTariff.bureau) : 0;
-  const isPhysicalCheckout = selectedProduct ? isPhysicalProduct(selectedProduct.type) : false;
-  const totalWithShipping = (selectedProduct?.priceRetail || 0) + (isPhysicalCheckout ? shippingPrice : 0);
-
-  const handleCheckoutSubmit = async (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone) {
-      setFormError("Le nom complet et le numéro de téléphone sont obligatoires.");
+    if (!regUsername || !regPassword || !businessName || !phone || !email) {
+      setAuthError("Tous les champs sont requis.");
       return;
     }
-    if (isPhysicalCheckout && (!shippingWilaya || !shippingAddress)) {
-      setFormError("Veuillez sélectionner votre wilaya et indiquer votre adresse pour la livraison.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormError("");
-
+    setLoading(true);
+    setAuthError("");
+    setAuthSuccess("");
     try {
-      // Determine what to put in paymentDetails if payment method is baridimob/ccp
-      let details = paymentDetails;
-      if (paymentMethod === "baridimob") {
-        details = `BaridiMob: ${paymentDetails || "En attente de vérification"}`;
-      } else if (paymentMethod === "ccp") {
-        details = `Versement CCP: ${paymentDetails || "En attente de vérification"}`;
-      } else if (paymentMethod === "card") {
-        details = "Paiement par Carte CIB/Edahabia validé automatiquement.";
-      } else if (paymentMethod === "hand") {
-        details = "Livraison contre remboursement (Yalidine) / Main à main.";
-      }
-
-      const orderPayload: any = {
-        customerName: name,
-        customerEmail: email,
-        customerPhone: phone,
-        productId: selectedProduct?.id,
-        paymentMethod,
-        paymentDetails: details,
-        tvModel,
-        installedApp,
-        hasAndroidBox,
-        downloaderCode
+      const payload = {
+        username: regUsername,
+        password: regPassword,
+        businessName,
+        phone,
+        email
       };
-
-      if (isPhysicalCheckout) {
-        orderPayload.shippingWilaya = shippingWilaya;
-        orderPayload.shippingType = shippingType;
-        orderPayload.shippingAddress = shippingAddress;
-        orderPayload.shippingPriceDA = shippingPrice;
-        orderPayload.shippingDelay = selectedTariff?.delai || "";
-      }
-
-      const result = await onOrderSubmit(orderPayload);
-      setSuccessOrder(result.order);
+      const res = await onRegister(payload);
+      setAuthSuccess(res.message);
+      setIsRegistering(false);
+      // clear fields
+      setUsername(regUsername);
     } catch (err: any) {
-      setFormError(err.message || "Une erreur est survenue lors de la commande.");
+      setAuthError(err.message || "Erreur d'inscription.");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  return (
-    <section id="shop-catalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Category Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-200 pb-5 mb-10">
-        <div>
-          <h2 className="font-display text-2xl font-bold text-slate-900">Nos Offres & Produits</h2>
-          <p className="text-slate-500 text-sm mt-1">Abonnements IPTV, recharges ADSL Idoom et boîtiers de streaming de dernière génération.</p>
-        </div>
-        <div className="flex flex-wrap mt-4 md:mt-0 bg-slate-100 p-1.5 rounded-xl border border-slate-200 gap-1 self-start">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filter === "all"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            Tout Voir
-          </button>
-          <button
-            onClick={() => setFilter("iptv")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filter === "iptv"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            Abonnements IPTV
-          </button>
-          <button
-            onClick={() => setFilter("device")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filter === "device"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            Boîtiers Android & Firestick
-          </button>
-          <button
-            onClick={() => setFilter("adsl")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filter === "adsl"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            Cartes ADSL Idoom
-          </button>
-          <button
-            onClick={() => {
-              setFilter("track");
-              setTrackQuery("");
-              setTrackedOrders(null);
-              setTrackError("");
-            }}
-            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
-              filter === "track"
-                ? "bg-emerald-600 text-white shadow-md"
-                : "text-emerald-600 hover:text-white hover:bg-emerald-600/10"
-            }`}
-          >
-            <Search className="h-3.5 w-3.5" />
-            <span>Suivi de Commande</span>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-          </button>
-        </div>
-      </div>
+  const handleClientActivation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClientName) {
+      setActionError("Le nom du client est requis.");
+      return;
+    }
+    setLoading(true);
+    setActionError("");
+    setActionSuccess("");
+    try {
+      const payload = {
+        clientName: newClientName,
+        server: selectedServer,
+        durationMonths: selectedDuration,
+        notes: clientNotes
+      };
+      const res = await onActivateClient(payload);
+      setActionSuccess(res.message);
+      setNewClientName("");
+      setClientNotes("");
+      setSelectedClientCredentials(res.client); // Open credentials sheet immediately so they can copy it!
+      setShowActivateModal(false);
+    } catch (err: any) {
+      setActionError(err.message || "Erreur d'activation.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      {catalogCategories.length > 0 && filter !== "track" && (
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/60 self-start max-w-full overflow-x-auto">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-3 py-1.5 border-r border-slate-200 shrink-0">
-            Filtre Catalogue
-          </span>
-          <button
-            onClick={() => setSelectedCategory("all")}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
-              selectedCategory === "all"
-                ? "bg-slate-800 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
-            }`}
-          >
-            Tous les catalogues
-          </button>
-          {catalogCategories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
-                selectedCategory === cat.id
-                  ? "bg-slate-800 text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      )}
+  const handleRechargeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rechargeAmount || !rechargeRef) {
+      setActionError("Veuillez remplir tous les champs de recharge.");
+      return;
+    }
+    setLoading(true);
+    setActionError("");
+    setActionSuccess("");
+    try {
+      const payload = {
+        amountDA: Number(rechargeAmount),
+        paymentMethod: rechargeMethod,
+        receiptReference: rechargeRef
+      };
+      const res = await onRequestCredit(payload);
+      setActionSuccess(res.message);
+      setRechargeAmount("");
+      setRechargeRef("");
+      setShowRechargeModal(false);
+    } catch (err: any) {
+      setActionError(err.message || "Erreur de recharge.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      {filter === "track" ? (
-        <div className="max-w-3xl mx-auto bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl space-y-8 text-white">
-          <div className="text-center space-y-2">
-            <div className="mx-auto h-12 w-12 bg-emerald-500/15 text-emerald-400 rounded-full flex items-center justify-center border border-emerald-500/25">
-              <Search className="h-6 w-6" />
+  const handlePanelRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onRequestPanel) return;
+    if (panelCodesCount < 10) {
+      setActionError("Le nombre minimum de codes requis pour un panel est de 10.");
+      return;
+    }
+    setLoading(true);
+    setActionError("");
+    setActionSuccess("");
+    try {
+      await onRequestPanel({
+        server: panelServer,
+        codesCount: panelCodesCount,
+        notes: panelNotes
+      });
+      setActionSuccess(`Demande de panel ${panelServer} (${panelCodesCount} codes) soumise avec succès !`);
+      setPanelNotes("");
+      setPanelCodesCount(10);
+      setShowPanelModal(false);
+    } catch (err: any) {
+      setActionError(err.message || "Erreur de demande de panel.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(label);
+    setTimeout(() => setCopiedField(""), 2000);
+  };
+
+  const handleDownloadM3u = (client: IptvClient) => {
+    const m3uContent = `#EXTM3U\n#EXTINF:-1, KURTAL IPTV - ${client.clientName} [${client.server}]\n${client.credentials?.m3uUrl || ""}`;
+    const blob = new Blob([m3uContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `iptv_${client.clientName.replace(/\s+/g, "_")}.m3u`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const filteredClients = wholesalerClients.filter(c =>
+    c.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.server.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Authentication Screen
+  if (!loggedWholesaler) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 space-y-6 text-left">
+        {onBackToHome && (
+          <button
+            onClick={onBackToHome}
+            className="flex items-center space-x-2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer bg-gray-900/40 hover:bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-800 self-start"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>← Retour à l'Accueil</span>
+          </button>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+          {/* Info Column */}
+          <div className="space-y-6">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400">Programme Revendeur</span>
+              <h2 className="font-display text-3xl font-extrabold text-white mt-2 leading-tight">
+                Vendez de l'IPTV à vos clients et maximisez vos revenus !
+              </h2>
             </div>
-            <h3 className="font-display font-bold text-xl text-white">Suivi en Temps Réel de Votre Commande</h3>
-            <p className="text-gray-400 text-xs max-w-md mx-auto">
-              Saisissez votre numéro de téléphone (ex: 0550123456) ou votre identifiant de commande (ex: o-abcdefg) pour connaître l'avancement.
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Devenez membre de notre réseau de distributeurs agréés en Algérie. Bénéficiez d'un panel réactif pour activer instantanément les codes de vos clients à prix de gros imbattable.
             </p>
-          </div>
 
-          <form onSubmit={handleTrackOrder} className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-3.5 h-4 w-4 text-gray-500" />
-              <input
-                type="text"
-                placeholder="ID de commande ou N° de téléphone..."
-                value={trackQuery}
-                onChange={(e) => setTrackQuery(e.target.value)}
-                className="w-full bg-black/40 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-all"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={isTracking}
-              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/10 transition-all flex items-center justify-center space-x-2 shrink-0 cursor-pointer animate-none"
-            >
-              {isTracking ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Recherche...</span>
-                </>
-              ) : (
-                <>
-                  <span>Rechercher</span>
-                </>
-              )}
-            </button>
-          </form>
-
-          {trackError && (
-            <div className="p-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-xs font-semibold flex items-center space-x-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>{trackError}</span>
-            </div>
-          )}
-
-          {trackedOrders && trackedOrders.length > 0 && (
-            <div className="space-y-6">
-              <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider">
-                Commandes trouvées ({trackedOrders.length})
-              </h4>
-              <div className="space-y-4">
-                {trackedOrders.map((order) => {
-                  let stepIndex = 0;
-                  if (order.status === "pending") stepIndex = 0;
-                  else if (order.status === "packaging") stepIndex = 1;
-                  else if (order.status === "shipping") stepIndex = 2;
-                  else if (order.status === "completed") stepIndex = 3;
-                  else if (order.status === "returned") stepIndex = 4;
-
-                  const steps = [
-                    { key: "pending", label: "Commande Reçue", desc: "Votre commande est bien enregistrée et en attente de validation.", icon: Clock },
-                    { key: "packaging", label: "En Préparation", desc: "Nous configurons votre accès IPTV ou préparons votre colis.", icon: Package },
-                    { key: "shipping", label: "En cours d'expédition", desc: "Le livreur est en route ou l'article a été expédié.", icon: Truck },
-                    { key: "completed", label: "Livrée & Activée", desc: "Commande finalisée avec succès. Merci pour votre confiance !", icon: CheckCircle }
-                  ];
-
-                  if (order.status === "returned") {
-                    steps[3] = { key: "returned", label: "Retournée / Annulée", desc: "La commande n'a pas pu être livrée et a été retournée.", icon: AlertTriangle };
-                  }
-
-                  return (
-                    <div key={order.id} className="p-5 bg-black/30 border border-slate-800 rounded-2xl space-y-5">
-                      {/* Top Bar Info */}
-                      <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-800/60 pb-3 gap-2">
-                        <div>
-                          <span className="text-[10px] text-gray-500 block">Identifiant Commande</span>
-                          <span className="text-sm font-mono font-bold text-emerald-400">{order.id}</span>
-                        </div>
-                        <div className="text-sm sm:text-right">
-                          <span className="text-[10px] text-gray-500 block">Produit / Service</span>
-                          <span className="font-bold text-white">{order.productName}</span>
-                        </div>
-                        <div className="text-sm sm:text-right">
-                          <span className="text-[10px] text-gray-500 block">Montant</span>
-                          <span className="font-extrabold text-amber-400">{order.priceDA.toLocaleString()} DA</span>
-                        </div>
-                      </div>
-
-                      {/* Stepper tracking */}
-                      <div className="relative pt-4 pb-2">
-                        {/* Stepper Progress Bar Line */}
-                        <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-slate-800 sm:left-4 sm:right-4 sm:top-5 sm:bottom-auto sm:w-auto sm:h-0.5"></div>
-
-                        {/* Stepper nodes */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-6 sm:gap-4 relative">
-                          {steps.map((step, idx) => {
-                            const isCurrent = order.status === step.key;
-                            const isPast = idx <= stepIndex && order.status !== "returned";
-                            const IconCmp = step.icon;
-
-                            return (
-                              <div key={step.key} className="flex sm:flex-col items-center sm:text-center flex-1 space-x-3.5 sm:space-x-0">
-                                <div className={`h-9 w-9 rounded-full flex items-center justify-center border transition-all shrink-0 z-10 ${
-                                  isCurrent
-                                    ? "bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/25 scale-110"
-                                    : isPast
-                                    ? "bg-emerald-950 border-emerald-500 text-emerald-400"
-                                    : "bg-slate-900 border-slate-800 text-slate-500"
-                                }`}>
-                                  <IconCmp className="h-4 w-4" />
-                                </div>
-                                <div className="sm:mt-2 text-left sm:text-center">
-                                  <p className={`text-xs font-bold ${isCurrent || isPast ? "text-white" : "text-slate-500"}`}>
-                                    {step.label}
-                                  </p>
-                                  <p className="text-[10px] text-gray-400 line-clamp-2 max-w-[150px] sm:mx-auto mt-0.5 hidden sm:block">
-                                    {step.desc}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Mobile Step Description */}
-                      <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs sm:hidden">
-                        <span className="font-bold text-emerald-400 block mb-0.5">Statut Actuel :</span>
-                        <p className="text-gray-300">
-                          {steps[stepIndex > 3 ? 3 : stepIndex]?.desc}
-                        </p>
-                      </div>
-
-                      {/* Delivery Driver Info Section */}
-                      {order.livreur && (
-                        <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl space-y-2">
-                          <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
-                            <Truck className="h-4 w-4" />
-                            <span>Livreur Assigné (Service Livraison)</span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
-                            <div>
-                              <span className="text-gray-500 text-[10px] block">Nom du Livreur</span>
-                              <span className="font-semibold text-white">{order.livreur.name}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500 text-[10px] block">Téléphone de Contact</span>
-                              <span className="font-bold text-amber-300">{order.livreur.phone}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500 text-[10px] block">Secteur / Wilaya</span>
-                              <span className="font-semibold text-white">{order.livreur.wilaya || "Toutes Wilayas"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Sub-note */}
-                      <div className="flex items-center space-x-1.5 text-[10px] text-gray-500">
-                        <Info className="h-3 w-3" />
-                        <span>Mise à jour en temps réel. Pour toute assistance, appelez notre support.</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        /* Products Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProducts.map((product) => (
-            <div 
-              key={product.id}
-              id={`product-card-${product.id}`}
-              className="bg-white rounded-2xl overflow-hidden flex flex-col h-full border border-slate-150 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 relative group"
-            >
-              {/* Image banner */}
-              <div className="relative h-48 overflow-hidden bg-slate-50">
-                {/* Secondary image hover transition if exists */}
-                {product.imageUrl2 ? (
-                  <>
-                    <img 
-                      src={product.imageUrl} 
-                      alt={product.name} 
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover opacity-90 transition-all duration-500 group-hover:opacity-0 group-hover:scale-105" 
-                    />
-                    <img 
-                      src={product.imageUrl2} 
-                      alt={`${product.name} alternate view`} 
-                      referrerPolicy="no-referrer"
-                      className="absolute inset-0 w-full h-full object-cover opacity-0 transition-all duration-500 group-hover:opacity-90 group-hover:scale-105" 
-                    />
-                  </>
-                ) : (
-                  <img 
-                    src={product.imageUrl} 
-                    alt={product.name} 
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-all duration-500 group-hover:scale-105" 
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent"></div>
-                
-                {/* Product Badge */}
-                <span className={`absolute top-4 left-4 px-2.5 py-1 text-[10px] uppercase font-bold rounded ${
-                  product.type === "iptv" || product.type === "code iptv"
-                    ? "bg-blue-50 text-blue-600 border border-blue-200" 
-                    : product.type === "adsl"
-                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                    : "bg-purple-50 text-purple-600 border border-purple-200"
-                }`}>
-                  {product.type === "iptv" || product.type === "code iptv"
-                    ? "Code IPTV" 
-                    : product.type === "adsl" 
-                    ? "Recharge ADSL" 
-                    : isPhysicalProduct(product.type)
-                    ? "Matériel (Livraison)"
-                    : product.type
-                  }
-                </span>
-
-                {/* Popular Badge */}
-                {product.isPopular && (
-                  <span className="absolute top-4 right-4 bg-amber-500 text-black text-[9px] font-extrabold uppercase px-2 py-1 rounded shadow-md tracking-wider">
-                    Recommandé
-                  </span>
-                )}
-              </div>
-
-              {/* Content info */}
-              <div className="p-6 flex-1 flex flex-col bg-white">
-                <h3 className="font-display text-xl font-bold text-slate-900 mb-2">{product.name}</h3>
-                <p className="text-slate-600 text-sm line-clamp-3 mb-4 leading-relaxed flex-grow-0">
-                  {product.description}
-                </p>
-
-                {/* Bullet points */}
-                <ul className="space-y-2 mb-6 flex-grow">
-                  {product.features.map((feature, i) => (
-                    <li key={i} className="flex items-start text-xs text-slate-700">
-                      <Check className="h-4 w-4 text-emerald-500 shrink-0 mr-2 mt-0.5" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Pricing & Call to action */}
-                <div className="border-t border-slate-100 pt-4 mt-auto flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-slate-400 block">Tarif Détail</span>
-                    <span className="text-2xl font-black font-display text-indigo-600">{product.priceRetail.toLocaleString()} DA</span>
-                    {product.type === "iptv" && <span className="text-slate-400 text-[10px] block">/ 12 Mois</span>}
-                  </div>
-                  <button
-                    id={`btn-buy-${product.id}`}
-                    onClick={() => handleOpenCheckout(product)}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-blue-500/15 transition-all flex items-center space-x-1 cursor-pointer font-sans"
-                  >
-                    <ShoppingBag className="h-3.5 w-3.5" />
-                    <span>Commander</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Checkout Modal Overlay */}
-      {selectedProduct && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-              <div className="flex items-center space-x-2.5">
-                <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
-                  <Tv className="h-5 w-5" />
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg shrink-0 mt-0.5">
+                  <Wallet className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-lg text-slate-800">Formulaire de Commande</h3>
-                  <p className="text-xs text-slate-500">Paiement 100% sécurisé et livraison rapide</p>
+                  <h4 className="text-sm font-semibold text-white">Tarifs Réduits d'achat (Gros)</h4>
+                  <p className="text-xs text-gray-400 mt-1">Économisez de 500 à 1000 DA sur chaque abonnement activé.</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setSelectedProduct(null)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg shrink-0 mt-0.5">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white">Activations Instantanées 24/7</h4>
+                  <p className="text-xs text-gray-400 mt-1">Pas besoin d'attendre. Activez et téléchargez les fichiers M3U et Xtream Codes immédiatement.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg shrink-0 mt-0.5">
+                  <CheckCircle className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white">Gestion Facile</h4>
+                  <p className="text-xs text-gray-400 mt-1">Suivez les dates d'expiration de vos abonnés pour les renouveler en un clic.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Form Column */}
+          <div className="bg-gray-950 p-8 rounded-2xl border border-gray-800 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 rounded-full blur-2xl"></div>
+
+            {/* Form Toggle Tabs */}
+            <div className="flex border-b border-gray-800 pb-4 mb-6">
+              <button
+                onClick={() => { setIsRegistering(false); setAuthError(""); }}
+                className={`flex-1 pb-3 text-sm font-bold border-b-2 text-center transition-all cursor-pointer ${
+                  !isRegistering
+                    ? "border-indigo-500 text-indigo-400"
+                    : "border-transparent text-gray-500 hover:text-gray-300"
+                }`}
               >
-                <X className="h-5 w-5" />
+                <div className="flex items-center justify-center space-x-1.5">
+                  <LogIn className="h-4 w-4" />
+                  <span>Se Connecter</span>
+                </div>
+              </button>
+              <button
+                onClick={() => { setIsRegistering(true); setAuthError(""); }}
+                className={`flex-1 pb-3 text-sm font-bold border-b-2 text-center transition-all cursor-pointer ${
+                  isRegistering
+                    ? "border-indigo-500 text-indigo-400"
+                    : "border-transparent text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-center space-x-1.5">
+                  <UserPlus className="h-4 w-4" />
+                  <span>Créer un Compte</span>
+                </div>
               </button>
             </div>
 
-            {/* Modal Body */}
-            {!successOrder ? (
-              <form onSubmit={handleCheckoutSubmit} className="p-6 space-y-5">
-                {formError && (
-                  <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-medium">
-                    {formError}
-                  </div>
-                )}
+            {authError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium mb-4">
+                {authError}
+              </div>
+            )}
+            {authSuccess && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-medium mb-4">
+                {authSuccess}
+              </div>
+            )}
 
-                {/* Selected Item Recap Card */}
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Produit choisi :</span>
-                      <h4 className="font-bold text-slate-800 text-base font-display">{selectedProduct.name}</h4>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total à payer :</span>
-                      <p className="text-xl font-extrabold text-blue-600 font-display">{totalWithShipping.toLocaleString()} DA</p>
-                    </div>
-                  </div>
-                  {isPhysicalCheckout && shippingWilaya && (
-                    <div className="flex justify-between items-center pt-2 border-t border-slate-200 text-[11px] text-slate-500">
-                      <span>Produit : {selectedProduct.priceRetail.toLocaleString()} DA + Livraison ({shippingType === "domicile" ? "à domicile" : "au bureau"}) : {shippingPrice.toLocaleString()} DA</span>
-                      {selectedTariff && <span className="font-semibold text-slate-600">Délai estimé : {selectedTariff.delai}</span>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Grid Input */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Nom & Prénom <span className="text-red-500">*</span></label>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="Ex: Sofiane Yahiaoui"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Numéro de Téléphone (Algeria) <span className="text-red-500">*</span></label>
-                    <input 
-                      type="tel" 
-                      required
-                      placeholder="Ex: 0550123456"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-                </div>
-
+            {/* Login Form */}
+            {!isRegistering ? (
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Adresse Email (Optionnel)</label>
-                  <input 
-                    type="email" 
-                    placeholder="Ex: sofiane@gmail.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Nom d'utilisateur</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: dino_pro"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
-
-                {isPhysicalCheckout ? (
-                  /* Formulaire LIVRAISON — produits physiques (Box Android, Démodulateur, TV...) */
-                  <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-4">
-                    <h4 className="text-xs font-bold uppercase text-emerald-700 tracking-wider flex items-center space-x-1.5">
-                      <Truck className="h-3.5 w-3.5" />
-                      <span>Informations de Livraison</span>
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Wilaya de livraison <span className="text-red-500">*</span></label>
-                        <select
-                          required
-                          value={shippingWilaya}
-                          onChange={(e) => setShippingWilaya(e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
-                        >
-                          <option value="">-- Choisir votre wilaya --</option>
-                          {DELIVERY_TARIFFS.map(t => (
-                            <option key={t.wilaya} value={t.wilaya}>{t.wilaya}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Mode de livraison <span className="text-red-500">*</span></label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setShippingType("domicile")}
-                            className={`py-2.5 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
-                              shippingType === "domicile"
-                                ? "bg-emerald-50 border-emerald-500 text-emerald-700"
-                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                            }`}
-                          >
-                            À domicile{selectedTariff ? ` (${selectedTariff.domicile.toLocaleString()} DA)` : ""}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setShippingType("bureau")}
-                            className={`py-2.5 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
-                              shippingType === "bureau"
-                                ? "bg-emerald-50 border-emerald-500 text-emerald-700"
-                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                            }`}
-                          >
-                            Au bureau / agence{selectedTariff ? ` (${selectedTariff.bureau.toLocaleString()} DA)` : ""}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Adresse complète (Commune, Quartier...) <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ex: Cité 500 logts, Bt 12, Draria, Alger"
-                        value={shippingAddress}
-                        onChange={(e) => setShippingAddress(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
-                      />
-                    </div>
-                    {selectedTariff && (
-                      <div className="flex items-center space-x-1.5 text-[11px] text-emerald-700 bg-emerald-100/60 border border-emerald-200 rounded-lg px-3 py-2">
-                        <Clock className="h-3.5 w-3.5 shrink-0" />
-                        <span>Délai de livraison estimé pour {shippingWilaya} : <strong>{selectedTariff.delai}</strong></span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                /* Configuration Client Specifics (TV Model, App Installed, Android Box, Downloader Code) */
-                <div className="p-4 bg-blue-50/40 rounded-xl border border-blue-100/75 space-y-4">
-                  <h4 className="text-xs font-bold uppercase text-indigo-700 tracking-wider">
-                    Informations de Configuration (Recommandé pour activation rapide)
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Modèle de votre Téléviseur (Optionnel)</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ex: Samsung QLED, LG OLED, TCL..."
-                        value={tvModel}
-                        onChange={(e) => setTvModel(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Choix de l'application IPTV <span className="text-red-500">*</span></label>
-                      <div className="space-y-1.5">
-                        <select
-                          value={installedApp}
-                          onChange={(e) => setInstalledApp(e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
-                        >
-                          <option value="">-- Choisir une option --</option>
-                          <optgroup label="TV Connectée Samsung & LG WebOS">
-                            <option value="Samsung Smart TV (Smarters Pro)">Samsung Smart TV - IPTV Smarters Pro</option>
-                            <option value="LG WebOS (SmartOne IPTV)">LG WebOS - SmartOne IPTV (Très stable)</option>
-                            <option value="IBO Player">IBO Player (Moderne & Fluide)</option>
-                            <option value="Smart IPTV (SIPTV)">Smart IPTV / SIPTV (Classique)</option>
-                            <option value="NetIPTV">NetIPTV (Simple)</option>
-                            <option value="Set IPTV">Set IPTV (Rapide)</option>
-                          </optgroup>
-                          <optgroup label="Boîtier Android / Firestick / Autre">
-                            <option value="Smarters Pro (Android App)">IPTV Smarters Pro (Android)</option>
-                            <option value="TiviMate Player">TiviMate (Recommandé premium Android)</option>
-                            <option value="XCIPTV Player">XCIPTV Player</option>
-                            <option value="Downloader Code Choice">Downloader App (AFTVnews)</option>
-                          </optgroup>
-                          <option value="other">Autre application (Saisir manuellement)...</option>
-                        </select>
-                        
-                        {(installedApp === "other" || (!["", "Samsung Smart TV (Smarters Pro)", "LG WebOS (SmartOne IPTV)", "IBO Player", "Smart IPTV (SIPTV)", "NetIPTV", "Set IPTV", "Smarters Pro (Android App)", "TiviMate Player", "XCIPTV Player", "Downloader Code Choice"].includes(installedApp) && installedApp.length > 0)) && (
-                          <input 
-                            type="text" 
-                            placeholder="Nom de l'application installée..."
-                            value={installedApp === "other" ? "" : installedApp}
-                            onChange={(e) => setInstalledApp(e.target.value)}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    <div className="flex items-center space-x-2.5 bg-white p-3 rounded-xl border border-slate-200">
-                      <input 
-                        type="checkbox"
-                        id="hasAndroidBox"
-                        checked={hasAndroidBox}
-                        onChange={(e) => setHasAndroidBox(e.target.checked)}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-0 h-4 w-4 bg-white cursor-pointer"
-                      />
-                      <label htmlFor="hasAndroidBox" className="text-xs font-medium text-slate-700 select-none cursor-pointer">
-                        Je possède un Boîtier/Box Android
-                      </label>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1.5">Code Downloader AFTVnews (Optionnel)</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ex: 283749"
-                        value={downloaderCode}
-                        onChange={(e) => setDownloaderCode(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-                </div>
-                )}
-
-                {/* Payment Method Selector */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">Méthode de Paiement Préférée :</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("baridimob")}
-                      className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
-                        paymentMethod === "baridimob"
-                          ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
-                          : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Smartphone className="h-5 w-5 text-blue-600" />
-                      <span className="text-[10px] font-bold">BaridiMob</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("ccp")}
-                      className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
-                        paymentMethod === "ccp"
-                          ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
-                          : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                      }`}
-                    >
-                      <CreditCard className="h-5 w-5 text-blue-600" />
-                      <span className="text-[10px] font-bold">Versement CCP</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("card")}
-                      className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
-                        paymentMethod === "card"
-                          ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
-                          : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                      }`}
-                    >
-                      <CreditCard className="h-5 w-5 text-blue-600" />
-                      <span className="text-[10px] font-bold">CIB / Dahabia</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("hand")}
-                      className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
-                        paymentMethod === "hand"
-                          ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
-                          : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Truck className="h-5 w-5 text-blue-600" />
-                      <span className="text-[10px] font-bold">Yalidine COD</span>
-                    </button>
-                  </div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Mot de passe</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Saisir votre mot de passe"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
                 </div>
-
-                {/* Conditional Payment Instructions Box */}
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 text-xs text-slate-600 space-y-2.5">
-                  {paymentMethod === "baridimob" && (
-                    <>
-                      <div className="flex items-center space-x-1.5 text-amber-600 font-bold">
-                        <Info className="h-3.5 w-3.5 text-amber-500" />
-                        <span>Instructions BaridiMob</span>
-                      </div>
-                      <p className="leading-relaxed">
-                        Veuillez transférer le montant de <strong className="text-slate-900">{selectedProduct.priceRetail.toLocaleString()} DA</strong> vers le compte Algérie Poste suivant via votre application BaridiMob :
-                      </p>
-                      <div className="p-2.5 bg-slate-100 rounded font-mono text-slate-800 border border-slate-200">
-                        RIP : 007999990022334455 <br />
-                        Titulaire : Belkacem Fares
-                      </div>
-                      <div className="mt-2">
-                        <label className="block text-[10px] text-slate-500 mb-1 font-semibold">Numéro de transaction ou Nom de l'expéditeur :</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: Trans #49120 ou Fares B."
-                          value={paymentDetails}
-                          onChange={(e) => setPaymentDetails(e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {paymentMethod === "ccp" && (
-                    <>
-                      <div className="flex items-center space-x-1.5 text-amber-600 font-bold">
-                        <Info className="h-3.5 w-3.5 text-amber-500" />
-                        <span>Instructions Versement CCP</span>
-                      </div>
-                      <p className="leading-relaxed">
-                        Rendez-vous dans un bureau d'Algérie Poste pour effectuer le versement de <strong className="text-slate-900">{selectedProduct.priceRetail.toLocaleString()} DA</strong> sur :
-                      </p>
-                      <div className="p-2.5 bg-slate-100 rounded font-mono text-slate-800 border border-slate-200">
-                        CCP : 1234567 Clé 89 <br />
-                        Nom : Belkacem Fares
-                      </div>
-                      <div className="mt-2">
-                        <label className="block text-[10px] text-slate-500 mb-1 font-semibold">Référence du reçu ou numéro de bureau postal :</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: Mandat n° 9812 ou Reçu"
-                          value={paymentDetails}
-                          onChange={(e) => setPaymentDetails(e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {paymentMethod === "card" && (
-                    <>
-                      <div className="flex items-center space-x-1.5 text-blue-600 font-bold">
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        <span>Formulaire Carte Bancaire CIB / Dahabia</span>
-                      </div>
-                      <p className="text-slate-500 leading-relaxed">
-                        Simulation de paiement sécurisé. Saisissez vos coordonnées de carte :
-                      </p>
-                      <div className="grid grid-cols-3 gap-3">
-                        <input
-                          type="text"
-                          maxLength={16}
-                          placeholder="Numéro de carte (16 chiffres)"
-                          className="col-span-3 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900"
-                        />
-                        <input
-                          type="text"
-                          placeholder="MM/AA"
-                          className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900"
-                        />
-                        <input
-                          type="text"
-                          placeholder="CVV"
-                          className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Code SMS 3D-Secure"
-                          className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {paymentMethod === "hand" && (
-                    <>
-                      <div className="flex items-center space-x-1.5 text-emerald-600 font-bold">
-                        <Truck className="h-3.5 w-3.5" />
-                        <span>Paiement à la livraison (Yalidine Express)</span>
-                      </div>
-                      <p className="leading-relaxed text-slate-600">
-                        {isPhysicalCheckout ? (
-                          <>
-                            Pour l'achat du produit physique <strong>{selectedProduct.name}</strong>, l'envoi se fera via <strong className="text-slate-900">Yalidine Express</strong> vers <strong className="text-slate-900">{shippingWilaya || "votre wilaya"}</strong> ({shippingType === "domicile" ? "à domicile" : "au bureau"}). Vous paierez <strong className="text-slate-900">{totalWithShipping.toLocaleString()} DA</strong> en espèces à la livraison.
-                          </>
-                        ) : (
-                          <>
-                            Pour l'abonnement IPTV ou le service <strong>{selectedProduct.name}</strong>, nous pouvons nous rencontrer ou vous appeler pour valider votre code et recevoir le paiement. Nous vous contacterons sous peu pour fixer les modalités.
-                          </>
-                        )}
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                {/* Submit button */}
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-55 text-white rounded-xl font-bold shadow-lg shadow-blue-500/10 transition-all flex items-center justify-center space-x-2 cursor-pointer"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Traitement en cours...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4" />
-                        <span>Confirmer ma Commande ({totalWithShipping.toLocaleString()} DA)</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg shadow-indigo-600/10"
+                >
+                  {loading ? "Connexion..." : "Se Connecter"}
+                </button>
+                <p className="text-[10px] text-center text-gray-500">
+                  Compte de démonstration : <strong className="text-indigo-400">dino_pro</strong> / <strong className="text-indigo-400">n'importe quel mot de passe</strong>
+                </p>
               </form>
             ) : (
-              /* Success Checkout View */
-              <div className="p-8 text-center space-y-5 animate-in fade-in duration-300">
-                <div className="mx-auto h-14 w-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center border border-emerald-200">
-                  <CheckCircle className="h-8 w-8" />
+              /* Registration Form */
+              <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Nom du Commerce / Magasin</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Kamal Sat Alger"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">Nom d'utilisateur</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: kamal_sat"
+                      value={regUsername}
+                      onChange={(e) => setRegUsername(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">Téléphone</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Ex: 0661987654"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <h3 className="font-display font-extrabold text-2xl text-slate-900">Merci pour votre commande !</h3>
-                  <p className="text-slate-500 text-xs mt-2 max-w-md mx-auto">
-                    Votre commande <span className="text-blue-600 font-mono font-semibold">#{successOrder.id}</span> a été enregistrée avec succès.
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Email professionnel</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="Ex: kamal.sat@gmail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Mot de passe</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Créez un mot de passe"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg shadow-indigo-600/10"
+                >
+                  {loading ? "Création..." : "Soumettre ma Demande d'Inscription"}
+                </button>
+                <p className="text-[9px] text-gray-500 text-center leading-relaxed">
+                  * Après inscription, l'administrateur recevra une alerte email immédiate pour activer votre compte.
+                </p>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ACTIVE WHOLESALER DASHBOARD
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Welcome Banner Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-gradient-to-r from-indigo-950 via-slate-900 to-gray-900 rounded-2xl border border-indigo-500/20 shadow-xl">
+        <div>
+          <span className="text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2.5 py-1 rounded font-bold uppercase tracking-wider">
+            Grossiste Agrée
+          </span>
+          <h2 className="font-display text-2xl font-bold text-white mt-2">Console Revendeur : {loggedWholesaler.businessName}</h2>
+          <p className="text-gray-400 text-xs mt-1">Gérez votre stock de crédits, activez vos abonnés et suivez les expirations.</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setActionError("");
+              setActionSuccess("");
+              setShowRechargeModal(true);
+            }}
+            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-indigo-400 font-bold text-xs rounded-xl border border-gray-700 transition-all flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Wallet className="h-4 w-4" />
+            <span>Demander Crédit</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActionError("");
+              setActionSuccess("");
+              setShowPanelModal(true);
+            }}
+            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-amber-400 font-bold text-xs rounded-xl border border-gray-700 transition-all flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Key className="h-4 w-4" />
+            <span>Demander Panel (Min 10 codes)</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActionError("");
+              setActionSuccess("");
+              setShowActivateModal(true);
+            }}
+            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/15 transition-all flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Nouvelle Activation</span>
+          </button>
+
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs rounded-xl border border-gray-700 transition-all flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Paramètres du compte</span>
+          </button>
+
+          {onLogoutWholesaler && (
+            <button
+              onClick={onLogoutWholesaler}
+              title="Quitte le panneau, votre session reste active"
+              className="px-4 py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-400 font-bold text-xs rounded-xl border border-red-500/20 transition-all flex items-center space-x-1.5 cursor-pointer"
+            >
+              <LogIn className="h-4 w-4 rotate-180" />
+              <span>Quitter le panneau</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* PARAMÈTRES DU COMPTE MODAL */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => {
+                setShowSettingsModal(false);
+                setConfirmFullLogout(false);
+              }}
+              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="space-y-1.5 mb-6 border-b border-gray-800 pb-4">
+              <Settings className="h-7 w-7 text-gray-400 mb-1" />
+              <h3 className="font-display font-extrabold text-lg text-white">Paramètres du compte</h3>
+              <p className="text-gray-400 text-xs">{loggedWholesaler.businessName} — {loggedWholesaler.username}</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-900 border border-gray-800 rounded-xl text-xs text-gray-400 leading-relaxed">
+                Le bouton <strong className="text-gray-200">« Quitter le panneau »</strong> vous ramène simplement à la
+                boutique : votre session reste active jusqu'à 2 jours et vous retrouverez
+                votre espace revendeur automatiquement, sans ressaisir vos identifiants.
+              </div>
+
+              <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl space-y-3">
+                <div className="flex items-start space-x-2">
+                  <ShieldAlert className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-red-300 leading-relaxed">
+                    La déconnexion complète met fin à votre session sur cet appareil.
+                    Vous devrez ressaisir votre identifiant et votre mot de passe pour
+                    revenir sur votre espace revendeur.
                   </p>
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 text-left text-xs text-slate-600 space-y-1.5 max-w-md mx-auto">
-                  <p><strong className="text-slate-800">Client :</strong> {successOrder.customerName}</p>
-                  <p><strong className="text-slate-800">Téléphone :</strong> {successOrder.customerPhone}</p>
-                  <p><strong className="text-slate-800">Produit :</strong> {successOrder.productName}</p>
-                  <p><strong className="text-slate-800">Montant :</strong> {successOrder.priceDA.toLocaleString()} DA</p>
-                  <p><strong className="text-slate-800">Méthode de paiement :</strong> {successOrder.paymentMethod.toUpperCase()}</p>
+                {!confirmFullLogout ? (
+                  <button
+                    onClick={() => setConfirmFullLogout(true)}
+                    className="w-full py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-400 border border-red-500/30 rounded-xl font-bold text-xs transition-all cursor-pointer"
+                  >
+                    Déconnexion complète
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-gray-300 font-semibold">Confirmer la déconnexion complète ?</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setShowSettingsModal(false);
+                          setConfirmFullLogout(false);
+                          onLogoutComplete && onLogoutComplete();
+                        }}
+                        className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-xs cursor-pointer"
+                      >
+                        Oui, déconnecter
+                      </button>
+                      <button
+                        onClick={() => setConfirmFullLogout(false)}
+                        className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-xs cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert states feedback */}
+      {actionSuccess && (
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-medium">
+          {actionSuccess}
+        </div>
+      )}
+
+      {/* Metrics Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-card p-6 rounded-2xl border border-gray-800 flex items-center justify-between">
+          <div>
+            <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold block">Crédit Disponible</span>
+            <span className="text-3xl font-black font-display text-emerald-400 mt-1 block">
+              {loggedWholesaler.creditBalance.toLocaleString()} DA
+            </span>
+          </div>
+          <div className="p-3.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
+            <Wallet className="h-6 w-6" />
+          </div>
+        </div>
+
+        <div className="glass-card p-6 rounded-2xl border border-gray-800 flex items-center justify-between">
+          <div>
+            <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold block">Abonnements Actifs</span>
+            <span className="text-3xl font-black font-display text-blue-400 mt-1 block">
+              {wholesalerClients.filter(c => c.status === "active").length}
+            </span>
+          </div>
+          <div className="p-3.5 bg-blue-500/10 text-blue-400 rounded-xl">
+            <Users className="h-6 w-6" />
+          </div>
+        </div>
+
+        <div className="glass-card p-6 rounded-2xl border border-gray-800 flex items-center justify-between">
+          <div>
+            <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold block">Demandes Recharges</span>
+            <span className="text-3xl font-black font-display text-amber-400 mt-1 block">
+              {wholesalerRequests.filter(r => r.status === "pending").length}
+            </span>
+          </div>
+          <div className="p-3.5 bg-amber-500/10 text-amber-400 rounded-xl">
+            <Clock className="h-6 w-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* Core Table View */}
+      <div className="bg-gray-950 rounded-2xl border border-gray-800 overflow-hidden shadow-lg">
+        {/* Table Search & Filter header */}
+        <div className="p-5 border-b border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-900/20">
+          <h3 className="font-display font-bold text-base text-white self-start sm:self-center">Liste de vos Clients Activés</h3>
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Rechercher par nom ou serveur..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+        </div>
+
+        {/* Responsive Table */}
+        <div className="overflow-x-auto">
+          {filteredClients.length > 0 ? (
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-gray-900/40 text-gray-400 border-b border-gray-800/80">
+                  <th className="p-4 font-semibold">Nom du Client</th>
+                  <th className="p-4 font-semibold">Serveur IPTV</th>
+                  <th className="p-4 font-semibold">Durée</th>
+                  <th className="p-4 font-semibold">Date Activation</th>
+                  <th className="p-4 font-semibold">Date Expiration</th>
+                  <th className="p-4 font-semibold">Coût (DA)</th>
+                  <th className="p-4 font-semibold text-center">Statut</th>
+                  <th className="p-4 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800/40">
+                {filteredClients.map((client) => {
+                  const isExpired = client.expirationDate ? new Date(client.expirationDate) < new Date() : false;
+                  return (
+                    <tr key={client.id} className="hover:bg-gray-900/10">
+                      <td className="p-4 font-bold text-white">{client.clientName}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded font-semibold text-[10px]">
+                          {client.server}
+                        </span>
+                      </td>
+                      <td className="p-4">{client.durationMonths} Mois</td>
+                      <td className="p-4 text-gray-400">
+                        {client.activationDate 
+                          ? new Date(client.activationDate).toLocaleDateString("fr-FR") 
+                          : "En attente"}
+                      </td>
+                      <td className="p-4 text-gray-400 font-mono">
+                        {client.expirationDate 
+                          ? new Date(client.expirationDate).toLocaleDateString("fr-FR") 
+                          : "En attente"}
+                      </td>
+                      <td className="p-4 font-bold text-emerald-400">{client.pricePaid.toLocaleString()} DA</td>
+                      <td className="p-4 text-center">
+                        {client.status === "pending" ? (
+                          <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-[9px] font-semibold animate-pulse">
+                            En attente
+                          </span>
+                        ) : isExpired ? (
+                          <span className="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-[9px] font-semibold">
+                            Expiré
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-semibold">
+                            Actif
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => setSelectedClientCredentials(client)}
+                          className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all cursor-pointer ${
+                            client.status === "pending"
+                              ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20"
+                              : "bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                          }`}
+                        >
+                          {client.status === "pending" ? "Suivre l'Activation" : "Voir les Accès"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-8 text-center text-gray-500">
+              <AlertCircle className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+              <p className="text-xs">Aucun client trouvé. Lancez votre première activation !</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Credit Recharge Request History List */}
+      <div className="bg-gray-950 rounded-2xl border border-gray-800 p-5 space-y-4">
+        <h3 className="font-display font-bold text-base text-white">Suivi de vos demandes de recharge crédit</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {wholesalerRequests.map((req) => (
+            <div key={req.id} className="p-4 bg-gray-900/40 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
+              <div>
+                <span className="text-[10px] text-gray-400 block">{new Date(req.createdAt).toLocaleString("fr-FR")}</span>
+                <span className="font-bold text-white text-sm">{req.amountDA.toLocaleString()} DA</span>
+                <span className="text-gray-400 block mt-1">Via {req.paymentMethod.toUpperCase()} (Ref: {req.receiptReference})</span>
+              </div>
+              <div>
+                {req.status === "pending" && (
+                  <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded font-semibold text-[10px]">
+                    En attente de validation
+                  </span>
+                )}
+                {req.status === "approved" && (
+                  <span className="px-2.5 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded font-semibold text-[10px]">
+                    Approuvée & Créditée
+                  </span>
+                )}
+                {req.status === "rejected" && (
+                  <span className="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded font-semibold text-[10px]">
+                    Rejetée
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+          {wholesalerRequests.length === 0 && (
+            <p className="text-xs text-gray-500 col-span-2 text-center py-2">Aucune demande de recharge effectuée.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Panel Requests Followup List */}
+      <div className="bg-gray-950 rounded-2xl border border-gray-800 p-5 space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-display font-bold text-base text-white flex items-center space-x-2">
+            <Key className="h-4 w-4 text-amber-500" />
+            <span>Suivi de vos demandes de Panels Revendeur (Min 10 codes)</span>
+          </h3>
+          <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-bold uppercase">
+            10 Codes Min.
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {panelRequests.map((panelReq) => (
+            <div key={panelReq.id} className="p-4 bg-gray-900/40 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
+              <div>
+                <span className="text-[10px] text-gray-400 block">{new Date(panelReq.createdAt).toLocaleString("fr-FR")}</span>
+                <span className="font-bold text-white text-sm">Panel : {panelReq.server}</span>
+                <span className="text-gray-300 block mt-1 font-semibold">{panelReq.codesCount} codes demandés</span>
+                {panelReq.notes && (
+                  <p className="text-[10px] text-amber-400 mt-1 italic">Note Admin: {panelReq.notes}</p>
+                )}
+              </div>
+              <div>
+                {panelReq.status === "pending" && (
+                  <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded font-semibold text-[10px]">
+                    En attente de validation
+                  </span>
+                )}
+                {panelReq.status === "approved" && (
+                  <span className="px-2.5 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded font-semibold text-[10px]">
+                    Panel Activé
+                  </span>
+                )}
+                {panelReq.status === "rejected" && (
+                  <span className="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded font-semibold text-[10px]">
+                    Rejetée
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+          {panelRequests.length === 0 && (
+            <p className="text-xs text-gray-500 col-span-2 text-center py-2">Aucune demande de panel effectuée.</p>
+          )}
+        </div>
+      </div>
+
+      {/* MODAL 3: REQUEST RESELLER PANEL */}
+      {showPanelModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowPanelModal(false)}
+              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="space-y-1 mb-6">
+              <h3 className="font-display font-extrabold text-lg text-white">Demande de Panel Revendeur</h3>
+              <p className="text-gray-400 text-xs">Créez votre propre panel IPTV autonome pour gérer vos clients.</p>
+            </div>
+
+            <form onSubmit={handlePanelRequestSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Serveur Panel IPTV</label>
+                <select
+                  value={panelServer}
+                  onChange={(e) => setPanelServer(e.target.value as SubscriptionServer)}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="Dino">Dino OTT</option>
+                  <option value="8K">8K OTT</option>
+                  <option value="V12">V12 OTT</option>
+                  <option value="Golden OTT">Golden OTT</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Nombre de codes (Minimum 10)</label>
+                <input
+                  type="number"
+                  min="10"
+                  required
+                  value={panelCodesCount}
+                  onChange={(e) => setPanelCodesCount(Number(e.target.value))}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">Conformément aux règles de revente, les panels nécessitent un achat initial de minimum 10 codes d'activation.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Note ou Message Optionnel</label>
+                <textarea
+                  placeholder="Informations supplémentaires pour l'admin..."
+                  value={panelNotes}
+                  onChange={(e) => setPanelNotes(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 h-20 resize-none"
+                />
+              </div>
+
+              {actionError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-[10px] font-semibold">
+                  {actionError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-black text-xs rounded-xl shadow-lg shadow-amber-600/10 transition-all cursor-pointer"
+              >
+                {loading ? "Traitement..." : "Soumettre la Demande de Panel"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* MODAL 1: NEW ACTIVATION */}
+      {showActivateModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowActivateModal(false)}
+              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center space-x-2.5 mb-5 border-b border-gray-800 pb-3">
+              <Plus className="h-5 w-5 text-indigo-400" />
+              <h3 className="font-display font-bold text-lg text-white">Activer un Client</h3>
+            </div>
+
+            {actionError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium mb-4">
+                {actionError}
+              </div>
+            )}
+
+            <form onSubmit={handleClientActivation} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-gray-300 font-semibold mb-1">Nom du Client</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Mohamed Belkaid"
+                  value={newClientName}
+                  onChange={(e) => setNewClientName(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-gray-300 font-semibold mb-1">Serveur IPTV</label>
+                  <select
+                    value={selectedServer}
+                    onChange={(e) => setSelectedServer(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                  >
+                    <option value="Dino">Dino IPTV (4,200 DA)</option>
+                    <option value="8K">8K Premium (6,800 DA)</option>
+                    <option value="V12">V12 IPTV Pro (4,300 DA)</option>
+                    <option value="Golden OTT">Golden OTT (6,200 DA)</option>
+                  </select>
                 </div>
 
-                <div className="pt-2">
-                  <p className="text-xs text-amber-800 font-medium bg-amber-50 border border-amber-200 py-2.5 px-4 rounded-lg inline-block max-w-sm">
-                    ⚡ Notre administrateur a reçu une notification immédiate par e-mail. Nous allons vous appeler au téléphone pour valider l'accès.
+                <div>
+                  <label className="block text-gray-300 font-semibold mb-1">Durée d'abonnement</label>
+                  <select
+                    value={selectedDuration}
+                    onChange={(e) => setSelectedDuration(Number(e.target.value))}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                  >
+                    <option value={1}>1 Mois (15% du tarif)</option>
+                    <option value={6}>6 Mois (60% du tarif)</option>
+                    <option value={12}>12 Mois (100% du tarif)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-300 font-semibold mb-1">Notes / MAC Address (Optionnel)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: SmartOne MAC: aa:bb:cc..."
+                  value={clientNotes}
+                  onChange={(e) => setClientNotes(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                />
+              </div>
+
+              <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg">
+                <p className="font-semibold text-[11px]">Tarification Revendeur :</p>
+                <p className="text-[10px] text-gray-300 mt-1">
+                  Cette activation sera déduite automatiquement de votre solde crédit. Assurez-vous d'avoir assez de fonds.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-bold text-xs"
+              >
+                {loading ? "Activation en cours..." : "Confirmer l'activation"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* MODAL 2: REQUEST RECHARGE */}
+      {showRechargeModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gray-950 border border-gray-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowRechargeModal(false)}
+              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center space-x-2.5 mb-5 border-b border-gray-800 pb-3">
+              <Wallet className="h-5 w-5 text-indigo-400" />
+              <h3 className="font-display font-bold text-lg text-white">Recharger mon Crédit</h3>
+            </div>
+
+            {actionError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium mb-4">
+                {actionError}
+              </div>
+            )}
+
+            <form onSubmit={handleRechargeSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-gray-300 font-semibold mb-1">Montant à recharger (DA)</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="Ex: 20000"
+                  value={rechargeAmount}
+                  onChange={(e) => setRechargeAmount(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 font-semibold mb-1">Mode de Paiement effectué</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRechargeMethod("baridimob")}
+                    className={`p-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
+                      rechargeMethod === "baridimob"
+                        ? "bg-indigo-500/10 border-indigo-500 text-indigo-400"
+                        : "bg-gray-900/50 border-gray-800 text-gray-400"
+                    }`}
+                  >
+                    BaridiMob
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRechargeMethod("ccp")}
+                    className={`p-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
+                      rechargeMethod === "ccp"
+                        ? "bg-indigo-500/10 border-indigo-500 text-indigo-400"
+                        : "bg-gray-900/50 border-gray-800 text-gray-400"
+                    }`}
+                  >
+                    Virement CCP
+                  </button>
+                </div>
+              </div>
+
+              {/* Display payment details */}
+              <div className="p-3 bg-gray-900 border border-gray-800 rounded-xl space-y-1.5 text-gray-300">
+                <span className="font-bold text-amber-400">Coordonnées de virement :</span>
+                {rechargeMethod === "baridimob" ? (
+                  <p className="font-mono">
+                    RIP : 007999990022334455 <br />
+                    Titulaire : Belkacem Fares
+                  </p>
+                ) : (
+                  <p className="font-mono">
+                    CCP : 1234567 Clé 89 <br />
+                    Titulaire : Belkacem Fares
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-gray-300 font-semibold mb-1">Numéro de Reçu / Référence du Transfert</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Trans #882190 ou Virement par Salah K."
+                  value={rechargeRef}
+                  onChange={(e) => setRegUsername(e.target.value)} // wait, let's fix this to setRechargeRef
+                  onChangeCapture={(e) => setRechargeRef((e.target as HTMLInputElement).value)}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-bold text-xs"
+              >
+                {loading ? "Soumission..." : "Soumettre la preuve de paiement"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* CREDENTIALS VIEWER DRAWER / SHEET */}
+      {selectedClientCredentials && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gray-950 border border-indigo-500/30 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setSelectedClientCredentials(null)}
+              className="absolute top-4 right-4 p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="text-center space-y-1.5 mb-6 border-b border-gray-800 pb-4">
+              <Key className="h-8 w-8 text-amber-400 mx-auto" />
+              <h3 className="font-display font-extrabold text-lg text-white">Accès IPTV : {selectedClientCredentials.clientName}</h3>
+              <p className="text-gray-400 text-xs">Serveur : {selectedClientCredentials.server} ({selectedClientCredentials.durationMonths} Mois)</p>
+            </div>
+
+            {selectedClientCredentials.status === "pending" ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-xl space-y-3 text-center">
+                  <div className="flex justify-center mb-1">
+                    <span className="relative flex h-8 w-8">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-8 w-8 bg-amber-500 flex items-center justify-center text-black font-bold">⏱️</span>
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-amber-400 uppercase tracking-wider text-[11px]">En attente d'activation</h4>
+                  <p className="text-[10px] leading-relaxed text-gray-300">
+                    Votre demande d'abonnement a été envoyée avec succès à l'administrateur et le coût de <strong>{selectedClientCredentials.pricePaid} DA</strong> a été déduit de votre solde.
+                  </p>
+                  <p className="text-[10px] leading-relaxed text-gray-400">
+                    L'administrateur génère actuellement votre accès sur le serveur. Les codes s'afficheront automatiquement ici dès validation. Merci pour votre patience !
                   </p>
                 </div>
 
                 <button
-                  onClick={() => setSelectedProduct(null)}
-                  className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold cursor-pointer border border-slate-250 transition-colors"
+                  onClick={() => setSelectedClientCredentials(null)}
+                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
                 >
-                  Fermer la fenêtre
+                  Fermer
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4 text-xs">
+                {copiedField && (
+                  <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-400 rounded-lg text-[10px] text-center font-semibold mb-4">
+                    Copié avec succès : {copiedField} !
+                  </div>
+                )}
+
+                {/* Xtream Codes format */}
+                <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
+                  <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Format Xtream Codes</span>
+                  
+                  <div className="space-y-2 pt-1.5 font-mono">
+                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
+                      <span className="text-gray-400">Host:</span>
+                      <span className="text-gray-200 break-all">{selectedClientCredentials.credentials?.xtreamHost}</span>
+                      <button 
+                        onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamHost || "", "Host")}
+                        className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
+                      <span className="text-gray-400">User:</span>
+                      <span className="text-gray-200">{selectedClientCredentials.credentials?.xtreamUser}</span>
+                      <button 
+                        onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamUser || "", "Username")}
+                        className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-gray-800">
+                      <span className="text-gray-400">Pass:</span>
+                      <span className="text-gray-200">{selectedClientCredentials.credentials?.xtreamPass}</span>
+                      <button 
+                        onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.xtreamPass || "", "Password")}
+                        className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* M3U Link Format */}
+                <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
+                  <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Lien M3U Complet</span>
+                  <div className="flex items-center justify-between bg-black/30 p-2 rounded border border-gray-800 font-mono">
+                    <span className="text-gray-200 truncate pr-2 select-all">{selectedClientCredentials.credentials?.m3uUrl}</span>
+                    <button 
+                      onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.m3uUrl || "", "Lien M3U")}
+                      className="p-1 text-gray-500 hover:text-white shrink-0"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {selectedClientCredentials.credentials?.m3uUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadM3u(selectedClientCredentials)}
+                      className="w-full mt-2 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/40 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Télécharger le Fichier .m3u</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-[10px] leading-relaxed">
+                  💡 Vous pouvez transmettre directement ces codes à votre client. Ils sont compatibles avec toutes les applications IPTV (Smarters Pro, NetIPTV, SmartOne, IBO Player, etc.).
+                </div>
+
+                <button
+                  onClick={() => setSelectedClientCredentials(null)}
+                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
+                >
+                  Fermer
                 </button>
               </div>
             )}
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
