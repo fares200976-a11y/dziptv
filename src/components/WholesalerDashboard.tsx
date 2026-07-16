@@ -397,7 +397,7 @@ export default function WholesalerDashboard({
                     placeholder="Ex: dino_pro"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
                 <div>
@@ -408,7 +408,7 @@ export default function WholesalerDashboard({
                     placeholder="Saisir votre mot de passe"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
                 <button
@@ -433,7 +433,7 @@ export default function WholesalerDashboard({
                     placeholder="Ex: Kamal Sat Alger"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -445,7 +445,7 @@ export default function WholesalerDashboard({
                       placeholder="Ex: kamal_sat"
                       value={regUsername}
                       onChange={(e) => setRegUsername(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                   <div>
@@ -456,7 +456,7 @@ export default function WholesalerDashboard({
                       placeholder="Ex: 0661987654"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                 </div>
@@ -468,7 +468,7 @@ export default function WholesalerDashboard({
                     placeholder="Ex: kamal.sat@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <div>
@@ -479,7 +479,7 @@ export default function WholesalerDashboard({
                     placeholder="Créez un mot de passe"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <button
@@ -1329,7 +1329,7 @@ export default function WholesalerDashboard({
                 )}
                 <div className="space-y-2 p-3.5 bg-white rounded-xl border border-slate-200">
                   <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Code Satellite</span>
-                  <div className="flex items-center justify-between bg-black/30 p-3 rounded border border-slate-200 font-mono">
+                  <div className="flex items-center justify-between bg-slate-50 p-3 rounded border border-slate-200 font-mono">
                     <span className="text-slate-800 text-sm tracking-wider select-all">{selectedClientCredentials.credentials?.satCode}</span>
                     <button
                       onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.satCode || "", "Code Sat")}
@@ -1362,7 +1362,7 @@ export default function WholesalerDashboard({
                   <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Format Xtream Codes</span>
                   
                   <div className="space-y-2 pt-1.5 font-mono">
-                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-slate-200">
+                    <div className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-200">
                       <span className="text-slate-500">Host:</span>
                       <span className="text-slate-700 break-all">{selectedClientCredentials.credentials?.xtreamHost}</span>
                       <button 
@@ -1373,7 +1373,7 @@ export default function WholesalerDashboard({
                       </button>
                     </div>
 
-                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-slate-200">
+                    <div className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-200">
                       <span className="text-slate-500">User:</span>
                       <span className="text-slate-700">{selectedClientCredentials.credentials?.xtreamUser}</span>
                       <button 
@@ -1384,7 +1384,7 @@ export default function WholesalerDashboard({
                       </button>
                     </div>
 
-                    <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-slate-200">
+                    <div className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-200">
                       <span className="text-slate-500">Pass:</span>
                       <span className="text-slate-700">{selectedClientCredentials.credentials?.xtreamPass}</span>
                       <button 
@@ -1400,7 +1400,7 @@ export default function WholesalerDashboard({
                 {/* M3U Link Format */}
                 <div className="space-y-2 p-3.5 bg-white rounded-xl border border-slate-200">
                   <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Lien M3U Complet</span>
-                  <div className="flex items-center justify-between bg-black/30 p-2 rounded border border-slate-200 font-mono">
+                  <div className="flex items-center justify-between bg-slate-50 p-2 rounded border border-slate-200 font-mono">
                     <span className="text-slate-700 truncate pr-2 select-all">{selectedClientCredentials.credentials?.m3uUrl}</span>
                     <button 
                       onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.m3uUrl || "", "Lien M3U")}

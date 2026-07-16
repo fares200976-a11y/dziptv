@@ -929,7 +929,7 @@ export default function AdminSimulator({
                         placeholder="Ex: Dino IPTV Alger"
                         value={wholesalerForm.businessName}
                         onChange={e => setWholesalerForm({ ...wholesalerForm, businessName: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
                       />
                     </div>
                     <div>
@@ -940,7 +940,7 @@ export default function AdminSimulator({
                         placeholder="Ex: fares_iptv"
                         value={wholesalerForm.username}
                         onChange={e => setWholesalerForm({ ...wholesalerForm, username: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
                       />
                     </div>
                     <div>
@@ -951,7 +951,7 @@ export default function AdminSimulator({
                         placeholder="Min 6 caractères"
                         value={wholesalerForm.password}
                         onChange={e => setWholesalerForm({ ...wholesalerForm, password: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
                       />
                     </div>
                   </div>
@@ -965,7 +965,7 @@ export default function AdminSimulator({
                         placeholder="Ex: 0550123456"
                         value={wholesalerForm.phone}
                         onChange={e => setWholesalerForm({ ...wholesalerForm, phone: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
                       />
                     </div>
                     <div>
@@ -976,7 +976,7 @@ export default function AdminSimulator({
                         placeholder="Ex: client@gmail.com"
                         value={wholesalerForm.email}
                         onChange={e => setWholesalerForm({ ...wholesalerForm, email: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
                       />
                     </div>
                     <div>
@@ -986,7 +986,7 @@ export default function AdminSimulator({
                         required
                         value={wholesalerForm.creditBalance}
                         onChange={e => setWholesalerForm({ ...wholesalerForm, creditBalance: parseInt(e.target.value) || 0 })}
-                        className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
                       />
                     </div>
                   </div>
@@ -1148,7 +1148,7 @@ export default function AdminSimulator({
                             required
                             value={editingWholesaler.businessName}
                             onChange={e => setEditingWholesaler({ ...editingWholesaler, businessName: e.target.value })}
-                            className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
                           />
                         </div>
                         <div>
@@ -1158,7 +1158,7 @@ export default function AdminSimulator({
                             required
                             value={editingWholesaler.username}
                             onChange={e => setEditingWholesaler({ ...editingWholesaler, username: e.target.value })}
-                            className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1172,7 +1172,7 @@ export default function AdminSimulator({
                             placeholder="Entrez un nouveau mot de passe"
                             value={editingWholesaler.password || ""}
                             onChange={e => setEditingWholesaler({ ...editingWholesaler, password: e.target.value })}
-                            className="w-full bg-black border border-amber-500/30 rounded-xl px-3 py-2 text-amber-600 font-mono font-bold text-sm focus:border-amber-500 focus:outline-none"
+                            className="w-full bg-white border border-amber-500/30 rounded-xl px-3 py-2 text-amber-600 font-mono font-bold text-sm focus:border-amber-500 focus:outline-none"
                           />
                         </div>
                         <div>
@@ -1182,7 +1182,7 @@ export default function AdminSimulator({
                             required
                             value={editingWholesaler.phone}
                             onChange={e => setEditingWholesaler({ ...editingWholesaler, phone: e.target.value })}
-                            className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1195,7 +1195,7 @@ export default function AdminSimulator({
                             required
                             value={editingWholesaler.email}
                             onChange={e => setEditingWholesaler({ ...editingWholesaler, email: e.target.value })}
-                            className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
                           />
                         </div>
                         <div>
@@ -1205,7 +1205,7 @@ export default function AdminSimulator({
                             required
                             value={editingWholesaler.creditBalance}
                             onChange={e => setEditingWholesaler({ ...editingWholesaler, creditBalance: parseInt(e.target.value) || 0 })}
-                            className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1215,7 +1215,7 @@ export default function AdminSimulator({
                         <select
                           value={editingWholesaler.status}
                           onChange={e => setEditingWholesaler({ ...editingWholesaler, status: e.target.value as any })}
-                          className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
                         >
                           <option value="approved">Approuvé (Actif)</option>
                           <option value="pending">En attente</option>
@@ -1506,7 +1506,7 @@ export default function AdminSimulator({
                         placeholder="Ex: Dino OTT 12 Mois"
                         value={productForm.name}
                         onChange={e => setProductForm({ ...productForm, name: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -1522,7 +1522,7 @@ export default function AdminSimulator({
                               setProductForm({ ...productForm, type: val });
                             }
                           }}
-                          className="flex-1 bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                          className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                         >
                           <option value="code iptv">Code IPTV</option>
                           <option value="abonnement iptv">Abonnement IPTV</option>
@@ -1551,7 +1551,7 @@ export default function AdminSimulator({
                             placeholder="Saisissez un type de produit personnalisé..."
                             value={productForm.type}
                             onChange={e => setProductForm({ ...productForm, type: e.target.value })}
-                            className="w-full bg-black border border-indigo-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                            className="w-full bg-white border border-indigo-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                             required
                           />
                         </div>
@@ -1563,7 +1563,7 @@ export default function AdminSimulator({
                         <select
                           value={productForm.categoryId || ""}
                           onChange={e => setProductForm({ ...productForm, categoryId: e.target.value })}
-                          className="flex-1 bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                          className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                         >
                           <option value="">-- Sans catégorie --</option>
                           {catalogCategories.map(cat => (
@@ -1597,7 +1597,7 @@ export default function AdminSimulator({
                                 );
                               }
                             }}
-                            className="flex-1 bg-black border border-indigo-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                            className="flex-1 bg-white border border-indigo-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                           />
                           <button
                             type="button"
@@ -1621,7 +1621,7 @@ export default function AdminSimulator({
                         type="file"
                         accept="image/*"
                         onChange={e => handleImageUpload(e, false, "imageUrl")}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-2 py-1 text-slate-900 text-sm mb-1"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-900 text-sm mb-1"
                       />
                       <input
                         type="text"
@@ -1629,7 +1629,7 @@ export default function AdminSimulator({
                         placeholder="Ou coller l'URL de l'image"
                         value={productForm.imageUrl}
                         onChange={e => setProductForm({ ...productForm, imageUrl: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-sm"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-sm"
                       />
                     </div>
                   </div>
@@ -1641,14 +1641,14 @@ export default function AdminSimulator({
                         type="file"
                         accept="image/*"
                         onChange={e => handleImageUpload(e, false, "imageUrl2")}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-2 py-1 text-slate-900 text-sm mb-1"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-900 text-sm mb-1"
                       />
                       <input
                         type="text"
                         placeholder="Ou coller l'URL de l'image secondaire"
                         value={productForm.imageUrl2 || ""}
                         onChange={e => setProductForm({ ...productForm, imageUrl2: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-sm"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-sm"
                       />
                     </div>
                   </div>
@@ -1661,7 +1661,7 @@ export default function AdminSimulator({
                         required
                         value={productForm.priceRetail}
                         onChange={e => setProductForm({ ...productForm, priceRetail: parseInt(e.target.value) || 0 })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -1671,7 +1671,7 @@ export default function AdminSimulator({
                         required
                         value={productForm.priceWholesale}
                         onChange={e => setProductForm({ ...productForm, priceWholesale: parseInt(e.target.value) || 0 })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -1681,7 +1681,7 @@ export default function AdminSimulator({
                         placeholder="Ex: Qualité 4K, 12 Mois, Assistance 24/7"
                         value={productForm.featuresString}
                         onChange={e => setProductForm({ ...productForm, featuresString: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                   </div>
@@ -1693,7 +1693,7 @@ export default function AdminSimulator({
                       placeholder="Petite description du produit..."
                       value={productForm.description}
                       onChange={e => setProductForm({ ...productForm, description: e.target.value })}
-                      className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
                     />
                   </div>
 
@@ -1718,7 +1718,7 @@ export default function AdminSimulator({
                         required
                         value={editingProduct.name}
                         onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -1734,7 +1734,7 @@ export default function AdminSimulator({
                               setEditingProduct({ ...editingProduct, type: val });
                             }
                           }}
-                          className="flex-1 bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                          className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                         >
                           <option value="code iptv">Code IPTV</option>
                           <option value="abonnement iptv">Abonnement IPTV</option>
@@ -1763,7 +1763,7 @@ export default function AdminSimulator({
                             placeholder="Saisissez un type de produit personnalisé..."
                             value={editingProduct.type}
                             onChange={e => setEditingProduct({ ...editingProduct, type: e.target.value })}
-                            className="w-full bg-black border border-amber-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-amber-500"
+                            className="w-full bg-white border border-amber-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500"
                             required
                           />
                         </div>
@@ -1775,7 +1775,7 @@ export default function AdminSimulator({
                         <select
                           value={editingProduct.categoryId || ""}
                           onChange={e => setEditingProduct({ ...editingProduct, categoryId: e.target.value })}
-                          className="flex-1 bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                          className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                         >
                           <option value="">-- Sans catégorie --</option>
                           {catalogCategories.map(cat => (
@@ -1809,7 +1809,7 @@ export default function AdminSimulator({
                                 );
                               }
                             }}
-                            className="flex-1 bg-black border border-amber-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-gray-600 focus:outline-none focus:border-amber-500"
+                            className="flex-1 bg-white border border-amber-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500"
                           />
                           <button
                             type="button"
@@ -1833,7 +1833,7 @@ export default function AdminSimulator({
                         type="file"
                         accept="image/*"
                         onChange={e => handleImageUpload(e, true, "imageUrl")}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-2 py-1 text-slate-900 text-sm mb-1"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-900 text-sm mb-1"
                       />
                       <input
                         type="text"
@@ -1841,7 +1841,7 @@ export default function AdminSimulator({
                         placeholder="Ou coller l'URL de l'image"
                         value={editingProduct.imageUrl}
                         onChange={e => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-sm"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-sm"
                       />
                     </div>
                   </div>
@@ -1853,14 +1853,14 @@ export default function AdminSimulator({
                         type="file"
                         accept="image/*"
                         onChange={e => handleImageUpload(e, true, "imageUrl2")}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-2 py-1 text-slate-900 text-sm mb-1"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-900 text-sm mb-1"
                       />
                       <input
                         type="text"
                         placeholder="Ou coller l'URL de l'image secondaire"
                         value={editingProduct.imageUrl2 || ""}
                         onChange={e => setEditingProduct({ ...editingProduct, imageUrl2: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-sm"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-sm"
                       />
                     </div>
                   </div>
@@ -1873,7 +1873,7 @@ export default function AdminSimulator({
                         required
                         value={editingProduct.priceRetail}
                         onChange={e => setEditingProduct({ ...editingProduct, priceRetail: parseInt(e.target.value) || 0 })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -1883,7 +1883,7 @@ export default function AdminSimulator({
                         required
                         value={editingProduct.priceWholesale}
                         onChange={e => setEditingProduct({ ...editingProduct, priceWholesale: parseInt(e.target.value) || 0 })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -1893,7 +1893,7 @@ export default function AdminSimulator({
                         placeholder="Qualité 4K, 12 Mois, etc."
                         value={(editingProduct as any).featuresString !== undefined ? (editingProduct as any).featuresString : editingProduct.features.join(", ")}
                         onChange={e => setEditingProduct({ ...editingProduct, featuresString: e.target.value } as any)}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                   </div>
@@ -1904,7 +1904,7 @@ export default function AdminSimulator({
                       required
                       value={editingProduct.description}
                       onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                      className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
                     />
                   </div>
 
@@ -2003,7 +2003,7 @@ export default function AdminSimulator({
                         placeholder="Ex: Configuration Dino sur Smart TV LG"
                         value={tutorialForm.title}
                         onChange={e => setTutorialForm({ ...tutorialForm, title: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2011,7 +2011,7 @@ export default function AdminSimulator({
                       <select
                         value={tutorialForm.category}
                         onChange={e => setTutorialForm({ ...tutorialForm, category: e.target.value as any })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       >
                         <option value="smart_tv">Smart TV</option>
                         <option value="android">Box/Mobile Android</option>
@@ -2030,7 +2030,7 @@ export default function AdminSimulator({
                         placeholder="Ex: https://www.youtube.com/embed/dQw4w9WgXcQ"
                         value={tutorialForm.url}
                         onChange={e => setTutorialForm({ ...tutorialForm, url: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2040,7 +2040,7 @@ export default function AdminSimulator({
                         placeholder="Ex: 283749"
                         value={tutorialForm.downloaderCode}
                         onChange={e => setTutorialForm({ ...tutorialForm, downloaderCode: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
                       />
                     </div>
                   </div>
@@ -2052,7 +2052,7 @@ export default function AdminSimulator({
                       placeholder="Décrivez les étapes d'installation..."
                       value={tutorialForm.description}
                       onChange={e => setTutorialForm({ ...tutorialForm, description: e.target.value })}
-                      className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
                     />
                   </div>
 
@@ -2077,7 +2077,7 @@ export default function AdminSimulator({
                         required
                         value={editingTutorial.title}
                         onChange={e => setEditingTutorial({ ...editingTutorial, title: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2085,7 +2085,7 @@ export default function AdminSimulator({
                       <select
                         value={editingTutorial.category}
                         onChange={e => setEditingTutorial({ ...editingTutorial, category: e.target.value as any })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       >
                         <option value="smart_tv">Smart TV</option>
                         <option value="android">Box/Mobile Android</option>
@@ -2103,7 +2103,7 @@ export default function AdminSimulator({
                         required
                         value={editingTutorial.url}
                         onChange={e => setEditingTutorial({ ...editingTutorial, url: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2112,7 +2112,7 @@ export default function AdminSimulator({
                         type="text"
                         value={editingTutorial.downloaderCode || ""}
                         onChange={e => setEditingTutorial({ ...editingTutorial, downloaderCode: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
                       />
                     </div>
                   </div>
@@ -2123,7 +2123,7 @@ export default function AdminSimulator({
                       required
                       value={editingTutorial.description}
                       onChange={e => setEditingTutorial({ ...editingTutorial, description: e.target.value })}
-                      className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
                     />
                   </div>
 
@@ -2215,7 +2215,7 @@ export default function AdminSimulator({
                         required
                         value={clientForm.clientName}
                         onChange={e => setClientForm({ ...clientForm, clientName: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2223,7 +2223,7 @@ export default function AdminSimulator({
                       <select
                         value={clientForm.server}
                         onChange={e => setClientForm({ ...clientForm, server: e.target.value as any })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       >
                         <option value="Dino">Dino</option>
                         <option value="8K">8K Premium</option>
@@ -2236,7 +2236,7 @@ export default function AdminSimulator({
                       <select
                         value={clientForm.status}
                         onChange={e => setClientForm({ ...clientForm, status: e.target.value as any })}
-                        className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       >
                         <option value="active">Actif</option>
                         <option value="expired">Expiré</option>
@@ -2252,7 +2252,7 @@ export default function AdminSimulator({
                         placeholder="Ex: http://dino-server.xyz:8080/get.php?username=..."
                         value={clientForm.m3uUrl}
                         onChange={e => setClientForm({ ...clientForm, m3uUrl: e.target.value })}
-                        className="w-full bg-black border border-amber-500/20 focus:border-amber-500 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
+                        className="w-full bg-white border border-amber-500/20 focus:border-amber-500 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
                       />
                     </div>
                     <div>
@@ -2262,7 +2262,7 @@ export default function AdminSimulator({
                         placeholder="Ex: http://dino-server.xyz:8080"
                         value={clientForm.xtreamHost}
                         onChange={e => setClientForm({ ...clientForm, xtreamHost: e.target.value })}
-                        className="w-full bg-black border border-amber-500/20 focus:border-amber-500 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
+                        className="w-full bg-white border border-amber-500/20 focus:border-amber-500 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
                       />
                     </div>
                   </div>
@@ -2275,7 +2275,7 @@ export default function AdminSimulator({
                         placeholder="Ex: user123"
                         value={clientForm.xtreamUser}
                         onChange={e => setClientForm({ ...clientForm, xtreamUser: e.target.value })}
-                        className="w-full bg-black border border-amber-500/20 focus:border-amber-500 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
+                        className="w-full bg-white border border-amber-500/20 focus:border-amber-500 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
                       />
                     </div>
                     <div>
@@ -2285,7 +2285,7 @@ export default function AdminSimulator({
                         placeholder="Ex: pass123"
                         value={clientForm.xtreamPass}
                         onChange={e => setClientForm({ ...clientForm, xtreamPass: e.target.value })}
-                        className="w-full bg-black border border-amber-500/20 focus:border-amber-500 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
+                        className="w-full bg-white border border-amber-500/20 focus:border-amber-500 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
                       />
                     </div>
                   </div>
@@ -2296,7 +2296,7 @@ export default function AdminSimulator({
                       type="text"
                       value={clientForm.notes}
                       onChange={e => setClientForm({ ...clientForm, notes: e.target.value })}
-                      className="w-full bg-black border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                     />
                   </div>
 
@@ -2431,7 +2431,7 @@ export default function AdminSimulator({
                         placeholder="Ex: Yalidine Chéraga / Mohamed"
                         value={livreurForm.name}
                         onChange={e => setLivreurForm({ ...livreurForm, name: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2442,7 +2442,7 @@ export default function AdminSimulator({
                         placeholder="Ex: 0550112233"
                         value={livreurForm.phone}
                         onChange={e => setLivreurForm({ ...livreurForm, phone: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2452,7 +2452,7 @@ export default function AdminSimulator({
                         placeholder="Ex: Alger, Blida, Tipaza"
                         value={livreurForm.wilaya}
                         onChange={e => setLivreurForm({ ...livreurForm, wilaya: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-slate-900"
                       />
                     </div>
                   </div>
@@ -2479,7 +2479,7 @@ export default function AdminSimulator({
                         required
                         value={editingLivreur.name}
                         onChange={e => setEditingLivreur({ ...editingLivreur, name: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2489,7 +2489,7 @@ export default function AdminSimulator({
                         required
                         value={editingLivreur.phone}
                         onChange={e => setEditingLivreur({ ...editingLivreur, phone: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2498,7 +2498,7 @@ export default function AdminSimulator({
                         type="text"
                         value={editingLivreur.wilaya}
                         onChange={e => setEditingLivreur({ ...editingLivreur, wilaya: e.target.value })}
-                        className="w-full bg-black border border-slate-200 rounded px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
@@ -2506,7 +2506,7 @@ export default function AdminSimulator({
                       <select
                         value={editingLivreur.status}
                         onChange={e => setEditingLivreur({ ...editingLivreur, status: e.target.value as any })}
-                        className="w-full bg-black border border-slate-200 rounded px-3 py-1.5 text-slate-900"
+                        className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-slate-900"
                       >
                         <option value="active">Actif</option>
                         <option value="inactive">Inactif</option>
@@ -2646,7 +2646,7 @@ export default function AdminSimulator({
                                 placeholder="Note admin (ex: Vos accès sont...)"
                                 value={panelActionNotes[req.id] || ""}
                                 onChange={(e) => setPanelActionNotes({ ...panelActionNotes, [req.id]: e.target.value })}
-                                className="bg-black border border-slate-200 rounded px-2 py-1 text-xs text-slate-900 w-48 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                                className="bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-900 w-48 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                               />
                               <div className="flex gap-2">
                                 <button
@@ -2782,7 +2782,7 @@ export default function AdminSimulator({
                         placeholder="Ex: Serveur 8K Premium"
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
-                        className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 placeholder-gray-700"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 placeholder-slate-400"
                       />
                     </div>
 
@@ -2793,7 +2793,7 @@ export default function AdminSimulator({
                         placeholder="Ex: Serveur haute définition idéal pour Smart TV..."
                         value={newCategoryDescription}
                         onChange={(e) => setNewCategoryDescription(e.target.value)}
-                        className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 placeholder-gray-700 resize-none"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 placeholder-slate-400 resize-none"
                       />
                     </div>
 
@@ -2817,7 +2817,7 @@ export default function AdminSimulator({
                             className={`p-2 rounded-lg border flex flex-col items-center gap-1 cursor-pointer transition-colors ${
                               newCategoryIcon === item.val
                                 ? "bg-indigo-600/20 border-indigo-500 text-indigo-600 font-bold"
-                                : "bg-black border-slate-200 hover:border-slate-300 text-slate-500"
+                                : "bg-white border-slate-200 hover:border-slate-300 text-slate-500"
                             }`}
                           >
                             {item.val === "Tv" && <Tv className="h-4 w-4" />}
@@ -2999,7 +2999,7 @@ export default function AdminSimulator({
                           required
                           value={editingCategory.name}
                           onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                          className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"
                         />
                       </div>
 
@@ -3009,7 +3009,7 @@ export default function AdminSimulator({
                           rows={2}
                           value={editingCategory.description || ""}
                           onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
-                          className="w-full bg-black border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500 resize-none"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500 resize-none"
                         />
                       </div>
 
@@ -3033,7 +3033,7 @@ export default function AdminSimulator({
                               className={`p-2 rounded-lg border flex flex-col items-center gap-1 cursor-pointer transition-colors ${
                                 editingCategory.icon === item.val
                                   ? "bg-amber-500/20 border-amber-500 text-amber-600 font-bold"
-                                  : "bg-black border-slate-200 hover:border-slate-300 text-slate-500"
+                                  : "bg-white border-slate-200 hover:border-slate-300 text-slate-500"
                               }`}
                             >
                               {item.val === "Tv" && <Tv className="h-4 w-4" />}
