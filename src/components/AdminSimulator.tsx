@@ -1438,9 +1438,17 @@ export default function AdminSimulator({
 
                         {onDeleteOrder && (
                           <button
-                            onClick={() => {
-                              if (confirm(`Supprimer définitivement la commande de ${order.customerName} (${order.productName}) ? Cette action est irréversible.`)) {
-                                onDeleteOrder(order.id);
+                            onClick={async () => {
+                              if (!confirm(`Supprimer définitivement la commande de ${order.customerName} (${order.productName}) ? Cette action est irréversible.`)) {
+                                return;
+                              }
+                              setErrorMessage("");
+                              setSuccessMessage("");
+                              try {
+                                await onDeleteOrder(order.id);
+                                setSuccessMessage("Commande supprimée avec succès.");
+                              } catch (err: any) {
+                                setErrorMessage(err.message || "Échec de la suppression de la commande.");
                               }
                             }}
                             title="Supprimer cette commande"
