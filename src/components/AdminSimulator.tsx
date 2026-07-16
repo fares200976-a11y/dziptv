@@ -277,6 +277,7 @@ export default function AdminSimulator({
     durationMonths: 12,
     status: "active" as "active" | "expired",
     notes: "",
+    adultContent: false,
     m3uUrl: "",
     xtreamHost: "",
     xtreamUser: "",
@@ -295,6 +296,7 @@ export default function AdminSimulator({
         durationMonths: clientForm.durationMonths,
         status: clientForm.status,
         notes: clientForm.notes,
+        adultContent: clientForm.adultContent,
         credentials: {
           m3uUrl: clientForm.m3uUrl,
           xtreamHost: clientForm.xtreamHost,
@@ -319,6 +321,7 @@ export default function AdminSimulator({
       durationMonths: client.durationMonths,
       status: client.status,
       notes: client.notes || "",
+      adultContent: !!client.adultContent,
       m3uUrl: client.credentials?.m3uUrl || "",
       xtreamHost: client.credentials?.xtreamHost || "",
       xtreamUser: client.credentials?.xtreamUser || "",
@@ -2340,6 +2343,28 @@ export default function AdminSimulator({
                     </div>
                   </div>
 
+                  {["Dino", "8K", "Golden OTT"].includes(clientForm.server) && (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                      <label className="text-slate-600 font-semibold">Contenu Adulte</label>
+                      <div className="flex rounded-lg overflow-hidden border border-slate-300 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setClientForm({ ...clientForm, adultContent: false })}
+                          className={`px-3 py-1.5 font-bold transition-colors cursor-pointer ${!clientForm.adultContent ? "bg-slate-700 text-white" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+                        >
+                          Non
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setClientForm({ ...clientForm, adultContent: true })}
+                          className={`px-3 py-1.5 font-bold transition-colors cursor-pointer ${clientForm.adultContent ? "bg-red-600 text-white" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+                        >
+                          Adulte
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-amber-600 font-bold mb-1">Lien M3U Complet (Attribué par l'Admin)</label>
@@ -2446,6 +2471,11 @@ export default function AdminSimulator({
                             <span className="px-2 py-0.5 bg-blue-500/10 text-blue-600 border border-blue-500/20 rounded font-semibold text-[11px]">
                               {client.server}
                             </span>
+                            {client.adultContent !== undefined && (
+                              <span className={`ml-1.5 px-2 py-0.5 rounded font-semibold text-[11px] ${client.adultContent ? "bg-red-500/10 text-red-600 border border-red-500/20" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
+                                {client.adultContent ? "Adulte" : "Sans Adulte"}
+                              </span>
+                            )}
                           </td>
                           <td className="p-3">
                             <span className="block font-medium text-slate-600">{client.durationMonths} Mois</span>
