@@ -1667,7 +1667,7 @@ app.get("/api/admin/clients", requireAdminAuth, async (req, res) => {
 
 app.put("/api/admin/clients/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
-  const { credentials, clientName, server, notes, status, durationMonths } = req.body;
+  const { credentials, clientName, server, notes, status, durationMonths, adultContent } = req.body;
 
   const db = await readDB();
   const clientIndex = db.clients.findIndex(c => c.id === id);
@@ -1684,6 +1684,7 @@ app.put("/api/admin/clients/:id", requireAdminAuth, async (req, res) => {
   if (notes !== undefined) client.notes = notes;
   if (status !== undefined) client.status = status;
   if (durationMonths !== undefined) client.durationMonths = Number(durationMonths);
+  if (adultContent !== undefined) client.adultContent = !!adultContent;
 
   if (credentials !== undefined) {
     client.credentials = {
