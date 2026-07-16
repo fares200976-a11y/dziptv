@@ -47,6 +47,7 @@ interface AdminSimulatorProps {
   onApproveWholesaler: (id: string, currentStatus: string) => Promise<void>;
   onAddCreditManual: (id: string, amount: number) => Promise<void>;
   onUpdateOrderStatus: (id: string, status: "completed" | "cancelled") => Promise<void>;
+  onDeleteOrder?: (id: string) => Promise<void>;
   onProcessCreditRequest: (id: string, action: "approve" | "reject") => Promise<void>;
   onProcessPanelRequest?: (id: string, status: "approved" | "rejected", notes?: string) => Promise<void>;
   onAddCategory?: (payload: { name: string; description?: string; icon?: string; color?: string }) => Promise<CatalogCategory | undefined | void>;
@@ -88,6 +89,7 @@ export default function AdminSimulator({
   onApproveWholesaler,
   onAddCreditManual,
   onUpdateOrderStatus,
+  onDeleteOrder,
   onProcessCreditRequest,
   onProcessPanelRequest,
   onAddCategory,
@@ -456,7 +458,7 @@ export default function AdminSimulator({
         ...productForm,
         features: productForm.featuresString.split(",").map(f => f.trim()).filter(f => f.length > 0)
       };
-      const res = await fetch("/api/products", {
+      const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -497,7 +499,7 @@ export default function AdminSimulator({
           ? (editingProduct as any).featuresString.split(",").map((f: string) => f.trim()).filter((f: string) => f.length > 0)
           : editingProduct.features
       };
-      const res = await fetch(`/api/products/${editingProduct.id}`, {
+      const res = await fetch(`/api/admin/products/${editingProduct.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -520,7 +522,7 @@ export default function AdminSimulator({
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await fetch(`/api/admin/products/${id}`, {
         method: "DELETE"
       });
       if (res.ok) {
@@ -1432,6 +1434,21 @@ export default function AdminSimulator({
                               Annuler
                             </button>
                           </div>
+                        )}
+
+                        {onDeleteOrder && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Supprimer définitivement la commande de ${order.customerName} (${order.productName}) ? Cette action est irréversible.`)) {
+                                onDeleteOrder(order.id);
+                              }
+                            }}
+                            title="Supprimer cette commande"
+                            className="px-2.5 py-1.5 bg-gray-800 hover:bg-red-600/20 hover:text-red-400 text-gray-400 border border-gray-700 hover:border-red-500/20 rounded font-bold text-[10px] cursor-pointer mt-1 flex items-center gap-1"
+                          >
+                            <X className="h-3 w-3" />
+                            Supprimer
+                          </button>
                         )}
                       </div>
                     </div>

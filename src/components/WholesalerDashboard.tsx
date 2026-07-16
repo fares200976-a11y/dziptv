@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Wholesaler, IptvClient, CreditRequest, PanelRequest, SubscriptionServer } from "../types";
+import { Wholesaler, IptvClient, CreditRequest, PanelRequest, SubscriptionServer, Product } from "../types";
 import { 
   UserPlus, 
   LogIn, 
@@ -29,6 +29,7 @@ interface WholesalerDashboardProps {
   wholesalerClients: IptvClient[];
   wholesalerRequests: CreditRequest[];
   panelRequests?: PanelRequest[];
+  products?: Product[];
   onActivateClient: (data: any) => Promise<any>;
   onRequestCredit: (data: any) => Promise<any>;
   onRequestPanel?: (data: any) => Promise<any>;
@@ -45,6 +46,7 @@ export default function WholesalerDashboard({
   wholesalerClients,
   wholesalerRequests,
   panelRequests = [],
+  products = [],
   onActivateClient,
   onRequestCredit,
   onRequestPanel,
@@ -82,12 +84,18 @@ export default function WholesalerDashboard({
   const [copiedField, setCopiedField] = useState("");
 
   // New Client Form
+  const [activationServiceType, setActivationServiceType] = useState<"iptv" | "sat" | "box">("iptv");
   const [newClientName, setNewClientName] = useState("");
   const [selectedServer, setSelectedServer] = useState<string>("Dino");
   const [selectedDuration, setSelectedDuration] = useState<number>(12);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [clientNotes, setClientNotes] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionSuccess, setActionSuccess] = useState("");
+
+  // Catalogue filtré pour Code Sat / Box Android (alimenté par ce que l'admin a ajouté)
+  const satProducts = products.filter(p => p.type === "code sat");
+  const boxProducts = products.filter(p => p.type === "boitier android" || p.type === "device");
 
   // New Panel Form
   const [panelServer, setPanelServer] = useState<SubscriptionServer>("Dino");
@@ -157,20 +165,33 @@ export default function WholesalerDashboard({
       setActionError("Le nom du client est requis.");
       return;
     }
+    if (activationServiceType !== "iptv" && !selectedProductId) {
+      setActionError("Veuillez sélectionner un produit dans le catalogue.");
+      return;
+    }
     setLoading(true);
     setActionError("");
     setActionSuccess("");
     try {
-      const payload = {
+      const payload: any = {
         clientName: newClientName,
-        server: selectedServer,
-        durationMonths: selectedDuration,
+        serviceType: activationServiceType,
         notes: clientNotes
       };
+      if (activationServiceType === "iptv") {
+        payload.server = selectedServer;
+        payload.durationMonths = selectedDuration;
+      } else {
+        payload.productId = selectedProductId;
+        if (activationServiceType === "sat") {
+          payload.durationMonths = selectedDuration;
+        }
+      }
       const res = await onActivateClient(payload);
       setActionSuccess(res.message);
       setNewClientName("");
       setClientNotes("");
+      setSelectedProductId("");
       setSelectedClientCredentials(res.client); // Open credentials sheet immediately so they can copy it!
       setShowActivateModal(false);
     } catch (err: any) {
@@ -699,15 +720,26 @@ export default function WholesalerDashboard({
               <tbody className="divide-y divide-gray-800/40">
                 {filteredClients.map((client) => {
                   const isExpired = client.expirationDate ? new Date(client.expirationDate) < new Date() : false;
+                  const svcType = client.serviceType || "iptv";
+                  const svcBadge = svcType === "sat"
+                    ? { label: "Code Sat", cls: "bg-purple-500/10 text-purple-400 border-purple-500/20" }
+                    : svcType === "box"
+                    ? { label: "Box Android", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" }
+                    : { label: "IPTV", cls: "bg-blue-500/10 text-blue-400 border-blue-500/20" };
                   return (
                     <tr key={client.id} className="hover:bg-gray-900/10">
                       <td className="p-4 font-bold text-white">{client.clientName}</td>
                       <td className="p-4">
-                        <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded font-semibold text-[10px]">
-                          {client.server}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`px-2 py-0.5 rounded font-semibold text-[9px] border ${svcBadge.cls}`}>
+                            {svcBadge.label}
+                          </span>
+                          <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded font-semibold text-[10px]">
+                            {client.server}
+                          </span>
+                        </div>
                       </td>
-                      <td className="p-4">{client.durationMonths} Mois</td>
+                      <td className="p-4">{svcType === "box" ? "—" : `${client.durationMonths} Mois`}</td>
                       <td className="p-4 text-gray-400">
                         {client.activationDate 
                           ? new Date(client.activationDate).toLocaleDateString("fr-FR") 
@@ -939,6 +971,35 @@ export default function WholesalerDashboard({
             )}
 
             <form onSubmit={handleClientActivation} className="space-y-4 text-xs">
+              {/* Sélecteur de type de service */}
+              <div>
+                <label className="block text-gray-300 font-semibold mb-1.5">Type de Service</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { key: "iptv", label: "IPTV" },
+                    { key: "sat", label: "Code Sat" },
+                    { key: "box", label: "Box Android" }
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => {
+                        setActivationServiceType(opt.key);
+                        setSelectedProductId("");
+                        setActionError("");
+                      }}
+                      className={`py-2 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
+                        activationServiceType === opt.key
+                          ? "bg-indigo-500/15 border-indigo-500 text-indigo-300"
+                          : "bg-gray-900 border-gray-800 text-gray-400 hover:bg-gray-800"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-gray-300 font-semibold mb-1">Nom du Client</label>
                 <input
@@ -951,37 +1012,103 @@ export default function WholesalerDashboard({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-gray-300 font-semibold mb-1">Serveur IPTV</label>
-                  <select
-                    value={selectedServer}
-                    onChange={(e) => setSelectedServer(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
-                  >
-                    <option value="Dino">Dino IPTV (4,200 DA)</option>
-                    <option value="8K">8K Premium (6,800 DA)</option>
-                    <option value="V12">V12 IPTV Pro (4,300 DA)</option>
-                    <option value="Golden OTT">Golden OTT (6,200 DA)</option>
-                  </select>
-                </div>
+              {activationServiceType === "iptv" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">Serveur IPTV</label>
+                    <select
+                      value={selectedServer}
+                      onChange={(e) => setSelectedServer(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                    >
+                      <option value="Dino">Dino IPTV (4,200 DA)</option>
+                      <option value="8K">8K Premium (6,800 DA)</option>
+                      <option value="V12">V12 IPTV Pro (4,300 DA)</option>
+                      <option value="Golden OTT">Golden OTT (6,200 DA)</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-gray-300 font-semibold mb-1">Durée d'abonnement</label>
-                  <select
-                    value={selectedDuration}
-                    onChange={(e) => setSelectedDuration(Number(e.target.value))}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
-                  >
-                    <option value={1}>1 Mois (15% du tarif)</option>
-                    <option value={6}>6 Mois (60% du tarif)</option>
-                    <option value={12}>12 Mois (100% du tarif)</option>
-                  </select>
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">Durée d'abonnement</label>
+                    <select
+                      value={selectedDuration}
+                      onChange={(e) => setSelectedDuration(Number(e.target.value))}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                    >
+                      <option value={1}>1 Mois (15% du tarif)</option>
+                      <option value={6}>6 Mois (60% du tarif)</option>
+                      <option value={12}>12 Mois (100% du tarif)</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {activationServiceType === "sat" && (
+                <div className="space-y-3">
+                  {satProducts.length === 0 ? (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg text-[11px]">
+                      Aucun produit "Code Sat" n'est encore disponible dans le catalogue. Contactez l'administrateur pour qu'il en ajoute.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-gray-300 font-semibold mb-1">Produit Code Sat</label>
+                        <select
+                          value={selectedProductId}
+                          onChange={(e) => setSelectedProductId(e.target.value)}
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                        >
+                          <option value="">-- Choisir --</option>
+                          {satProducts.map(p => (
+                            <option key={p.id} value={p.id}>{p.name} ({p.priceWholesale.toLocaleString()} DA)</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-gray-300 font-semibold mb-1">Durée</label>
+                        <select
+                          value={selectedDuration}
+                          onChange={(e) => setSelectedDuration(Number(e.target.value))}
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                        >
+                          <option value={6}>6 Mois</option>
+                          <option value={12}>12 Mois</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activationServiceType === "box" && (
+                <div className="space-y-3">
+                  {boxProducts.length === 0 ? (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg text-[11px]">
+                      Aucun produit "Box Android" n'est encore disponible dans le catalogue. Contactez l'administrateur pour qu'il en ajoute.
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">Modèle de Box Android</label>
+                      <select
+                        value={selectedProductId}
+                        onChange={(e) => setSelectedProductId(e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-white"
+                      >
+                        <option value="">-- Choisir --</option>
+                        {boxProducts.map(p => (
+                          <option key={p.id} value={p.id}>{p.name} ({p.priceWholesale.toLocaleString()} DA)</option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-gray-500 mt-1">Vente matérielle : pas d'abonnement ni d'expiration.</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">Notes / MAC Address (Optionnel)</label>
+                <label className="block text-gray-300 font-semibold mb-1">
+                  {activationServiceType === "box" ? "Notes / N° de série (Optionnel)" : "Notes / MAC Address (Optionnel)"}
+                </label>
                 <input
                   type="text"
                   placeholder="Ex: SmartOne MAC: aa:bb:cc..."
@@ -1129,8 +1256,14 @@ export default function WholesalerDashboard({
 
             <div className="text-center space-y-1.5 mb-6 border-b border-gray-800 pb-4">
               <Key className="h-8 w-8 text-amber-400 mx-auto" />
-              <h3 className="font-display font-extrabold text-lg text-white">Accès IPTV : {selectedClientCredentials.clientName}</h3>
-              <p className="text-gray-400 text-xs">Serveur : {selectedClientCredentials.server} ({selectedClientCredentials.durationMonths} Mois)</p>
+              <h3 className="font-display font-extrabold text-lg text-white">
+                {selectedClientCredentials.serviceType === "sat" ? "Accès Code Sat" : selectedClientCredentials.serviceType === "box" ? "Confirmation Box Android" : "Accès IPTV"} : {selectedClientCredentials.clientName}
+              </h3>
+              <p className="text-gray-400 text-xs">
+                {selectedClientCredentials.serviceType === "box"
+                  ? `Produit : ${selectedClientCredentials.server}`
+                  : `Serveur : ${selectedClientCredentials.server} (${selectedClientCredentials.durationMonths} Mois)`}
+              </p>
             </div>
 
             {selectedClientCredentials.status === "pending" ? (
@@ -1151,6 +1284,56 @@ export default function WholesalerDashboard({
                   </p>
                 </div>
 
+                <button
+                  onClick={() => setSelectedClientCredentials(null)}
+                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
+                >
+                  Fermer
+                </button>
+              </div>
+            ) : selectedClientCredentials.serviceType === "box" ? (
+              /* BOX ANDROID : vente matérielle, pas de credentials à afficher */
+              <div className="space-y-4 text-xs">
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-xl text-center space-y-2">
+                  <CheckCircle className="h-8 w-8 mx-auto text-emerald-400" />
+                  <p className="font-bold text-[12px]">Vente enregistrée avec succès</p>
+                  <p className="text-[10px] text-gray-300 leading-relaxed">
+                    {selectedClientCredentials.pricePaid.toLocaleString()} DA ont été déduits de votre solde crédit. Remettez le boîtier à votre client.
+                  </p>
+                  {selectedClientCredentials.notes && (
+                    <p className="text-[10px] text-gray-400 pt-1 border-t border-emerald-500/20 mt-2">Note : {selectedClientCredentials.notes}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedClientCredentials(null)}
+                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
+                >
+                  Fermer
+                </button>
+              </div>
+            ) : selectedClientCredentials.serviceType === "sat" ? (
+              /* CODE SAT : afficher uniquement le code généré */
+              <div className="space-y-4 text-xs">
+                {copiedField && (
+                  <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-400 rounded-lg text-[10px] text-center font-semibold mb-2">
+                    Copié avec succès : {copiedField} !
+                  </div>
+                )}
+                <div className="space-y-2 p-3.5 bg-gray-900 rounded-xl border border-gray-800">
+                  <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Code Satellite</span>
+                  <div className="flex items-center justify-between bg-black/30 p-3 rounded border border-gray-800 font-mono">
+                    <span className="text-gray-100 text-sm tracking-wider select-all">{selectedClientCredentials.credentials?.satCode}</span>
+                    <button
+                      onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.satCode || "", "Code Sat")}
+                      className="p-1 text-gray-500 hover:text-white shrink-0 ml-2"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-[10px] leading-relaxed">
+                  💡 Transmettez ce code à votre client pour qu'il l'active sur son récepteur satellite.
+                </div>
                 <button
                   onClick={() => setSelectedClientCredentials(null)}
                   className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs"
