@@ -92,6 +92,7 @@ export default function WholesalerDashboard({
   const [selectedServer, setSelectedServer] = useState<string>("Dino");
   const [selectedDuration, setSelectedDuration] = useState<number>(12);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [adultContent, setAdultContent] = useState(false);
   const [clientNotes, setClientNotes] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionSuccess, setActionSuccess] = useState("");
@@ -184,6 +185,7 @@ export default function WholesalerDashboard({
       if (activationServiceType === "iptv") {
         payload.server = selectedServer;
         payload.durationMonths = selectedDuration;
+        payload.adultContent = adultContent;
       } else {
         payload.productId = selectedProductId;
         if (activationServiceType === "sat") {
@@ -195,6 +197,7 @@ export default function WholesalerDashboard({
       setNewClientName("");
       setClientNotes("");
       setSelectedProductId("");
+      setAdultContent(false);
       setSelectedClientCredentials(res.client); // Open credentials sheet immediately so they can copy it!
       setShowActivateModal(false);
     } catch (err: any) {
@@ -603,7 +606,7 @@ export default function WholesalerDashboard({
               <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl space-y-3">
                 <div className="flex items-start space-x-2">
                   <ShieldAlert className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-300 leading-relaxed">
+                  <p className="text-sm text-red-700 leading-relaxed">
                     La déconnexion complète met fin à votre session sur cet appareil.
                     Vous devrez ressaisir votre identifiant et votre mot de passe pour
                     revenir sur votre espace revendeur.
@@ -998,7 +1001,7 @@ export default function WholesalerDashboard({
                       }}
                       className={`py-2 rounded-xl border text-center text-sm font-bold transition-all cursor-pointer ${
                         activationServiceType === opt.key
-                          ? "bg-indigo-500/15 border-indigo-500 text-indigo-300"
+                          ? "bg-indigo-500/15 border-indigo-500 text-indigo-700"
                           : "bg-white border-slate-200 text-slate-500 hover:bg-slate-100"
                       }`}
                     >
@@ -1047,6 +1050,31 @@ export default function WholesalerDashboard({
                       <option value={6}>6 Mois (60% du tarif)</option>
                       <option value={12}>12 Mois (100% du tarif)</option>
                     </select>
+                  </div>
+                </div>
+              )}
+
+              {activationServiceType === "iptv" && ["Dino", "8K", "Golden OTT"].includes(selectedServer) && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                  <div>
+                    <label className="block text-slate-700 font-semibold">Contenu Adulte</label>
+                    <p className="text-slate-400 text-[11px] mt-0.5">Inclure les chaînes adultes dans le bouquet de ce client.</p>
+                  </div>
+                  <div className="flex rounded-lg overflow-hidden border border-slate-300 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setAdultContent(false)}
+                      className={`px-3 py-1.5 text-sm font-bold transition-colors cursor-pointer ${!adultContent ? "bg-slate-700 text-white" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+                    >
+                      Non
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdultContent(true)}
+                      className={`px-3 py-1.5 text-sm font-bold transition-colors cursor-pointer ${adultContent ? "bg-red-600 text-white" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+                    >
+                      Adulte
+                    </button>
                   </div>
                 </div>
               )}
@@ -1276,7 +1304,7 @@ export default function WholesalerDashboard({
 
             {selectedClientCredentials.status === "pending" ? (
               <div className="space-y-4">
-                <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-xl space-y-3 text-center">
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-xl space-y-3 text-center">
                   <div className="flex justify-center mb-1">
                     <span className="relative flex h-8 w-8">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -1302,7 +1330,7 @@ export default function WholesalerDashboard({
             ) : selectedClientCredentials.serviceType === "box" ? (
               /* BOX ANDROID : vente matérielle, pas de credentials à afficher */
               <div className="space-y-4 text-sm">
-                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-xl text-center space-y-2">
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 rounded-xl text-center space-y-2">
                   <CheckCircle className="h-8 w-8 mx-auto text-emerald-600" />
                   <p className="font-bold text-[12px]">Vente enregistrée avec succès</p>
                   <p className="text-xs text-slate-600 leading-relaxed">
@@ -1339,7 +1367,7 @@ export default function WholesalerDashboard({
                     </button>
                   </div>
                 </div>
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-xs leading-relaxed">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-lg text-xs leading-relaxed">
                   💡 Transmettez ce code à votre client pour qu'il l'active sur son récepteur satellite.
                 </div>
                 <button
@@ -1421,7 +1449,42 @@ export default function WholesalerDashboard({
                   )}
                 </div>
 
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-xs leading-relaxed">
+                {(selectedClientCredentials.adultContent !== undefined || selectedClientCredentials.credentials?.bouquetLink) && (
+                  <div className="space-y-2 p-3.5 bg-white rounded-xl border border-slate-200">
+                    {selectedClientCredentials.adultContent !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Contenu Adulte</span>
+                        <span className={`px-2 py-0.5 rounded font-bold text-[11px] ${selectedClientCredentials.adultContent ? "bg-red-500/10 text-red-600 border border-red-500/20" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
+                          {selectedClientCredentials.adultContent ? "Activé" : "Désactivé"}
+                        </span>
+                      </div>
+                    )}
+                    {selectedClientCredentials.credentials?.bouquetLink && (
+                      <div className={selectedClientCredentials.adultContent !== undefined ? "pt-2 border-t border-slate-100" : ""}>
+                        <span className="text-xs uppercase font-bold text-slate-500 tracking-wider block mb-1.5">Lien de Gestion des Bouquets</span>
+                        <div className="flex items-center justify-between bg-slate-50 p-2 rounded border border-slate-200 font-mono">
+                          <a
+                            href={selectedClientCredentials.credentials.bouquetLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-indigo-600 hover:underline truncate pr-2"
+                          >
+                            {selectedClientCredentials.credentials.bouquetLink}
+                          </a>
+                          <button
+                            onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.bouquetLink || "", "Lien Bouquets")}
+                            className="p-1 text-slate-400 hover:text-slate-900 shrink-0"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">Utilisez ce lien pour configurer les chaînes/bouquets de ce client.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-lg text-xs leading-relaxed">
                   💡 Vous pouvez transmettre directement ces codes à votre client. Ils sont compatibles avec toutes les applications IPTV (Smarters Pro, NetIPTV, SmartOne, IBO Player, etc.).
                 </div>
 

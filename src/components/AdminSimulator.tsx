@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Wholesaler, Order, CreditRequest, EmailNotification, AppStats, Product, VideoTutorial, IptvClient, Livreur, PanelRequest, CatalogCategory } from "../types";
 import { useTranslation } from "../i18n/LanguageContext";
 import LanguageToggle from "./LanguageToggle";
@@ -105,6 +105,46 @@ export default function AdminSimulator({
 }: AdminSimulatorProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"emails" | "wholesalers" | "requests" | "orders" | "products" | "tutorials" | "clients" | "livreurs" | "panels" | "categories">("emails");
+
+  // Liens de gestion des bouquets (Dino / 8K / Golden OTT), affichés au revendeur après activation IPTV
+  const [bouquetLinks, setBouquetLinks] = useState<{ dino: string; "8k": string; "golden ott": string }>({ dino: "", "8k": "", "golden ott": "" });
+  const [bouquetLinksLoaded, setBouquetLinksLoaded] = useState(false);
+  const [bouquetLinksSaving, setBouquetLinksSaving] = useState(false);
+  const [bouquetLinksSaved, setBouquetLinksSaved] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/bouquet-links")
+      .then(res => res.ok ? res.json() : {})
+      .then(data => {
+        setBouquetLinks({
+          dino: data.dino || "",
+          "8k": data["8k"] || "",
+          "golden ott": data["golden ott"] || ""
+        });
+        setBouquetLinksLoaded(true);
+      })
+      .catch(() => setBouquetLinksLoaded(true));
+  }, []);
+
+  const handleSaveBouquetLinks = async () => {
+    setBouquetLinksSaving(true);
+    setBouquetLinksSaved(false);
+    try {
+      const res = await fetch("/api/admin/bouquet-links", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bouquetLinks)
+      });
+      if (res.ok) {
+        setBouquetLinksSaved(true);
+        setTimeout(() => setBouquetLinksSaved(false), 2500);
+      }
+    } catch (e) {
+      console.error("Error saving bouquet links:", e);
+    } finally {
+      setBouquetLinksSaving(false);
+    }
+  };
   const [refreshing, setRefreshing] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -843,7 +883,7 @@ export default function AdminSimulator({
           {/* TAB 1: EMAIL SIMULATOR (NOTIFICATIONS ADMIN) */}
           {activeTab === "emails" && (
             <div className="space-y-4">
-              <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-sm text-amber-300 leading-relaxed flex items-center space-x-2">
+              <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-sm text-amber-700 leading-relaxed flex items-center space-x-2">
                 <Info className="h-4 w-4 text-amber-600 shrink-0" />
                 <span>
                   📢 <strong>Intercepteur d'Alertes :</strong> Reçoit toutes les notifications envoyées à <strong>fares200976@gmail.com</strong> et les alertes WhatsApp sur le <strong>00213667719761</strong>.
@@ -1491,6 +1531,62 @@ export default function AdminSimulator({
                   <Plus className="h-3.5 w-3.5" />
                   <span>{showAddProduct ? "Masquer" : "Ajouter un Produit"}</span>
                 </button>
+              </div>
+
+              {/* Liens de gestion des bouquets IPTV (Dino / 8K / Golden OTT) */}
+              <div className="p-5 bg-white rounded-2xl border border-slate-200 space-y-3">
+                <h4 className="font-bold text-slate-900 uppercase text-xs tracking-wider flex items-center gap-1.5">
+                  <Key className="h-3.5 w-3.5 text-indigo-600" />
+                  <span>Liens de Gestion des Bouquets (Dino / 8K / Golden OTT)</span>
+                </h4>
+                <p className="text-slate-400 text-[11px]">
+                  Ces liens sont transmis automatiquement au revendeur après chaque activation IPTV, pour qu'il configure les chaînes/bouquets de son client.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1 text-xs">Dino IPTV</label>
+                    <input
+                      type="text"
+                      placeholder="https://..."
+                      value={bouquetLinks.dino}
+                      onChange={(e) => setBouquetLinks({ ...bouquetLinks, dino: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1 text-xs">8K Premium</label>
+                    <input
+                      type="text"
+                      placeholder="https://..."
+                      value={bouquetLinks["8k"]}
+                      onChange={(e) => setBouquetLinks({ ...bouquetLinks, "8k": e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1 text-xs">Golden OTT</label>
+                    <input
+                      type="text"
+                      placeholder="https://..."
+                      value={bouquetLinks["golden ott"]}
+                      onChange={(e) => setBouquetLinks({ ...bouquetLinks, "golden ott": e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900 text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveBouquetLinks}
+                    disabled={bouquetLinksSaving || !bouquetLinksLoaded}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer"
+                  >
+                    {bouquetLinksSaving ? "Enregistrement..." : "Enregistrer les liens"}
+                  </button>
+                  {bouquetLinksSaved && (
+                    <span className="text-emerald-600 text-xs font-semibold">✓ Enregistré</span>
+                  )}
+                </div>
               </div>
 
               {/* Add Product Form */}
