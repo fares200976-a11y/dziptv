@@ -680,6 +680,27 @@ export default function App() {
     }
   };
 
+  // Clic sur le bouton d'une slide du carrousel d'accueil : ouvre directement
+  // le formulaire de commande du produit lié, ou un lien externe, ou à défaut
+  // fait défiler vers le catalogue.
+  const handleHeroSlideClick = (slide: { productId?: string; linkUrl?: string }) => {
+    if (slide.productId) {
+      const card = document.getElementById(`product-card-${slide.productId}`);
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => {
+          document.getElementById(`btn-buy-${slide.productId}`)?.click();
+        }, 500);
+        return;
+      }
+    }
+    if (slide.linkUrl) {
+      window.open(slide.linkUrl, slide.linkUrl.startsWith("http") ? "_blank" : "_self");
+      return;
+    }
+    scrollToCatalog();
+  };
+
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
       currentView === "retail" 
@@ -704,6 +725,7 @@ export default function App() {
             <Hero 
               onExploreClick={scrollToCatalog}
               onWholesaleClick={() => handleSetView("wholesaler")}
+              onSlideClick={handleHeroSlideClick}
             />
             {/* Products grid and checkout modals */}
             <RetailCatalog 
