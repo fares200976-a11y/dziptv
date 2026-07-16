@@ -3,7 +3,7 @@ import { Music, Volume2, VolumeX, Play, Pause } from "lucide-react";
 
 export default function MusicPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -11,20 +11,25 @@ export default function MusicPlayer() {
     const audio = new Audio("https://mp3tourl.com/audio/1784219222470-27652ba3-7399-40cd-8b67-3f5b47b118da.mp3");
     audio.loop = true;
     audio.volume = 0.25; // elegant low volume
+    audio.muted = true; // requis par les navigateurs pour autoriser l'autoplay
     audioRef.current = audio;
 
-    // Autoplay trigger on first body click/touch
+    // Démarrage automatique en muet dès le chargement de la page (autorisé par
+    // tous les navigateurs). Le son se déclenche ensuite au premier clic/toucher.
+    audio.play()
+      .then(() => setIsPlaying(true))
+      .catch(err => {
+        console.log("Autoplay muet bloqué, en attente d'un geste utilisateur.", err);
+      });
+
     const handleGesture = () => {
-      if (audioRef.current && !isPlaying) {
-        audioRef.current.play()
-          .then(() => {
-            setIsPlaying(true);
-          })
-          .catch(err => {
-            console.log("Autoplay was prevented, waiting for direct user click.", err);
-          });
+      if (audioRef.current) {
+        audioRef.current.muted = false;
+        setIsMuted(false);
+        if (!isPlaying) {
+          audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
       }
-      // Remove event listeners after first gesture to play
       window.removeEventListener("click", handleGesture);
       window.removeEventListener("keydown", handleGesture);
       window.removeEventListener("touchstart", handleGesture);
@@ -70,8 +75,8 @@ export default function MusicPlayer() {
         <div className={`p-1.5 rounded-full ${isPlaying ? "bg-amber-500 text-black animate-spin duration-1000" : "bg-gray-800 text-gray-400"}`}>
           <Music className="h-3 w-3" />
         </div>
-        <span className="text-[10px] font-mono font-medium text-gray-300 hidden sm:inline max-w-[120px] truncate">
-          {isPlaying ? "DZ Premium Loop" : "Musique en Pause"}
+        <span className="text-[10px] font-mono font-medium text-gray-300 hidden sm:inline max-w-[140px] truncate">
+          {isPlaying && isMuted ? "🔇 Cliquez pour le son" : isPlaying ? "DZ Premium Loop" : "Musique en Pause"}
         </span>
       </div>
 
