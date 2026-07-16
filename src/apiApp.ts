@@ -19,7 +19,8 @@ import {
   Livreur,
   CatalogCategory,
   PanelRequest,
-  ServerBouquetLinks
+  ServerBouquetLinks,
+  HeroSlide
 } from "./types.js";
 
 const app = express();
@@ -467,6 +468,7 @@ interface DBStructure {
   panelRequests: PanelRequest[];
   revokedTokens?: { jti: string; exp: number }[];
   bouquetLinks?: ServerBouquetLinks;
+  heroSlides?: HeroSlide[];
 }
 
 // Read database
@@ -617,7 +619,18 @@ async function readDB(): Promise<DBStructure> {
         ],
         panelRequests: [],
         revokedTokens: [],
-        bouquetLinks: {}
+        bouquetLinks: {},
+        heroSlides: [
+          {
+            id: "slide-default-1",
+            badge: "N\u00b01 de l'IPTV Premium en Alg\u00e9rie",
+            title: "Abonnements IPTV Stables & Mat\u00e9riel Haute Qualit\u00e9",
+            highlightWord: "IPTV Stables",
+            buttonText: "Acheter un abonnement",
+            imageUrl: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=800",
+            order: 1
+          }
+        ]
       };
       await storageWriteRaw(JSON.stringify(initialDB, null, 2));
       return initialDB;
@@ -669,6 +682,20 @@ async function readDB(): Promise<DBStructure> {
       parsed.bouquetLinks = {};
       changed = true;
     }
+    if (!parsed.heroSlides) {
+      parsed.heroSlides = [
+          {
+            id: "slide-default-1",
+            badge: "N\u00b01 de l'IPTV Premium en Alg\u00e9rie",
+            title: "Abonnements IPTV Stables & Mat\u00e9riel Haute Qualit\u00e9",
+            highlightWord: "IPTV Stables",
+            buttonText: "Acheter un abonnement",
+            imageUrl: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=800",
+            order: 1
+          }
+        ];
+      changed = true;
+    }
     if (changed) {
       await storageWriteRaw(JSON.stringify(parsed, null, 2));
     }
@@ -691,7 +718,18 @@ async function readDB(): Promise<DBStructure> {
       ],
       panelRequests: [],
       revokedTokens: [],
-      bouquetLinks: {}
+      bouquetLinks: {},
+      heroSlides: [
+          {
+            id: "slide-default-1",
+            badge: "N\u00b01 de l'IPTV Premium en Alg\u00e9rie",
+            title: "Abonnements IPTV Stables & Mat\u00e9riel Haute Qualit\u00e9",
+            highlightWord: "IPTV Stables",
+            buttonText: "Acheter un abonnement",
+            imageUrl: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=800",
+            order: 1
+          }
+        ]
     };
   }
 }
@@ -736,6 +774,13 @@ async function sendAdminEmail(subject: string, body: string, type: EmailNotifica
 app.get("/api/products", async (req, res) => {
   const db = await readDB();
   res.json(db.products);
+});
+
+// --- HERO SLIDES (carrousel bannière d'accueil) ---
+app.get("/api/hero-slides", async (req, res) => {
+  const db = await readDB();
+  const slides = (db.heroSlides || []).slice().sort((a, b) => a.order - b.order);
+  res.json(slides);
 });
 
 // --- CATALOG CATEGORY ENDPOINTS ---
@@ -1506,6 +1551,65 @@ app.get("/api/orders/track", async (req, res) => {
 // Liens de gestion des bouquets (Dino / 8K / Golden OTT) — configurés par
 // l'admin, affichés au revendeur après activation IPTV pour qu'il règle les
 // chaînes de son client.
+// --- HERO SLIDES : CRUD admin (carrousel de bannières sur la page d'accueil) ---
+app.post("/api/admin/hero-slides", requireAdminAuth, async (req, res) => {
+  const { badge, title, highlightWord, buttonText, imageUrl, productId, linkUrl, isNew } = req.body;
+  if (!title || !buttonText || !imageUrl) {
+    return res.status(400).json({ error: "Le titre, le texte du bouton et l'image sont obligatoires." });
+  }
+  const db = await readDB();
+  if (!db.heroSlides) db.heroSlides = [];
+  const maxOrder = db.heroSlides.reduce((max, s) => Math.max(max, s.order || 0), 0);
+  const newSlide: HeroSlide = {
+    id: "slide-" + Math.random().toString(36).substr(2, 9),
+    badge: badge || "",
+    title,
+    highlightWord: highlightWord || "",
+    buttonText,
+    imageUrl,
+    productId: productId || undefined,
+    linkUrl: linkUrl || undefined,
+    isNew: !!isNew,
+    order: maxOrder + 1
+  };
+  db.heroSlides.push(newSlide);
+  await writeDB(db);
+  res.json(newSlide);
+});
+
+app.put("/api/admin/hero-slides/:id", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { badge, title, highlightWord, buttonText, imageUrl, productId, linkUrl, isNew, order } = req.body;
+  const db = await readDB();
+  const index = (db.heroSlides || []).findIndex(s => s.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Slide introuvable." });
+  }
+  const slide = db.heroSlides![index];
+  db.heroSlides![index] = {
+    ...slide,
+    badge: badge !== undefined ? badge : slide.badge,
+    title: title !== undefined ? title : slide.title,
+    highlightWord: highlightWord !== undefined ? highlightWord : slide.highlightWord,
+    buttonText: buttonText !== undefined ? buttonText : slide.buttonText,
+    imageUrl: imageUrl !== undefined ? imageUrl : slide.imageUrl,
+    productId: productId !== undefined ? (productId || undefined) : slide.productId,
+    linkUrl: linkUrl !== undefined ? (linkUrl || undefined) : slide.linkUrl,
+    isNew: isNew !== undefined ? !!isNew : slide.isNew,
+    order: order !== undefined ? Number(order) : slide.order
+  };
+  await writeDB(db);
+  res.json(db.heroSlides![index]);
+});
+
+app.delete("/api/admin/hero-slides/:id", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const db = await readDB();
+  db.heroSlides = (db.heroSlides || []).filter(s => s.id !== id);
+  await writeDB(db);
+  res.json({ success: true });
+});
+
 app.get("/api/admin/bouquet-links", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   res.json(db.bouquetLinks || {});

@@ -13,6 +13,20 @@ export interface CatalogCategory {
   color?: string;
 }
 
+// Bannière/slide du carrousel d'accueil, gérée par l'admin.
+export interface HeroSlide {
+  id: string;
+  badge?: string; // ex: "Google TV Box:"
+  title: string; // ex: "Stream BoxTV 4K Google TV RJ45 2/32GB"
+  highlightWord?: string; // mot mis en avant dans le titre (couleur d'accent), doit être une sous-chaîne exacte de "title"
+  buttonText: string; // ex: "Acheter Maintenant"
+  imageUrl: string;
+  productId?: string; // si défini, le bouton ouvre le formulaire de commande de ce produit
+  linkUrl?: string; // sinon, lien externe/interne optionnel
+  isNew?: boolean; // affiche un badge "NEW"
+  order: number; // ordre d'affichage dans le carrousel
+}
+
 export interface Product {
   id: string;
   name: string;
