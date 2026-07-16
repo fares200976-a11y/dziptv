@@ -514,16 +514,14 @@ export default function App() {
   };
 
   const handleDeleteOrder = async (id: string) => {
-    try {
-      const res = await fetch(`/api/admin/orders/${id}`, {
-        method: "DELETE"
-      });
-      if (res.ok) {
-        refreshAllData();
-      }
-    } catch (e) {
-      console.error(e);
+    const res = await fetch(`/api/admin/orders/${id}`, {
+      method: "DELETE"
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Échec de la suppression (code ${res.status}).`);
     }
+    refreshAllData();
   };
 
   const handleProcessCreditRequest = async (id: string, action: "approve" | "reject") => {
