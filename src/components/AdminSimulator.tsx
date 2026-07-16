@@ -10,6 +10,7 @@ import {
   X, 
   Trash2, 
   Sparkles, 
+  Image as ImageIcon,
   TrendingUp, 
   Smartphone, 
   UserCheck, 
@@ -114,7 +115,7 @@ export default function AdminSimulator({
   onLogoutAdmin
 }: AdminSimulatorProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"emails" | "wholesalers" | "requests" | "orders" | "products" | "tutorials" | "clients" | "livreurs" | "panels" | "categories">("emails");
+  const [activeTab, setActiveTab] = useState<"emails" | "wholesalers" | "requests" | "orders" | "products" | "tutorials" | "clients" | "livreurs" | "panels" | "categories" | "slides">("emails");
 
   // Liens de gestion des bouquets (Dino / 8K / Golden OTT), affichés au revendeur après activation IPTV
   const [bouquetLinks, setBouquetLinks] = useState<{ dino: string; "8k": string; "golden ott": string }>({ dino: "", "8k": "", "golden ott": "" });
@@ -199,6 +200,116 @@ export default function AdminSimulator({
       refreshAllData();
     } catch (err: any) {
       setErrorMessage(err.message || "Échec de l'enregistrement des accès.");
+    }
+  };
+
+  // --- Bannières / slides du carrousel d'accueil ---
+  const [heroSlides, setHeroSlides] = useState<any[]>([]);
+  const [showAddSlide, setShowAddSlide] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<any | null>(null);
+  const [slideForm, setSlideForm] = useState({
+    badge: "",
+    title: "",
+    highlightWord: "",
+    buttonText: "Acheter Maintenant",
+    imageUrl: "",
+    productId: "",
+    linkUrl: "",
+    isNew: false
+  });
+
+  const fetchHeroSlides = () => {
+    fetch("/api/hero-slides")
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setHeroSlides(Array.isArray(data) ? data : []))
+      .catch(() => setHeroSlides([]));
+  };
+
+  useEffect(() => {
+    fetchHeroSlides();
+  }, []);
+
+  const resetSlideForm = () => {
+    setSlideForm({ badge: "", title: "", highlightWord: "", buttonText: "Acheter Maintenant", imageUrl: "", productId: "", linkUrl: "", isNew: false });
+  };
+
+  const handleAddSlideSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await fetch("/api/admin/hero-slides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(slideForm)
+      });
+      if (res.ok) {
+        setSuccessMessage(`Slide "${slideForm.title}" ajoutée avec succès !`);
+        resetSlideForm();
+        setShowAddSlide(false);
+        fetchHeroSlides();
+      } else {
+        const data = await res.json();
+        setErrorMessage(data.error || "Échec de l'ajout de la slide.");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message);
+    }
+  };
+
+  const startEditSlide = (slide: any) => {
+    setEditingSlide(slide);
+    setSlideForm({
+      badge: slide.badge || "",
+      title: slide.title || "",
+      highlightWord: slide.highlightWord || "",
+      buttonText: slide.buttonText || "",
+      imageUrl: slide.imageUrl || "",
+      productId: slide.productId || "",
+      linkUrl: slide.linkUrl || "",
+      isNew: !!slide.isNew
+    });
+  };
+
+  const handleEditSlideSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSlide) return;
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await fetch(`/api/admin/hero-slides/${editingSlide.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(slideForm)
+      });
+      if (res.ok) {
+        setSuccessMessage("Slide mise à jour avec succès !");
+        setEditingSlide(null);
+        resetSlideForm();
+        fetchHeroSlides();
+      } else {
+        const data = await res.json();
+        setErrorMessage(data.error || "Échec de la modification.");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message);
+    }
+  };
+
+  const handleDeleteSlide = async (id: string, title: string) => {
+    if (!confirm(`Supprimer la slide "${title}" ?`)) return;
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await fetch(`/api/admin/hero-slides/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setSuccessMessage("Slide supprimée.");
+        fetchHeroSlides();
+      } else {
+        setErrorMessage("Échec de la suppression.");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message);
     }
   };
   const [refreshing, setRefreshing] = useState(false);
@@ -933,6 +1044,19 @@ export default function AdminSimulator({
           >
             <FolderOpen className="h-4 w-4 text-amber-600" />
             <span>Catégories ({catalogCategories.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("slides")}
+            className={`px-5 py-4 text-sm font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+              activeTab === "slides"
+                ? "border-amber-500 text-amber-600 bg-amber-500/5"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <ImageIcon className="h-4 w-4 text-amber-600" />
+            <span>Bannières Accueil ({heroSlides.length})</span>
           </button>
         </div>
 
@@ -3362,6 +3486,194 @@ export default function AdminSimulator({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* --- BANNIÈRES ACCUEIL (Carrousel) --- */}
+          {activeTab === "slides" && (
+            <div className="space-y-6 text-sm">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Bannières du Carrousel d'Accueil</h3>
+                  <p className="text-slate-400 text-xs mt-1">Ces bannières défilent automatiquement en haut de la page d'accueil de la boutique.</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAddSlide(!showAddSlide);
+                    setEditingSlide(null);
+                    resetSlideForm();
+                  }}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold flex items-center space-x-1.5 transition-all cursor-pointer shrink-0"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>{showAddSlide ? "Masquer" : "Ajouter une Bannière"}</span>
+                </button>
+              </div>
+
+              {(showAddSlide || editingSlide) && (
+                <form onSubmit={editingSlide ? handleEditSlideSubmit : handleAddSlideSubmit} className="p-5 bg-white rounded-2xl border border-slate-200 space-y-4">
+                  <h4 className="font-bold text-blue-600 uppercase">{editingSlide ? "Modifier la bannière" : "Ajouter une nouvelle bannière"}</h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1">Badge (Optionnel)</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Google TV Box:"
+                        value={slideForm.badge}
+                        onChange={e => setSlideForm({ ...slideForm, badge: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1">Texte du Bouton</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Acheter Maintenant"
+                        value={slideForm.buttonText}
+                        onChange={e => setSlideForm({ ...slideForm, buttonText: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Titre de la Bannière</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Stream BoxTV 4K Google TV RJ45 2/32GB"
+                      value={slideForm.title}
+                      onChange={e => setSlideForm({ ...slideForm, title: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Mot à Mettre en Avant (Optionnel)</label>
+                    <input
+                      type="text"
+                      placeholder="Doit être recopié exactement depuis le titre ci-dessus, ex: BoxTV 4K"
+                      value={slideForm.highlightWord}
+                      onChange={e => setSlideForm({ ...slideForm, highlightWord: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">Ce mot sera affiché en couleur dans le titre. Laissez vide pour un titre uni.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Image de la Bannière (URL)</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="https://..."
+                      value={slideForm.imageUrl}
+                      onChange={e => setSlideForm({ ...slideForm, imageUrl: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1">Produit Lié (Optionnel)</label>
+                      <select
+                        value={slideForm.productId}
+                        onChange={e => setSlideForm({ ...slideForm, productId: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                      >
+                        <option value="">-- Aucun (voir lien externe) --</option>
+                        {products.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-slate-400 mt-1">Clic sur le bouton = ouvre directement la commande de ce produit.</p>
+                    </div>
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1">Ou Lien Externe (Optionnel)</label>
+                      <input
+                        type="text"
+                        placeholder="https://... (ignoré si produit lié)"
+                        value={slideForm.linkUrl}
+                        onChange={e => setSlideForm({ ...slideForm, linkUrl: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <label className="flex items-center space-x-2 cursor-pointer w-fit">
+                    <input
+                      type="checkbox"
+                      checked={slideForm.isNew}
+                      onChange={e => setSlideForm({ ...slideForm, isNew: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span className="text-slate-600 font-semibold">Afficher le badge "NEW"</span>
+                  </label>
+
+                  <div className="flex space-x-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddSlide(false);
+                        setEditingSlide(null);
+                        resetSlideForm();
+                      }}
+                      className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors font-semibold cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl transition-colors shadow-lg cursor-pointer"
+                    >
+                      {editingSlide ? "Enregistrer" : "Ajouter la Bannière"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Liste des bannières existantes */}
+              <div className="space-y-3">
+                {heroSlides.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                    <ImageIcon className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                    <p className="text-xs">Aucune bannière configurée. La page d'accueil affiche le contenu par défaut.</p>
+                  </div>
+                ) : (
+                  heroSlides.sort((a, b) => a.order - b.order).map((slide) => (
+                    <div key={slide.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-200">
+                      <img src={slide.imageUrl} alt={slide.title} className="h-16 w-16 rounded-lg object-cover border border-slate-200 shrink-0" referrerPolicy="no-referrer" />
+                      <div className="flex-1 min-w-0">
+                        {slide.badge && <span className="text-[10px] text-blue-600 font-semibold block">{slide.badge}</span>}
+                        <p className="font-bold text-slate-900 truncate">{slide.title}</p>
+                        <p className="text-xs text-slate-400">
+                          Bouton : "{slide.buttonText}"
+                          {slide.productId && <span className="text-emerald-600"> · lié à un produit</span>}
+                          {slide.linkUrl && <span className="text-indigo-600"> · lien externe</span>}
+                          {slide.isNew && <span className="text-amber-600"> · badge NEW</span>}
+                        </p>
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        <button
+                          onClick={() => { startEditSlide(slide); setShowAddSlide(false); }}
+                          className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg cursor-pointer"
+                          title="Modifier"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSlide(slide.id, slide.title)}
+                          className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-lg cursor-pointer"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
 
