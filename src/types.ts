@@ -99,6 +99,17 @@ export interface Order {
   shippingAddress?: string;
   shippingPriceDA?: number;
   shippingDelay?: string; // ex: "J+1"
+  // IPTV (Dino / 8K / Golden OTT) : choix contenu adulte, fait par le client au
+  // moment de la commande. Les accès (credentials) sont saisis par l'admin une
+  // fois la commande validée, et affichés au client via le suivi de commande.
+  adultContent?: boolean;
+  credentials?: {
+    m3uUrl?: string;
+    xtreamUser?: string;
+    xtreamPass?: string;
+    xtreamHost?: string;
+    bouquetLink?: string;
+  };
 }
 
 export interface VideoTutorial {

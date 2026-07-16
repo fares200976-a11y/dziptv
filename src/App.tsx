@@ -524,6 +524,19 @@ export default function App() {
     refreshAllData();
   };
 
+  const handleUpdateOrderCredentials = async (id: string, payload: any) => {
+    const res = await fetch(`/api/admin/orders/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Échec de l'enregistrement (code ${res.status}).`);
+    }
+    refreshAllData();
+  };
+
   const handleProcessCreditRequest = async (id: string, action: "approve" | "reject") => {
     try {
       const res = await fetch(`/api/admin/credit-requests/${id}`, {
@@ -768,6 +781,7 @@ export default function App() {
                 onAddCreditManual={handleAddCreditManual}
                 onUpdateOrderStatus={handleUpdateOrderStatus}
                 onDeleteOrder={handleDeleteOrder}
+                onUpdateOrderCredentials={handleUpdateOrderCredentials}
                 onProcessCreditRequest={handleProcessCreditRequest}
                 onProcessPanelRequest={handleProcessPanelRequest}
                 onAddCategory={handleAddCategory}
