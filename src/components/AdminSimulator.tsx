@@ -49,6 +49,7 @@ interface AdminSimulatorProps {
   onApproveWholesaler: (id: string, currentStatus: string) => Promise<void>;
   onAddCreditManual: (id: string, amount: number) => Promise<void>;
   onUpdateOrderStatus: (id: string, status: "completed" | "cancelled") => Promise<void>;
+  onUpdateOrderCredentials?: (id: string, payload: any) => Promise<void>;
   onDeleteOrder?: (id: string) => Promise<void>;
   onProcessCreditRequest: (id: string, action: "approve" | "reject") => Promise<void>;
   onProcessPanelRequest?: (id: string, status: "approved" | "rejected", notes?: string) => Promise<void>;
@@ -76,6 +77,14 @@ const isStandardType = (t: string) => {
   ].includes(t);
 };
 
+// Commandes boutique pour lesquelles l'admin peut fournir des accès IPTV
+// (M3U, Xtream, lien de bouquets) : uniquement Dino / 8K / Golden OTT.
+const ADULT_TOGGLE_NAMES = ["dino", "8k", "golden"];
+const isIptvOrderWithAccess = (order: any) => {
+  return (order.productType === "iptv" || order.productType === "code iptv")
+    && ADULT_TOGGLE_NAMES.some(n => (order.productName || "").toLowerCase().includes(n));
+};
+
 export default function AdminSimulator({
   stats,
   wholesalers,
@@ -91,6 +100,7 @@ export default function AdminSimulator({
   onApproveWholesaler,
   onAddCreditManual,
   onUpdateOrderStatus,
+  onUpdateOrderCredentials,
   onDeleteOrder,
   onProcessCreditRequest,
   onProcessPanelRequest,
@@ -143,6 +153,52 @@ export default function AdminSimulator({
       console.error("Error saving bouquet links:", e);
     } finally {
       setBouquetLinksSaving(false);
+    }
+  };
+
+  // Saisie des accès IPTV (M3U, Xtream, lien bouquets) pour une commande boutique
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [orderCredForm, setOrderCredForm] = useState({
+    m3uUrl: "",
+    xtreamHost: "",
+    xtreamUser: "",
+    xtreamPass: "",
+    bouquetLink: "",
+    adultContent: false
+  });
+
+  const startEditOrderCredentials = (order: any) => {
+    setEditingOrderId(order.id);
+    setOrderCredForm({
+      m3uUrl: order.credentials?.m3uUrl || "",
+      xtreamHost: order.credentials?.xtreamHost || "",
+      xtreamUser: order.credentials?.xtreamUser || "",
+      xtreamPass: order.credentials?.xtreamPass || "",
+      bouquetLink: order.credentials?.bouquetLink || "",
+      adultContent: !!order.adultContent
+    });
+  };
+
+  const handleSaveOrderCredentials = async () => {
+    if (!editingOrderId || !onUpdateOrderCredentials) return;
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      await onUpdateOrderCredentials(editingOrderId, {
+        adultContent: orderCredForm.adultContent,
+        credentials: {
+          m3uUrl: orderCredForm.m3uUrl,
+          xtreamHost: orderCredForm.xtreamHost,
+          xtreamUser: orderCredForm.xtreamUser,
+          xtreamPass: orderCredForm.xtreamPass,
+          bouquetLink: orderCredForm.bouquetLink
+        }
+      });
+      setSuccessMessage("Accès IPTV enregistrés et visibles par le client.");
+      setEditingOrderId(null);
+      refreshAllData();
+    } catch (err: any) {
+      setErrorMessage(err.message || "Échec de l'enregistrement des accès.");
     }
   };
   const [refreshing, setRefreshing] = useState(false);
@@ -1411,6 +1467,91 @@ export default function AdminSimulator({
                             )}
                             {order.shippingPriceDA !== undefined && (
                               <p className="text-emerald-600 font-bold">Frais de livraison : {order.shippingPriceDA.toLocaleString()} DA</p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Accès IPTV (Dino / 8K / Golden OTT) : à fournir par l'admin/l'équipe */}
+                        {isIptvOrderWithAccess(order) && (
+                          <div className="p-3 bg-indigo-500/5 rounded-lg border border-indigo-500/15 text-sm mt-2 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-indigo-600 font-bold uppercase tracking-wider">🔑 Accès IPTV Client</span>
+                              {order.adultContent !== undefined && (
+                                <span className={`px-2 py-0.5 rounded font-bold text-[11px] ${order.adultContent ? "bg-red-500/10 text-red-600 border border-red-500/20" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
+                                  {order.adultContent ? "Adulte" : "Sans Adulte"}
+                                </span>
+                              )}
+                            </div>
+
+                            {editingOrderId === order.id ? (
+                              <div className="space-y-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Xtream Host (ex: http://line.dino.dndscloud.ru)"
+                                    value={orderCredForm.xtreamHost}
+                                    onChange={e => setOrderCredForm({ ...orderCredForm, xtreamHost: e.target.value })}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-900 text-xs font-mono"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="Lien M3U complet"
+                                    value={orderCredForm.m3uUrl}
+                                    onChange={e => setOrderCredForm({ ...orderCredForm, m3uUrl: e.target.value })}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-900 text-xs font-mono"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="Username"
+                                    value={orderCredForm.xtreamUser}
+                                    onChange={e => setOrderCredForm({ ...orderCredForm, xtreamUser: e.target.value })}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-900 text-xs font-mono"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="Password"
+                                    value={orderCredForm.xtreamPass}
+                                    onChange={e => setOrderCredForm({ ...orderCredForm, xtreamPass: e.target.value })}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-900 text-xs font-mono"
+                                  />
+                                </div>
+                                <input
+                                  type="text"
+                                  placeholder="Lien de gestion des bouquets (optionnel)"
+                                  value={orderCredForm.bouquetLink}
+                                  onChange={e => setOrderCredForm({ ...orderCredForm, bouquetLink: e.target.value })}
+                                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-900 text-xs font-mono"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveOrderCredentials}
+                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs cursor-pointer"
+                                  >
+                                    Enregistrer et envoyer au client
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingOrderId(null)}
+                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg font-bold text-xs cursor-pointer"
+                                  >
+                                    Annuler
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-500 text-xs">
+                                  {order.credentials?.m3uUrl ? "Accès déjà fournis — le client peut les voir via le suivi de commande." : "Aucun accès fourni pour le moment."}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => startEditOrderCredentials(order)}
+                                  className="px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 border border-indigo-500/20 rounded-lg font-bold text-xs cursor-pointer shrink-0 ml-2"
+                                >
+                                  {order.credentials?.m3uUrl ? "Modifier les Accès" : "Fournir les Accès"}
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}

@@ -19,7 +19,10 @@ import {
   Clock,
   MapPin,
   AlertTriangle,
-  ZoomIn
+  ZoomIn,
+  Key,
+  Copy,
+  Download
 } from "lucide-react";
 
 // Types de produits considérés comme "physiques" : nécessitent une livraison
@@ -56,6 +59,16 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
   const [installedApp, setInstalledApp] = useState("");
   const [hasAndroidBox, setHasAndroidBox] = useState(false);
   const [downloaderCode, setDownloaderCode] = useState("");
+  const [adultContent, setAdultContent] = useState(false);
+  const [copiedField, setCopiedField] = useState("");
+
+  const handleCopyToClipboard = (text: string, fieldName: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(""), 2000);
+    }).catch(() => {});
+  };
 
   // Livraison (produits physiques uniquement)
   const [shippingWilaya, setShippingWilaya] = useState("");
@@ -118,6 +131,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
     setShippingWilaya("");
     setShippingType("domicile");
     setShippingAddress("");
+    setAdultContent(false);
   };
 
   // Tarif de livraison correspondant à la wilaya/type choisis (produits physiques)
@@ -125,6 +139,11 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
   const shippingPrice = selectedTariff ? (shippingType === "domicile" ? selectedTariff.domicile : selectedTariff.bureau) : 0;
   const isPhysicalCheckout = selectedProduct ? isPhysicalProduct(selectedProduct.type) : false;
   const totalWithShipping = (selectedProduct?.priceRetail || 0) + (isPhysicalCheckout ? shippingPrice : 0);
+  // Contenu adulte : uniquement pertinent pour les abonnements IPTV Dino / 8K / Golden OTT
+  const ADULT_TOGGLE_NAMES = ["dino", "8k", "golden"];
+  const supportsAdultToggle = selectedProduct
+    ? (selectedProduct.type === "iptv" || selectedProduct.type === "code iptv") && ADULT_TOGGLE_NAMES.some(n => selectedProduct.name.toLowerCase().includes(n))
+    : false;
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,6 +191,10 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
         orderPayload.shippingAddress = shippingAddress;
         orderPayload.shippingPriceDA = shippingPrice;
         orderPayload.shippingDelay = selectedTariff?.delai || "";
+      }
+
+      if (supportsAdultToggle) {
+        orderPayload.adultContent = adultContent;
       }
 
       const result = await onOrderSubmit(orderPayload);
@@ -421,6 +444,94 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                           {steps[stepIndex > 3 ? 3 : stepIndex]?.desc}
                         </p>
                       </div>
+
+                      {/* Accès IPTV fournis par l'admin (M3U, Xtream, lien de bouquets) */}
+                      {order.credentials && (order.credentials.m3uUrl || order.credentials.xtreamUser) && (
+                        <div className="p-4 bg-indigo-500/5 border border-indigo-500/15 rounded-xl space-y-3">
+                          <div className="flex items-center space-x-2 text-indigo-400 font-bold text-xs">
+                            <Key className="h-4 w-4" />
+                            <span>Vos Accès IPTV</span>
+                          </div>
+
+                          {copiedField && (
+                            <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-300 rounded-lg text-[10px] text-center font-semibold">
+                              Copié : {copiedField} !
+                            </div>
+                          )}
+
+                          <div className="space-y-2 font-mono text-xs">
+                            {order.credentials.xtreamHost && (
+                              <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-slate-800">
+                                <span className="text-gray-400">Host:</span>
+                                <span className="text-gray-200 break-all">{order.credentials.xtreamHost}</span>
+                                <button onClick={() => handleCopyToClipboard(order.credentials.xtreamHost || "", "Host")} className="p-1 text-gray-500 hover:text-white shrink-0 ml-2">
+                                  <Copy className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            )}
+                            {order.credentials.xtreamUser && (
+                              <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-slate-800">
+                                <span className="text-gray-400">User:</span>
+                                <span className="text-gray-200">{order.credentials.xtreamUser}</span>
+                                <button onClick={() => handleCopyToClipboard(order.credentials.xtreamUser || "", "Username")} className="p-1 text-gray-500 hover:text-white shrink-0 ml-2">
+                                  <Copy className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            )}
+                            {order.credentials.xtreamPass && (
+                              <div className="flex justify-between items-center bg-black/30 p-2 rounded border border-slate-800">
+                                <span className="text-gray-400">Pass:</span>
+                                <span className="text-gray-200">{order.credentials.xtreamPass}</span>
+                                <button onClick={() => handleCopyToClipboard(order.credentials.xtreamPass || "", "Password")} className="p-1 text-gray-500 hover:text-white shrink-0 ml-2">
+                                  <Copy className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {order.credentials.m3uUrl && (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between bg-black/30 p-2 rounded border border-slate-800 font-mono text-xs">
+                                <span className="text-gray-200 truncate pr-2 select-all">{order.credentials.m3uUrl}</span>
+                                <button onClick={() => handleCopyToClipboard(order.credentials.m3uUrl || "", "Lien M3U")} className="p-1 text-gray-500 hover:text-white shrink-0">
+                                  <Copy className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                              <a
+                                href={order.credentials.m3uUrl}
+                                download={`kurtal-${order.id}.m3u`}
+                                className="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/40 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                                <span>Télécharger le Fichier .m3u</span>
+                              </a>
+                            </div>
+                          )}
+
+                          {order.credentials.bouquetLink && (
+                            <div className="pt-2 border-t border-indigo-500/10">
+                              <span className="text-[10px] text-gray-400 block mb-1">Lien de gestion des bouquets :</span>
+                              <a
+                                href={order.credentials.bouquetLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-indigo-400 hover:underline text-xs break-all"
+                              >
+                                {order.credentials.bouquetLink}
+                              </a>
+                            </div>
+                          )}
+
+                          {order.adultContent !== undefined && (
+                            <div className="pt-2 border-t border-indigo-500/10 flex items-center justify-between">
+                              <span className="text-[10px] text-gray-400">Contenu Adulte :</span>
+                              <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${order.adultContent ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-slate-800 text-gray-400 border border-slate-700"}`}>
+                                {order.adultContent ? "Activé" : "Désactivé"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Delivery Driver Info Section */}
                       {order.livreur && (
@@ -731,6 +842,30 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 ) : (
                 /* Configuration Client Specifics (TV Model, App Installed, Android Box, Downloader Code) */
                 <div className="p-4 bg-blue-50/40 rounded-xl border border-blue-100/75 space-y-4">
+                  {supportsAdultToggle && (
+                    <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700">Contenu Adulte</label>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Souhaitez-vous inclure les chaînes adultes dans votre bouquet ?</p>
+                      </div>
+                      <div className="flex rounded-lg overflow-hidden border border-slate-300 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setAdultContent(false)}
+                          className={`px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${!adultContent ? "bg-slate-700 text-white" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+                        >
+                          Non
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAdultContent(true)}
+                          className={`px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${adultContent ? "bg-red-600 text-white" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+                        >
+                          Adulte
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <h4 className="text-xs font-bold uppercase text-indigo-700 tracking-wider">
                     Informations de Configuration (Recommandé pour activation rapide)
                   </h4>
