@@ -1,5 +1,10 @@
 export type SubscriptionServer = 'Dino' | '8K' | 'V12' | 'Golden OTT';
 
+// Liens de gestion des bouquets par serveur (fournis/édités par l'admin),
+// affichés au revendeur/client pour configurer ses chaînes après activation.
+// Clé = nom du serveur en minuscules ("dino", "8k", "golden ott").
+export type ServerBouquetLinks = Record<string, string>;
+
 export interface CatalogCategory {
   id: string;
   name: string;
@@ -54,7 +59,10 @@ export interface IptvClient {
     xtreamPass?: string;
     xtreamHost?: string;
     satCode?: string; // pour les activations Code Sat
+    bouquetLink?: string; // lien de gestion des bouquets (Dino/8K/Golden OTT), fourni par l'admin
   };
+  // Contenu adulte inclus ou non (Dino / 8K / Golden OTT uniquement)
+  adultContent?: boolean;
 }
 
 export interface Livreur {

@@ -18,7 +18,8 @@ import {
   VideoTutorial,
   Livreur,
   CatalogCategory,
-  PanelRequest
+  PanelRequest,
+  ServerBouquetLinks
 } from "./types.js";
 
 const app = express();
@@ -465,6 +466,7 @@ interface DBStructure {
   catalogCategories: CatalogCategory[];
   panelRequests: PanelRequest[];
   revokedTokens?: { jti: string; exp: number }[];
+  bouquetLinks?: ServerBouquetLinks;
 }
 
 // Read database
@@ -614,7 +616,8 @@ async function readDB(): Promise<DBStructure> {
           { id: "cat-adsl", name: "Recharges ADSL & Fibre" }
         ],
         panelRequests: [],
-        revokedTokens: []
+        revokedTokens: [],
+        bouquetLinks: {}
       };
       await storageWriteRaw(JSON.stringify(initialDB, null, 2));
       return initialDB;
@@ -662,6 +665,10 @@ async function readDB(): Promise<DBStructure> {
       parsed.revokedTokens = [];
       changed = true;
     }
+    if (!parsed.bouquetLinks) {
+      parsed.bouquetLinks = {};
+      changed = true;
+    }
     if (changed) {
       await storageWriteRaw(JSON.stringify(parsed, null, 2));
     }
@@ -683,7 +690,8 @@ async function readDB(): Promise<DBStructure> {
         { id: "cat-adsl", name: "Recharges ADSL & Fibre" }
       ],
       panelRequests: [],
-      revokedTokens: []
+      revokedTokens: [],
+      bouquetLinks: {}
     };
   }
 }
@@ -1092,7 +1100,7 @@ app.get("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
 // Wholesaler Activate / Add Client (INSTANT ACTIVATION) — IPTV, Code Sat ou Box Android
 app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
   const wholesalerId = (req as any).wholesalerId as string;
-  const { clientName, server, durationMonths, notes, serviceType, productId } = req.body;
+  const { clientName, server, durationMonths, notes, serviceType, productId, adultContent } = req.body;
   const type: "iptv" | "sat" | "box" = serviceType === "sat" || serviceType === "box" ? serviceType : "iptv";
 
   if (!clientName) {
@@ -1138,15 +1146,25 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
     const password = Math.random().toString(36).substring(2, 10);
 
     let host = "http://kurtal-server.xyz:8080";
+    // Clé de lookup pour bouquetLinks : "dino", "8k" ou "golden ott" (cf. ADULT_CONTENT_SERVERS ci-dessous)
+    let bouquetKey = "";
     if (server.toLowerCase().includes("dino")) {
-      host = "http://dino-ott.xyz:8080";
+      host = "http://line.dino.dndscloud.ru";
+      bouquetKey = "dino";
     } else if (server.toLowerCase().includes("8k")) {
-      host = "http://8k-premium.co:8080";
+      host = "http://tv.business-cnd-8k.com";
+      bouquetKey = "8k";
     } else if (server.toLowerCase().includes("v12")) {
-      host = "http://v12-pro.com:8080";
+      host = "http://ulimate.cx";
     } else if (server.toLowerCase().includes("golden")) {
-      host = "http://golden-ott.net:8080";
+      host = "http://ejzce.aldoccecelai.org";
+      bouquetKey = "golden ott";
     }
+
+    // Option "Contenu Adulte" : uniquement pertinente pour Dino / 8K / Golden OTT.
+    const supportsAdultToggle = !!bouquetKey;
+    const finalAdultContent = supportsAdultToggle ? !!adultContent : undefined;
+    const bouquetLink = bouquetKey ? (db.bouquetLinks?.[bouquetKey] || "") : "";
 
     const m3uUrl = `${host}/get.php?username=${username}&password=${password}&output=ts`;
 
@@ -1166,11 +1184,13 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
       expirationDate: expirationDate.toISOString(),
       status: "active",
       notes: notes || "",
+      adultContent: finalAdultContent,
       credentials: {
         m3uUrl,
         xtreamUser: username,
         xtreamPass: password,
-        xtreamHost: host
+        xtreamHost: host,
+        bouquetLink: bouquetLink || undefined
       }
     };
 
@@ -1189,6 +1209,8 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
         `- Identifiant: ${username}\n` +
         `- Mot de passe: ${password}\n` +
         `- Lien M3U: ${m3uUrl}\n` +
+        (supportsAdultToggle ? `- Contenu Adulte: ${finalAdultContent ? "Oui" : "Non"}\n` : ``) +
+        (bouquetLink ? `- Lien gestion des bouquets: ${bouquetLink}\n` : ``) +
         `- Nouveau solde du revendeur: ${wholesaler.creditBalance} DA\n\n` +
         `L'activation a été effectuée de manière 100% autonome et instantanée. Les codes d'accès ont été générés pour le revendeur.`,
         "client_activation"
@@ -1472,6 +1494,27 @@ app.get("/api/orders/track", async (req, res) => {
 // ==========================================
 // ADMIN API ROUTES
 // ==========================================
+
+// Liens de gestion des bouquets (Dino / 8K / Golden OTT) — configurés par
+// l'admin, affichés au revendeur après activation IPTV pour qu'il règle les
+// chaînes de son client.
+app.get("/api/admin/bouquet-links", requireAdminAuth, async (req, res) => {
+  const db = await readDB();
+  res.json(db.bouquetLinks || {});
+});
+
+app.put("/api/admin/bouquet-links", requireAdminAuth, async (req, res) => {
+  const { dino, "8k": eightK, "golden ott": goldenOtt } = req.body;
+  const db = await readDB();
+  db.bouquetLinks = {
+    ...(db.bouquetLinks || {}),
+    ...(dino !== undefined ? { dino } : {}),
+    ...(eightK !== undefined ? { "8k": eightK } : {}),
+    ...(goldenOtt !== undefined ? { "golden ott": goldenOtt } : {})
+  };
+  await writeDB(db);
+  res.json(db.bouquetLinks);
+});
 
 app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
   const db = await readDB();
