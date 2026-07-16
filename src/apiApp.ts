@@ -1370,7 +1370,8 @@ app.post("/api/orders", async (req, res) => {
     downloaderCode,
     shippingWilaya,
     shippingType,
-    shippingAddress
+    shippingAddress,
+    adultContent
   } = req.body;
 
   if (!customerName || !customerPhone || !productId || !paymentMethod) {
@@ -1388,6 +1389,11 @@ app.post("/api/orders", async (req, res) => {
   // tarifaire (jamais confiance dans une valeur envoyée par le client).
   const PHYSICAL_PRODUCT_TYPES = ["device", "demodulateur", "televiseur", "boitier android", "accessoire"];
   const isPhysical = PHYSICAL_PRODUCT_TYPES.includes(product.type);
+
+  // Contenu adulte : pertinent uniquement pour les abonnements IPTV Dino / 8K / Golden OTT.
+  const ADULT_TOGGLE_NAMES = ["dino", "8k", "golden"];
+  const supportsAdultToggle = (product.type === "iptv" || product.type === "code iptv")
+    && ADULT_TOGGLE_NAMES.some(n => product.name.toLowerCase().includes(n));
 
   let shippingPriceDA = 0;
   let shippingDelay = "";
@@ -1428,7 +1434,8 @@ app.post("/api/orders", async (req, res) => {
       shippingAddress,
       shippingPriceDA,
       shippingDelay
-    } : {})
+    } : {}),
+    ...(supportsAdultToggle ? { adultContent: !!adultContent } : {})
   };
 
   db.orders.unshift(newOrder);
@@ -1442,6 +1449,7 @@ app.post("/api/orders", async (req, res) => {
     `- Email: ${customerEmail || 'Non fourni'}\n` +
     `- Produit: ${product.name} (${product.type === "iptv" ? "Abonnement IPTV" : "Matériel Box/Firestick"})\n` +
     `- Prix produit: ${product.priceRetail} DA\n` +
+    (supportsAdultToggle ? `- Contenu Adulte: ${adultContent ? "Oui" : "Non"}\n` : ``) +
     (isPhysical ? `- Livraison (${shippingType === "domicile" ? "domicile" : "bureau"}) vers ${shippingWilaya}: ${shippingPriceDA} DA (délai ${shippingDelay})\n- Adresse: ${shippingAddress}\n` : ``) +
     `- Total: ${totalPrice} DA\n` +
     `- Méthode de paiement: ${paymentMethod.toUpperCase()}\n` +
@@ -1576,7 +1584,7 @@ app.get("/api/admin/orders", requireAdminAuth, async (req, res) => {
 
 app.put("/api/admin/orders/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, credentials, adultContent } = req.body;
 
   const db = await readDB();
   const orderIndex = db.orders.findIndex(o => o.id === id);
@@ -1585,10 +1593,17 @@ app.put("/api/admin/orders/:id", requireAdminAuth, async (req, res) => {
     return res.status(404).json({ error: "Commande introuvable." });
   }
 
-  db.orders[orderIndex].status = status;
+  if (status !== undefined) db.orders[orderIndex].status = status;
+  if (adultContent !== undefined) db.orders[orderIndex].adultContent = !!adultContent;
+  if (credentials !== undefined) {
+    db.orders[orderIndex].credentials = {
+      ...db.orders[orderIndex].credentials,
+      ...credentials
+    };
+  }
   await writeDB(db);
 
-  res.json({ message: "Statut de la commande mis à jour.", order: db.orders[orderIndex] });
+  res.json({ message: "Commande mise à jour.", order: db.orders[orderIndex] });
 });
 
 app.get("/api/admin/credit-requests", requireAdminAuth, async (req, res) => {
