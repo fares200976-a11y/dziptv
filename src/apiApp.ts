@@ -1290,7 +1290,7 @@ app.get("/api/auth/admin/session", requireAdminAuth, async (req, res) => {
   if (!member) {
     return res.status(401).json({ error: "Compte introuvable. Veuillez vous reconnecter." });
   }
-  res.json({ ok: true, isOwner: false, name: member.name, permissions: member.permissions || [] });
+  res.json({ ok: true, isOwner: false, name: member.name, permissions: member.permissions || [], creditBalance: member.creditBalance ?? 0, teamMemberId: member.id });
 });
 
 app.post("/api/auth/admin/logout-complete", async (req, res) => {
@@ -1530,6 +1530,171 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
     message: `Activation effectuée avec succès ! ${pricePaid} DA ont été déduits de votre crédit.`,
     client: newClient,
     newBalance: wholesaler.creditBalance
+  });
+});
+
+// ============================================================================
+// ACTIVATION CLIENT PAR UN MEMBRE DE L'ÉQUIPE (utilise son propre crédit,
+// accordé par l'admin — même logique que pour un revendeur, mais en interne).
+// ============================================================================
+app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("clients"), async (req, res) => {
+  if ((req as any).isOwner) {
+    return res.status(400).json({ error: "Cette activation est réservée aux membres de l'équipe (pas au compte principal)." });
+  }
+  const teamMemberId = (req as any).teamMemberId as string;
+  const { clientName, server, durationMonths, notes, serviceType, productId, adultContent } = req.body;
+  const type: "iptv" | "sat" | "box" = serviceType === "sat" || serviceType === "box" ? serviceType : "iptv";
+
+  if (!clientName) {
+    return res.status(400).json({ error: "Le nom du client est requis." });
+  }
+
+  const db = await readDB();
+  const member = (db.teamMembers || []).find(m => m.id === teamMemberId);
+  if (!member) {
+    return res.status(404).json({ error: "Membre introuvable." });
+  }
+  if (member.creditBalance === undefined) member.creditBalance = 0;
+
+  if (type === "iptv") {
+    if (!server || !durationMonths) {
+      return res.status(400).json({ error: "Nom, serveur et durée requis." });
+    }
+    const product = db.products.find(p => p.name.toLowerCase().includes(server.toLowerCase()) && p.type === "iptv");
+    if (!product) {
+      return res.status(400).json({ error: "Serveur IPTV invalide." });
+    }
+    let pricePaid = product.priceWholesale;
+    if (durationMonths === 1) pricePaid = Math.round(product.priceWholesale * 0.15);
+    else if (durationMonths === 6) pricePaid = Math.round(product.priceWholesale * 0.60);
+    else if (durationMonths === 12) pricePaid = product.priceWholesale;
+
+    if (member.creditBalance < pricePaid) {
+      return res.status(400).json({
+        error: `Crédit insuffisant. Cette activation coûte ${pricePaid} DA. Votre solde actuel est de ${member.creditBalance} DA. Demandez à l'administrateur de recharger votre crédit.`
+      });
+    }
+
+    const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const username = `kt_${server.toLowerCase().replace(/[^a-z0-9]/g, "")}_${randomSuffix}`;
+    const password = Math.random().toString(36).substring(2, 10);
+
+    let host = "http://kurtal-server.xyz:8080";
+    let bouquetKey = "";
+    if (server.toLowerCase().includes("dino")) { host = "http://line.dino.dndscloud.ru"; bouquetKey = "dino"; }
+    else if (server.toLowerCase().includes("8k")) { host = "http://tv.business-cnd-8k.com"; bouquetKey = "8k"; }
+    else if (server.toLowerCase().includes("v12")) { host = "http://ulimate.cx"; }
+    else if (server.toLowerCase().includes("golden")) { host = "http://ejzce.aldoccecelai.org"; bouquetKey = "golden ott"; }
+
+    const supportsAdultToggle = !!bouquetKey;
+    const finalAdultContent = supportsAdultToggle ? !!adultContent : undefined;
+    const bouquetLink = bouquetKey ? (db.bouquetLinks?.[bouquetKey] || "") : "";
+    const m3uUrl = `${host}/get.php?username=${username}&password=${password}&output=ts`;
+
+    const activationDate = new Date();
+    const expirationDate = new Date();
+    expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths));
+
+    const newClient: IptvClient = {
+      id: "c-" + Math.random().toString(36).substr(2, 9),
+      createdByTeamMemberId: teamMemberId,
+      clientName,
+      serviceType: "iptv",
+      server: server as any,
+      durationMonths: Number(durationMonths),
+      pricePaid,
+      activationDate: activationDate.toISOString(),
+      expirationDate: expirationDate.toISOString(),
+      status: "active",
+      notes: notes || "",
+      adultContent: finalAdultContent,
+      credentials: { m3uUrl, xtreamUser: username, xtreamPass: password, xtreamHost: host, bouquetLink: bouquetLink || undefined }
+    };
+
+    member.creditBalance -= pricePaid;
+    db.clients.push(newClient);
+    await writeDB(db);
+
+    try {
+      await sendAdminEmail(
+        `Activation IPTV par l'équipe (${member.name}) : ${clientName}`,
+        `Le membre de l'équipe '${member.name}' a activé un abonnement IPTV avec son crédit interne.\n\n` +
+        `- Client: ${clientName}\n- Serveur: ${server}\n- Durée: ${durationMonths} Mois\n- Prix: ${pricePaid} DA\n` +
+        `- Nouveau solde de ${member.name}: ${member.creditBalance} DA`,
+        "client_activation"
+      );
+    } catch (err) {
+      console.error("Error sending admin notification email:", err);
+    }
+
+    return res.json({
+      message: `Activation réussie ! ${pricePaid} DA ont été déduits de votre crédit.`,
+      client: newClient,
+      newBalance: member.creditBalance
+    });
+  }
+
+  if (!productId) {
+    return res.status(400).json({ error: "Veuillez sélectionner un produit dans le catalogue." });
+  }
+  const expectedCatalogType = type === "sat" ? "code sat" : "boitier android";
+  const product = db.products.find(p => p.id === productId && (p.type === expectedCatalogType || p.type === "device"));
+  if (!product) {
+    return res.status(400).json({ error: "Produit introuvable ou type invalide." });
+  }
+  const pricePaid = product.priceWholesale;
+  if (member.creditBalance < pricePaid) {
+    return res.status(400).json({
+      error: `Crédit insuffisant. Cette activation coûte ${pricePaid} DA. Votre solde actuel est de ${member.creditBalance} DA. Demandez à l'administrateur de recharger votre crédit.`
+    });
+  }
+
+  const activationDate = new Date();
+  const expirationDate = new Date();
+  if (type === "sat") {
+    expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths || 12));
+  } else {
+    expirationDate.setFullYear(expirationDate.getFullYear() + 50);
+  }
+
+  const newClient: IptvClient = {
+    id: "c-" + Math.random().toString(36).substr(2, 9),
+    createdByTeamMemberId: teamMemberId,
+    clientName,
+    serviceType: type,
+    server: product.name,
+    durationMonths: type === "sat" ? Number(durationMonths || 12) : 0,
+    pricePaid,
+    activationDate: activationDate.toISOString(),
+    expirationDate: expirationDate.toISOString(),
+    status: "active",
+    notes: notes || "",
+    credentials: type === "sat" ? {
+      satCode: Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase()
+    } : undefined
+  };
+
+  member.creditBalance -= pricePaid;
+  db.clients.push(newClient);
+  await writeDB(db);
+
+  try {
+    await sendAdminEmail(
+      `Activation ${type === "sat" ? "Code Sat" : "Box Android"} par l'équipe (${member.name}) : ${clientName}`,
+      `Le membre de l'équipe '${member.name}' a activé un ${type === "sat" ? "code satellite" : "boîtier Android"} avec son crédit interne.\n\n` +
+      `- Client: ${clientName}\n- Produit: ${product.name}\n- Prix: ${pricePaid} DA\n` +
+      (type === "sat" ? `- Code: ${newClient.credentials?.satCode}\n` : ``) +
+      `- Nouveau solde de ${member.name}: ${member.creditBalance} DA`,
+      "client_activation"
+    );
+  } catch (err) {
+    console.error("Error sending admin notification email:", err);
+  }
+
+  res.json({
+    message: `Activation réussie ! ${pricePaid} DA ont été déduits de votre crédit.`,
+    client: newClient,
+    newBalance: member.creditBalance
   });
 });
 
@@ -1837,7 +2002,8 @@ app.post("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => 
     alertEmail: alertEmail || undefined,
     alertWhatsappPhone: alertWhatsappPhone || undefined,
     alertWhatsappApiKey: alertWhatsappApiKey || undefined,
-    alertTelegramChatId: alertTelegramChatId || undefined
+    alertTelegramChatId: alertTelegramChatId || undefined,
+    creditBalance: 0
   };
   db.teamMembers.push(newMember);
   await writeDB(db);
@@ -1848,13 +2014,14 @@ app.post("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => 
 
 app.put("/api/admin/team/:id", requireAdminAuth, requireOwner, async (req, res) => {
   const { id } = req.params;
-  const { permissions, name, alertEmail, alertWhatsappPhone, alertWhatsappApiKey, alertTelegramChatId } = req.body;
+  const { permissions, name, alertEmail, alertWhatsappPhone, alertWhatsappApiKey, alertTelegramChatId, creditBalance } = req.body;
   const db = await readDB();
   const member = (db.teamMembers || []).find(m => m.id === id);
   if (!member) {
     return res.status(404).json({ error: "Membre introuvable." });
   }
   if (name !== undefined) member.name = name;
+  if (creditBalance !== undefined) member.creditBalance = Number(creditBalance);
   if (permissions !== undefined) {
     member.permissions = Array.isArray(permissions)
       ? permissions.filter((p: string) => ADMIN_PERMISSION_TABS.includes(p))
@@ -1950,7 +2117,14 @@ app.put("/api/admin/wholesalers/:id", requireAdminAuth, requireAdminPermission("
 
 app.get("/api/admin/orders", requireAdminAuth, async (req, res) => {
   const db = await readDB();
-  res.json(db.orders);
+  if ((req as any).isOwner) {
+    return res.json(db.orders);
+  }
+  // Un membre de l'équipe voit les commandes non encore prises en charge
+  // (pour pouvoir s'en saisir) + celles qu'il a lui-même déjà traitées.
+  const teamMemberId = (req as any).teamMemberId;
+  const visible = db.orders.filter(o => !o.handledByTeamMemberId || o.handledByTeamMemberId === teamMemberId);
+  res.json(visible);
 });
 
 app.put("/api/admin/orders/:id", requireAdminAuth, requireAdminPermission("orders"), async (req, res) => {
@@ -1962,6 +2136,20 @@ app.put("/api/admin/orders/:id", requireAdminAuth, requireAdminPermission("order
 
   if (orderIndex === -1) {
     return res.status(404).json({ error: "Commande introuvable." });
+  }
+
+  // Un membre de l'équipe ne peut pas agir sur une commande déjà prise en
+  // charge par un autre membre.
+  if (!(req as any).isOwner
+    && db.orders[orderIndex].handledByTeamMemberId
+    && db.orders[orderIndex].handledByTeamMemberId !== (req as any).teamMemberId) {
+    return res.status(403).json({ error: "Cette commande est déjà prise en charge par un autre membre de l'équipe." });
+  }
+
+  // Un membre de l'équipe qui agit sur une commande non assignée se l'approprie
+  // automatiquement — elle devient alors invisible pour les autres membres.
+  if (!(req as any).isOwner && !db.orders[orderIndex].handledByTeamMemberId) {
+    db.orders[orderIndex].handledByTeamMemberId = (req as any).teamMemberId;
   }
 
   if (status !== undefined) db.orders[orderIndex].status = status;
@@ -2048,7 +2236,12 @@ app.delete("/api/admin/notifications/:id", requireAdminAuth, requireAdminPermiss
 
 app.get("/api/admin/clients", requireAdminAuth, async (req, res) => {
   const db = await readDB();
-  res.json(db.clients || []);
+  if ((req as any).isOwner) {
+    return res.json(db.clients || []);
+  }
+  const teamMemberId = (req as any).teamMemberId;
+  const visible = (db.clients || []).filter(c => c.createdByTeamMemberId === teamMemberId);
+  res.json(visible);
 });
 
 app.put("/api/admin/clients/:id", requireAdminAuth, requireAdminPermission("clients"), async (req, res) => {
@@ -2060,6 +2253,11 @@ app.put("/api/admin/clients/:id", requireAdminAuth, requireAdminPermission("clie
 
   if (clientIndex === -1) {
     return res.status(404).json({ error: "Client introuvable." });
+  }
+
+  // Un membre de l'équipe ne peut modifier que les clients qu'il a lui-même créés.
+  if (!(req as any).isOwner && db.clients[clientIndex].createdByTeamMemberId !== (req as any).teamMemberId) {
+    return res.status(403).json({ error: "Vous ne pouvez modifier que vos propres clients." });
   }
 
   const client = db.clients[clientIndex];
@@ -2166,6 +2364,12 @@ app.put("/api/admin/orders/:id/delivery", requireAdminAuth, requireAdminPermissi
     return res.status(404).json({ error: "Commande introuvable." });
   }
   const order = db.orders[index];
+  if (!(req as any).isOwner && order.handledByTeamMemberId && order.handledByTeamMemberId !== (req as any).teamMemberId) {
+    return res.status(403).json({ error: "Cette commande est déjà prise en charge par un autre membre de l'équipe." });
+  }
+  if (!(req as any).isOwner && !order.handledByTeamMemberId) {
+    order.handledByTeamMemberId = (req as any).teamMemberId;
+  }
   if (assignedLivreurId !== undefined) order.assignedLivreurId = assignedLivreurId;
   if (deliveryStatus !== undefined) order.deliveryStatus = deliveryStatus;
   if (status !== undefined) order.status = status;

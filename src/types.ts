@@ -16,6 +16,9 @@ export interface TeamMember {
   // Sections du panel admin auxquelles ce membre a accès (voir ADMIN_TABS).
   // Vide = aucun accès (sauf le compte principal, qui a toujours accès à tout).
   permissions?: string[];
+  // Crédit accordé par l'admin, utilisé par ce membre pour activer lui-même
+  // des abonnements IPTV/Sat/Box (comme un revendeur, mais en interne).
+  creditBalance?: number;
   // Alertes personnelles (en plus de celles de l'administrateur principal).
   alertEmail?: string;
   // Clé CallMeBot du membre : chacun doit l'obtenir lui-même en envoyant
@@ -78,7 +81,10 @@ export interface Wholesaler {
 
 export interface IptvClient {
   id: string;
-  wholesalerId: string;
+  // Un client est créé SOIT par un revendeur (wholesalerId), SOIT par un
+  // membre de l'équipe (createdByTeamMemberId) — jamais les deux.
+  wholesalerId?: string;
+  createdByTeamMemberId?: string;
   clientName: string;
   // Type de service activé. Absent = 'iptv' (rétrocompatibilité avec les
   // activations existantes créées avant l'ajout de Code Sat / Box Android).
@@ -113,6 +119,9 @@ export interface Livreur {
 
 export interface Order {
   id: string;
+  // Membre de l'équipe qui a pris en charge cette commande (assigné
+  // automatiquement dès la première action). Absent = pas encore prise en main.
+  handledByTeamMemberId?: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;

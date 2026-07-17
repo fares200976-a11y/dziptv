@@ -29,6 +29,7 @@ export default function App() {
   const [adminIsOwner, setAdminIsOwner] = useState(true);
   const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
   const [adminName, setAdminName] = useState("");
+  const [adminCreditBalance, setAdminCreditBalance] = useState(0);
 
   // Secret Admin modal states
   const [showSecretModal, setShowSecretModal] = useState(false);
@@ -99,6 +100,7 @@ export default function App() {
           setAdminIsOwner(!!data.isOwner);
           setAdminPermissions(data.permissions || []);
           setAdminName(data.name || "");
+          setAdminCreditBalance(data.creditBalance || 0);
         }
       } catch (e) {
         setAdminUnlocked(false);
@@ -379,6 +381,7 @@ export default function App() {
           setAdminIsOwner(!!sessionData.isOwner);
           setAdminPermissions(sessionData.permissions || []);
           setAdminName(sessionData.name || "");
+          setAdminCreditBalance(sessionData.creditBalance || 0);
         }
       } catch (e) {
         // Non bloquant : au pire le panel se rechargera sans détail au prochain accès.
@@ -410,6 +413,7 @@ export default function App() {
     setAdminUnlocked(false);
     setAdminIsOwner(true);
     setAdminPermissions([]);
+    setAdminCreditBalance(0);
     setAdminName("");
     setView("retail");
   };
@@ -567,6 +571,33 @@ export default function App() {
       throw new Error(data.error || `Échec de l'enregistrement (code ${res.status}).`);
     }
     refreshAllData();
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    const res = await fetch(`/api/admin/clients/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Échec de la suppression (code ${res.status}).`);
+    }
+    refreshAllData();
+  };
+
+  // Activation d'un client par un membre de l'équipe, avec son propre crédit.
+  const handleStaffActivateClient = async (payload: any) => {
+    const res = await fetch("/api/admin/staff-clients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Échec de l'activation.");
+    }
+    if (typeof data.newBalance === "number") {
+      setAdminCreditBalance(data.newBalance);
+    }
+    refreshAllData();
+    return data;
   };
 
   const handleProcessCreditRequest = async (id: string, action: "approve" | "reject") => {
@@ -823,6 +854,8 @@ export default function App() {
                 isOwner={adminIsOwner}
                 permissions={adminPermissions}
                 adminName={adminName}
+                adminCreditBalance={adminCreditBalance}
+                onStaffActivateClient={handleStaffActivateClient}
                 stats={adminStats}
                 wholesalers={adminWholesalers}
                 orders={adminOrders}
@@ -839,6 +872,7 @@ export default function App() {
                 onUpdateOrderStatus={handleUpdateOrderStatus}
                 onDeleteOrder={handleDeleteOrder}
                 onUpdateOrderCredentials={handleUpdateOrderCredentials}
+                onDeleteClient={handleDeleteClient}
                 onProcessCreditRequest={handleProcessCreditRequest}
                 onProcessPanelRequest={handleProcessPanelRequest}
                 onAddCategory={handleAddCategory}
