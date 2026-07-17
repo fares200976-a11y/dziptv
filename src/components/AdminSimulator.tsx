@@ -36,6 +36,9 @@ import {
 } from "lucide-react";
 
 interface AdminSimulatorProps {
+  isOwner?: boolean;
+  permissions?: string[];
+  adminName?: string;
   stats: AppStats;
   wholesalers: Wholesaler[];
   orders: Order[];
@@ -86,7 +89,26 @@ const isIptvOrderWithAccess = (order: any) => {
     && ADULT_TOGGLE_NAMES.some(n => (order.productName || "").toLowerCase().includes(n));
 };
 
+// Sections accordables à un membre de l'équipe (doit correspondre à
+// ADMIN_PERMISSION_TABS côté serveur). "team" n'est jamais accordable.
+const PERMISSION_TAB_LABELS: { key: string; label: string }[] = [
+  { key: "emails", label: "Emails" },
+  { key: "wholesalers", label: "Revendeurs" },
+  { key: "requests", label: "Recharges" },
+  { key: "orders", label: "Commandes" },
+  { key: "products", label: "Catalogue Produits" },
+  { key: "tutorials", label: "Tutoriels Vidéo" },
+  { key: "clients", label: "Abonnements Grossistes" },
+  { key: "livreurs", label: "Livreurs & Suivi" },
+  { key: "panels", label: "Demandes Panels" },
+  { key: "categories", label: "Catégories" },
+  { key: "slides", label: "Bannières Accueil" }
+];
+
 export default function AdminSimulator({
+  isOwner = true,
+  permissions = [],
+  adminName = "",
   stats,
   wholesalers,
   orders,
@@ -115,7 +137,17 @@ export default function AdminSimulator({
   onLogoutAdmin
 }: AdminSimulatorProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"emails" | "wholesalers" | "requests" | "orders" | "products" | "tutorials" | "clients" | "livreurs" | "panels" | "categories" | "slides">("emails");
+  const canAccess = (tab: string) => isOwner || permissions.includes(tab);
+  const [activeTab, setActiveTab] = useState<"emails" | "wholesalers" | "requests" | "orders" | "products" | "tutorials" | "clients" | "livreurs" | "panels" | "categories" | "slides" | "team">("emails");
+
+  // Si le compte connecté (membre d'équipe) n'a pas accès à l'onglet par
+  // défaut ("emails"), on bascule automatiquement sur la première section autorisée.
+  useEffect(() => {
+    if (!canAccess(activeTab)) {
+      const firstAllowed = PERMISSION_TAB_LABELS.find(t => canAccess(t.key));
+      if (firstAllowed) setActiveTab(firstAllowed.key as any);
+    }
+  }, [isOwner, permissions]);
 
   // Liens de gestion des bouquets (Dino / 8K / Golden OTT), affichés au revendeur après activation IPTV
   const [bouquetLinks, setBouquetLinks] = useState<{ dino: string; "8k": string; "golden ott": string }>({ dino: "", "8k": "", "golden ott": "" });
@@ -305,6 +337,105 @@ export default function AdminSimulator({
       if (res.ok) {
         setSuccessMessage("Slide supprimée.");
         fetchHeroSlides();
+      } else {
+        setErrorMessage("Échec de la suppression.");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message);
+    }
+  };
+
+  // --- Équipe : comptes admin secondaires ---
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [showAddTeamMember, setShowAddTeamMember] = useState(false);
+  const [teamForm, setTeamForm] = useState({ name: "", username: "", password: "", permissions: [] as string[] });
+
+  const fetchTeamMembers = () => {
+    fetch("/api/admin/team")
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setTeamMembers(Array.isArray(data) ? data : []))
+      .catch(() => setTeamMembers([]));
+  };
+
+  useEffect(() => {
+    fetchTeamMembers();
+  }, []);
+
+  const handleAddTeamMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await fetch("/api/admin/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(teamForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccessMessage(`Compte créé pour "${teamForm.name}" — communiquez-lui son nom d'utilisateur et mot de passe.`);
+        setTeamForm({ name: "", username: "", password: "", permissions: [] });
+        setShowAddTeamMember(false);
+        fetchTeamMembers();
+      } else {
+        setErrorMessage(data.error || "Échec de la création du compte.");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message);
+    }
+  };
+
+  const toggleFormPermission = (key: string) => {
+    setTeamForm(f => ({
+      ...f,
+      permissions: f.permissions.includes(key)
+        ? f.permissions.filter(p => p !== key)
+        : [...f.permissions, key]
+    }));
+  };
+
+  const [editingPermissionsFor, setEditingPermissionsFor] = useState<string | null>(null);
+  const [editPermissionsDraft, setEditPermissionsDraft] = useState<string[]>([]);
+
+  const startEditPermissions = (member: any) => {
+    setEditingPermissionsFor(member.id);
+    setEditPermissionsDraft(member.permissions || []);
+  };
+
+  const toggleEditPermission = (key: string) => {
+    setEditPermissionsDraft(prev => prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]);
+  };
+
+  const handleSaveMemberPermissions = async (id: string) => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await fetch(`/api/admin/team/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ permissions: editPermissionsDraft })
+      });
+      if (res.ok) {
+        setSuccessMessage("Tâches mises à jour.");
+        setEditingPermissionsFor(null);
+        fetchTeamMembers();
+      } else {
+        setErrorMessage("Échec de la mise à jour des tâches.");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message);
+    }
+  };
+
+  const handleDeleteTeamMember = async (id: string, name: string) => {
+    if (!confirm(`Retirer l'accès de "${name}" ?`)) return;
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await fetch(`/api/admin/team/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setSuccessMessage("Accès retiré.");
+        fetchTeamMembers();
       } else {
         setErrorMessage("Échec de la suppression.");
       }
@@ -922,6 +1053,7 @@ export default function AdminSimulator({
       {/* Admin Tabs Panel Selector */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-lg">
         <div className="flex flex-wrap border-b border-slate-200 bg-white/10">
+          {canAccess("emails") && (
           <button
             onClick={() => setActiveTab("emails")}
             className={`px-5 py-4 text-sm font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
@@ -933,7 +1065,9 @@ export default function AdminSimulator({
             <Mail className="h-4 w-4" />
             <span>Emails ({notifications.filter(n => !n.read).length})</span>
           </button>
+          )}
 
+          {canAccess("wholesalers") && (
           <button
             onClick={() => setActiveTab("wholesalers")}
             className={`px-5 py-4 text-sm font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
@@ -945,7 +1079,9 @@ export default function AdminSimulator({
             <Users className="h-4 w-4" />
             <span>Revendeurs ({wholesalers.length})</span>
           </button>
+          )}
 
+          {canAccess("requests") && (
           <button
             onClick={() => setActiveTab("requests")}
             className={`px-5 py-4 text-sm font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
@@ -957,7 +1093,9 @@ export default function AdminSimulator({
             <Clock className="h-4 w-4" />
             <span>Recharges ({requests.filter(r => r.status === "pending").length})</span>
           </button>
+          )}
 
+          {canAccess("orders") && (
           <button
             onClick={() => setActiveTab("orders")}
             className={`px-5 py-4 text-sm font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
@@ -969,7 +1107,9 @@ export default function AdminSimulator({
             <FileText className="h-4 w-4" />
             <span>Commandes ({orders.filter(o => o.status === "pending").length})</span>
           </button>
+          )}
 
+          {canAccess("products") && (
           <button
             onClick={() => setActiveTab("products")}
             className={`px-5 py-4 text-sm font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
@@ -981,7 +1121,9 @@ export default function AdminSimulator({
             <ShoppingBag className="h-4 w-4" />
             <span>Catalogue Produits ({products.length})</span>
           </button>
+          )}
 
+          {canAccess("tutorials") && (
           <button
             onClick={() => setActiveTab("tutorials")}
             className={`px-5 py-4 text-sm font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
@@ -993,7 +1135,9 @@ export default function AdminSimulator({
             <Video className="h-4 w-4" />
             <span>Tutoriels Vidéo ({tutorials.length})</span>
           </button>
+          )}
 
+          {canAccess("clients") && (
           <button
             type="button"
             onClick={() => setActiveTab("clients")}
@@ -1006,7 +1150,9 @@ export default function AdminSimulator({
             <Users className="h-4 w-4 text-amber-600" />
             <span>Abonnements Grossistes ({clients.length})</span>
           </button>
+          )}
 
+          {canAccess("livreurs") && (
           <button
             type="button"
             onClick={() => setActiveTab("livreurs")}
@@ -1019,7 +1165,9 @@ export default function AdminSimulator({
             <Truck className="h-4 w-4 text-amber-600" />
             <span>Livreurs & Suivi ({livreurs.length})</span>
           </button>
+          )}
 
+          {canAccess("panels") && (
           <button
             type="button"
             onClick={() => setActiveTab("panels")}
@@ -1032,7 +1180,9 @@ export default function AdminSimulator({
             <Key className="h-4 w-4 text-amber-600" />
             <span>Demandes Panels ({panelRequests.filter(p => p.status === "pending").length})</span>
           </button>
+          )}
 
+          {canAccess("categories") && (
           <button
             type="button"
             onClick={() => setActiveTab("categories")}
@@ -1045,7 +1195,9 @@ export default function AdminSimulator({
             <FolderOpen className="h-4 w-4 text-amber-600" />
             <span>Catégories ({catalogCategories.length})</span>
           </button>
+          )}
 
+          {canAccess("slides") && (
           <button
             type="button"
             onClick={() => setActiveTab("slides")}
@@ -1058,6 +1210,22 @@ export default function AdminSimulator({
             <ImageIcon className="h-4 w-4 text-amber-600" />
             <span>Bannières Accueil ({heroSlides.length})</span>
           </button>
+          )}
+
+          {isOwner && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("team")}
+            className={`px-5 py-4 text-sm font-bold border-b-2 transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+              activeTab === "team"
+                ? "border-amber-500 text-amber-600 bg-amber-500/5"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <Users className="h-4 w-4 text-amber-600" />
+            <span>Équipe ({teamMembers.length})</span>
+          </button>
+          )}
         </div>
 
         {/* Tab Contents */}
@@ -3670,6 +3838,190 @@ export default function AdminSimulator({
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* --- ÉQUIPE (comptes admin secondaires) --- */}
+          {activeTab === "team" && (
+            <div className="space-y-6 text-sm">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Comptes de l'Équipe</h3>
+                  <p className="text-slate-400 text-xs mt-1">Donnez à un membre de votre équipe son propre accès au panel admin, sans partager votre mot de passe principal.</p>
+                </div>
+                <button
+                  onClick={() => setShowAddTeamMember(!showAddTeamMember)}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold flex items-center space-x-1.5 transition-all cursor-pointer shrink-0"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>{showAddTeamMember ? "Masquer" : "Ajouter un Membre"}</span>
+                </button>
+              </div>
+
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-xl text-xs">
+                ⚠️ Ces comptes ont un accès complet au panel admin (revendeurs, commandes, crédits, catalogue...). N'ajoutez que des personnes de confiance.
+              </div>
+
+              {showAddTeamMember && (
+                <form onSubmit={handleAddTeamMember} className="p-5 bg-white rounded-2xl border border-slate-200 space-y-4">
+                  <h4 className="font-bold text-blue-600 uppercase">Nouveau membre de l'équipe</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1">Nom complet</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Yacine Support"
+                        value={teamForm.name}
+                        onChange={e => setTeamForm({ ...teamForm, name: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1">Nom d'utilisateur</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: yacine"
+                        value={teamForm.username}
+                        onChange={e => setTeamForm({ ...teamForm, username: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1">Mot de passe</label>
+                      <input
+                        type="text"
+                        required
+                        minLength={6}
+                        placeholder="6 caractères minimum"
+                        value={teamForm.password}
+                        onChange={e => setTeamForm({ ...teamForm, password: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-2">Tâches autorisées <span className="text-slate-400 font-normal">(cochez ce qu'il/elle pourra gérer)</span></label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {PERMISSION_TAB_LABELS.map(p => (
+                        <label key={p.key} className="flex items-center space-x-2 p-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100">
+                          <input
+                            type="checkbox"
+                            checked={teamForm.permissions.includes(p.key)}
+                            onChange={() => toggleFormPermission(p.key)}
+                            className="rounded"
+                          />
+                          <span className="text-slate-700 text-xs font-medium">{p.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {teamForm.permissions.length === 0 && (
+                      <p className="text-[11px] text-amber-600 mt-1.5">⚠️ Aucune tâche cochée : ce compte ne pourra rien faire tant que vous n'en cochez pas au moins une.</p>
+                    )}
+                  </div>
+
+                  <div className="flex space-x-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddTeamMember(false)}
+                      className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors font-semibold cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl transition-colors shadow-lg cursor-pointer"
+                    >
+                      Créer le Compte
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <div className="space-y-3">
+                {teamMembers.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                    <p className="text-xs">Aucun membre de l'équipe pour le moment. Vous êtes seul(e) à avoir accès au panel admin.</p>
+                  </div>
+                ) : (
+                  teamMembers.map((member) => (
+                    <div key={member.id} className="p-4 bg-white rounded-2xl border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900">{member.name}</p>
+                          <p className="text-xs text-slate-400">
+                            Utilisateur : <span className="font-mono text-slate-600">{member.username}</span> · Ajouté le {new Date(member.createdAt).toLocaleDateString("fr-FR")}
+                          </p>
+                        </div>
+                        <div className="flex gap-1.5 shrink-0">
+                          {editingPermissionsFor !== member.id && (
+                            <button
+                              onClick={() => startEditPermissions(member)}
+                              className="px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 border border-indigo-500/20 rounded-lg font-bold text-xs cursor-pointer"
+                            >
+                              Modifier les Tâches
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteTeamMember(member.id, member.name)}
+                            className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-lg cursor-pointer"
+                            title="Retirer l'accès"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {editingPermissionsFor === member.id ? (
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {PERMISSION_TAB_LABELS.map(p => (
+                              <label key={p.key} className="flex items-center space-x-2 p-2 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100">
+                                <input
+                                  type="checkbox"
+                                  checked={editPermissionsDraft.includes(p.key)}
+                                  onChange={() => toggleEditPermission(p.key)}
+                                  className="rounded"
+                                />
+                                <span className="text-slate-700 text-xs font-medium">{p.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingPermissionsFor(null)}
+                              className="flex-1 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-lg font-bold text-xs cursor-pointer"
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              onClick={() => handleSaveMemberPermissions(member.id)}
+                              className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs cursor-pointer"
+                            >
+                              Enregistrer
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {(member.permissions || []).length === 0 ? (
+                            <span className="text-[11px] text-amber-600 italic">Aucune tâche assignée — ce compte ne peut rien faire pour l'instant.</span>
+                          ) : (
+                            PERMISSION_TAB_LABELS.filter(p => (member.permissions || []).includes(p.key)).map(p => (
+                              <span key={p.key} className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 rounded font-semibold text-[11px]">
+                                {p.label}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
