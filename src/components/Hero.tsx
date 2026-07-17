@@ -21,7 +21,7 @@ interface HeroProps {
   onSlideClick?: (slide: { productId?: string; linkUrl?: string }) => void;
 }
 
-const AUTO_ADVANCE_MS = 6000;
+const AUTO_ADVANCE_MS = 5000;
 
 export default function Hero({ onExploreClick, onWholesaleClick, onSlideClick }: HeroProps) {
   const { t } = useTranslation();
@@ -61,8 +61,8 @@ export default function Hero({ onExploreClick, onWholesaleClick, onSlideClick }:
   const goPrev = () => goTo((current - 1 + slides.length) % slides.length);
   const goNext = () => goTo((current + 1) % slides.length);
 
-  // Tant que le chargement n'est pas terminé, ou si aucune slide n'existe
-  // (catalogue vide côté admin), on affiche le contenu par défaut traduit
+  // Tant que le chargement n'est pas terminÃ©, ou si aucune slide n'existe
+  // (catalogue vide cÃ´tÃ© admin), on affiche le contenu par dÃ©faut traduit
   // pour ne jamais laisser la page d'accueil vide.
   if (!loaded || slides.length === 0) {
     return (
@@ -162,13 +162,13 @@ export default function Hero({ onExploreClick, onWholesaleClick, onSlideClick }:
             </div>
           </div>
 
-          {/* Navigation flèches (si plus d'une slide) */}
+          {/* Navigation flÃ¨ches (si plus d'une slide) */}
           {slides.length > 1 && (
             <>
               <button
                 onClick={goPrev}
                 className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white rounded-full shadow-md text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
-                title="Précédent"
+                title="PrÃ©cÃ©dent"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
