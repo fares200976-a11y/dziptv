@@ -82,7 +82,7 @@ const isStandardType = (t: string) => {
   ].includes(t);
 };
 
-// Commandes boutique pour lesquelles l'admin peut fournir des accÃ¨s IPTV
+// Commandes boutique pour lesquelles l'admin peut fournir des accès IPTV
 // (M3U, Xtream, lien de bouquets) : uniquement Dino / 8K / Golden OTT.
 const ADULT_TOGGLE_NAMES = ["dino", "8k", "golden"];
 const isIptvOrderWithAccess = (order: any) => {
@@ -90,20 +90,20 @@ const isIptvOrderWithAccess = (order: any) => {
     && ADULT_TOGGLE_NAMES.some(n => (order.productName || "").toLowerCase().includes(n));
 };
 
-// Sections accordables Ã  un membre de l'Ã©quipe (doit correspondre Ã 
-// ADMIN_PERMISSION_TABS cÃ´tÃ© serveur). "team" n'est jamais accordable.
+// Sections accordables à un membre de l'équipe (doit correspondre à
+// ADMIN_PERMISSION_TABS côté serveur). "team" n'est jamais accordable.
 const PERMISSION_TAB_LABELS: { key: string; label: string }[] = [
   { key: "emails", label: "Emails" },
   { key: "wholesalers", label: "Revendeurs" },
   { key: "requests", label: "Recharges" },
   { key: "orders", label: "Commandes" },
   { key: "products", label: "Catalogue Produits" },
-  { key: "tutorials", label: "Tutoriels VidÃ©o" },
+  { key: "tutorials", label: "Tutoriels Vidéo" },
   { key: "clients", label: "Abonnements Grossistes" },
   { key: "livreurs", label: "Livreurs & Suivi" },
   { key: "panels", label: "Demandes Panels" },
-  { key: "categories", label: "CatÃ©gories" },
-  { key: "slides", label: "BanniÃ¨res Accueil" }
+  { key: "categories", label: "Catégories" },
+  { key: "slides", label: "Bannières Accueil" }
 ];
 
 export default function AdminSimulator({
@@ -142,8 +142,8 @@ export default function AdminSimulator({
   const canAccess = (tab: string) => isOwner || permissions.includes(tab);
   const [activeTab, setActiveTab] = useState<"emails" | "wholesalers" | "requests" | "orders" | "products" | "tutorials" | "clients" | "livreurs" | "panels" | "categories" | "slides" | "team">("emails");
 
-  // Si le compte connectÃ© (membre d'Ã©quipe) n'a pas accÃ¨s Ã  l'onglet par
-  // dÃ©faut ("emails"), on bascule automatiquement sur la premiÃ¨re section autorisÃ©e.
+  // Si le compte connecté (membre d'équipe) n'a pas accès à l'onglet par
+  // défaut ("emails"), on bascule automatiquement sur la première section autorisée.
   useEffect(() => {
     if (!canAccess(activeTab)) {
       const firstAllowed = PERMISSION_TAB_LABELS.find(t => canAccess(t.key));
@@ -151,7 +151,7 @@ export default function AdminSimulator({
     }
   }, [isOwner, permissions]);
 
-  // Liens de gestion des bouquets (Dino / 8K / Golden OTT), affichÃ©s au revendeur aprÃ¨s activation IPTV
+  // Liens de gestion des bouquets (Dino / 8K / Golden OTT), affichés au revendeur après activation IPTV
   const [bouquetLinks, setBouquetLinks] = useState<{ dino: string; "8k": string; "golden ott": string }>({ dino: "", "8k": "", "golden ott": "" });
   const [bouquetLinksLoaded, setBouquetLinksLoaded] = useState(false);
   const [bouquetLinksSaving, setBouquetLinksSaving] = useState(false);
@@ -191,7 +191,7 @@ export default function AdminSimulator({
     }
   };
 
-  // Saisie des accÃ¨s IPTV (M3U, Xtream, lien bouquets) pour une commande boutique
+  // Saisie des accès IPTV (M3U, Xtream, lien bouquets) pour une commande boutique
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [orderCredForm, setOrderCredForm] = useState({
     m3uUrl: "",
@@ -229,15 +229,15 @@ export default function AdminSimulator({
           bouquetLink: orderCredForm.bouquetLink
         }
       });
-      setSuccessMessage("AccÃ¨s IPTV enregistrÃ©s et visibles par le client.");
+      setSuccessMessage("Accès IPTV enregistrés et visibles par le client.");
       setEditingOrderId(null);
       refreshAllData();
     } catch (err: any) {
-      setErrorMessage(err.message || "Ã‰chec de l'enregistrement des accÃ¨s.");
+      setErrorMessage(err.message || "Échec de l'enregistrement des accès.");
     }
   };
 
-  // --- BanniÃ¨res / slides du carrousel d'accueil ---
+  // --- Bannières / slides du carrousel d'accueil ---
   const [heroSlides, setHeroSlides] = useState<any[]>([]);
   const [showAddSlide, setShowAddSlide] = useState(false);
   const [editingSlide, setEditingSlide] = useState<any | null>(null);
@@ -278,13 +278,13 @@ export default function AdminSimulator({
         body: JSON.stringify(slideForm)
       });
       if (res.ok) {
-        setSuccessMessage(`Slide "${slideForm.title}" ajoutÃ©e avec succÃ¨s !`);
+        setSuccessMessage(`Slide "${slideForm.title}" ajoutée avec succès !`);
         resetSlideForm();
         setShowAddSlide(false);
         fetchHeroSlides();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Ã‰chec de l'ajout de la slide.");
+        setErrorMessage(data.error || "Échec de l'ajout de la slide.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -317,13 +317,13 @@ export default function AdminSimulator({
         body: JSON.stringify(slideForm)
       });
       if (res.ok) {
-        setSuccessMessage("Slide mise Ã  jour avec succÃ¨s !");
+        setSuccessMessage("Slide mise à jour avec succès !");
         setEditingSlide(null);
         resetSlideForm();
         fetchHeroSlides();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Ã‰chec de la modification.");
+        setErrorMessage(data.error || "Échec de la modification.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -337,17 +337,17 @@ export default function AdminSimulator({
     try {
       const res = await fetch(`/api/admin/hero-slides/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setSuccessMessage("Slide supprimÃ©e.");
+        setSuccessMessage("Slide supprimée.");
         fetchHeroSlides();
       } else {
-        setErrorMessage("Ã‰chec de la suppression.");
+        setErrorMessage("Échec de la suppression.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
     }
   };
 
-  // --- Ã‰quipe : comptes admin secondaires ---
+  // --- Équipe : comptes admin secondaires ---
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [showAddTeamMember, setShowAddTeamMember] = useState(false);
   const [teamForm, setTeamForm] = useState({
@@ -384,12 +384,12 @@ export default function AdminSimulator({
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccessMessage(`Compte crÃ©Ã© pour "${teamForm.name}" â€” communiquez-lui son nom d'utilisateur et mot de passe.`);
+        setSuccessMessage(`Compte créé pour "${teamForm.name}" — communiquez-lui son nom d'utilisateur et mot de passe.`);
         setTeamForm({ name: "", username: "", password: "", permissions: [], alertEmail: "", alertWhatsappPhone: "", alertWhatsappApiKey: "", alertTelegramChatId: "" });
         setShowAddTeamMember(false);
         fetchTeamMembers();
       } else {
-        setErrorMessage(data.error || "Ã‰chec de la crÃ©ation du compte.");
+        setErrorMessage(data.error || "Échec de la création du compte.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -434,11 +434,11 @@ export default function AdminSimulator({
         body: JSON.stringify({ permissions: editPermissionsDraft, ...editAlertDraft })
       });
       if (res.ok) {
-        setSuccessMessage("TÃ¢ches et alertes mises Ã  jour.");
+        setSuccessMessage("Tâches et alertes mises à jour.");
         setEditingPermissionsFor(null);
         fetchTeamMembers();
       } else {
-        setErrorMessage("Ã‰chec de la mise Ã  jour des tÃ¢ches.");
+        setErrorMessage("Échec de la mise à jour des tâches.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -446,16 +446,16 @@ export default function AdminSimulator({
   };
 
   const handleDeleteTeamMember = async (id: string, name: string) => {
-    if (!confirm(`Retirer l'accÃ¨s de "${name}" ?`)) return;
+    if (!confirm(`Retirer l'accès de "${name}" ?`)) return;
     setErrorMessage("");
     setSuccessMessage("");
     try {
       const res = await fetch(`/api/admin/team/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setSuccessMessage("AccÃ¨s retirÃ©.");
+        setSuccessMessage("Accès retiré.");
         fetchTeamMembers();
       } else {
-        setErrorMessage("Ã‰chec de la suppression.");
+        setErrorMessage("Échec de la suppression.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -510,7 +510,7 @@ export default function AdminSimulator({
         body: JSON.stringify(livreurForm)
       });
       if (res.ok) {
-        setSuccessMessage(`Livreur "${livreurForm.name}" ajoutÃ© avec succÃ¨s !`);
+        setSuccessMessage(`Livreur "${livreurForm.name}" ajouté avec succès !`);
         setLivreurForm({ name: "", phone: "", wilaya: "", status: "active" });
         setShowAddLivreur(false);
         fetchLivreurs();
@@ -535,12 +535,12 @@ export default function AdminSimulator({
         body: JSON.stringify(editingLivreur)
       });
       if (res.ok) {
-        setSuccessMessage("Informations livreur mises Ã  jour !");
+        setSuccessMessage("Informations livreur mises à jour !");
         setEditingLivreur(null);
         fetchLivreurs();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Erreur de mise Ã  jour.");
+        setErrorMessage(data.error || "Erreur de mise à jour.");
       }
     } catch (e: any) {
       setErrorMessage(e.message);
@@ -554,7 +554,7 @@ export default function AdminSimulator({
     try {
       const res = await fetch(`/api/admin/livreurs/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setSuccessMessage("Livreur supprimÃ© de la base.");
+        setSuccessMessage("Livreur supprimé de la base.");
         fetchLivreurs();
       } else {
         setErrorMessage("Impossible de supprimer le livreur.");
@@ -574,11 +574,11 @@ export default function AdminSimulator({
         body: JSON.stringify({ assignedLivreurId, deliveryStatus })
       });
       if (res.ok) {
-        setSuccessMessage("Suivi de livraison mis Ã  jour avec succÃ¨s !");
+        setSuccessMessage("Suivi de livraison mis à jour avec succès !");
         refreshAllData();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Erreur de mise Ã  jour livraison.");
+        setErrorMessage(data.error || "Erreur de mise à jour livraison.");
       }
     } catch (e: any) {
       setErrorMessage(e.message);
@@ -621,11 +621,11 @@ export default function AdminSimulator({
         }
       };
       await onUpdateClient(editingClient.id, payload);
-      setSuccessMessage(`Abonnement de "${clientForm.clientName}" mis Ã  jour avec succÃ¨s !`);
+      setSuccessMessage(`Abonnement de "${clientForm.clientName}" mis à jour avec succès !`);
       setEditingClient(null);
       refreshAllData();
     } catch (err: any) {
-      setErrorMessage("Ã‰chec de la modification : " + err.message);
+      setErrorMessage("Échec de la modification : " + err.message);
     }
   };
 
@@ -660,7 +660,7 @@ export default function AdminSimulator({
     categoryId: ""
   });
 
-  // Ajout rapide d'une catÃ©gorie directement depuis le formulaire produit
+  // Ajout rapide d'une catégorie directement depuis le formulaire produit
   // (sans changer d'onglet), pour le formulaire "Ajouter un produit"
   const [quickAddCatOpenNew, setQuickAddCatOpenNew] = useState(false);
   const [quickAddCatNameNew, setQuickAddCatNameNew] = useState("");
@@ -722,9 +722,9 @@ export default function AdminSimulator({
   };
 
   const handleResetClick = async () => {
-    if (confirm("ÃŠtes-vous sÃ»r de vouloir rÃ©initialiser la base de donnÃ©es ? Toutes vos donnÃ©es personnalisÃ©es seront effacÃ©es.")) {
+    if (confirm("Êtes-vous sûr de vouloir réinitialiser la base de données ? Toutes vos données personnalisées seront effacées.")) {
       await onResetDatabase();
-      setResetMessage("Base de donnÃ©es rÃ©initialisÃ©e aux valeurs d'origine !");
+      setResetMessage("Base de données réinitialisée aux valeurs d'origine !");
       setTimeout(() => setResetMessage(""), 4000);
     }
   };
@@ -741,7 +741,7 @@ export default function AdminSimulator({
         body: JSON.stringify(wholesalerForm)
       });
       if (res.ok) {
-        setSuccessMessage(`Compte revendeur "${wholesalerForm.businessName}" crÃ©Ã© avec succÃ¨s !`);
+        setSuccessMessage(`Compte revendeur "${wholesalerForm.businessName}" créé avec succès !`);
         setWholesalerForm({
           username: "",
           password: "",
@@ -754,10 +754,10 @@ export default function AdminSimulator({
         refreshAllData();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Une erreur est survenue lors de la crÃ©ation.");
+        setErrorMessage(data.error || "Une erreur est survenue lors de la création.");
       }
     } catch (err: any) {
-      setErrorMessage("Erreur rÃ©seau: " + err.message);
+      setErrorMessage("Erreur réseau: " + err.message);
     }
   };
 
@@ -782,15 +782,15 @@ export default function AdminSimulator({
         })
       });
       if (res.ok) {
-        setSuccessMessage(`Compte revendeur "${editingWholesaler.businessName}" mis Ã  jour avec succÃ¨s !`);
+        setSuccessMessage(`Compte revendeur "${editingWholesaler.businessName}" mis à jour avec succès !`);
         setEditingWholesaler(null);
         refreshAllData();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Une erreur est survenue lors de la mise Ã  jour.");
+        setErrorMessage(data.error || "Une erreur est survenue lors de la mise à jour.");
       }
     } catch (err: any) {
-      setErrorMessage("Erreur rÃ©seau: " + err.message);
+      setErrorMessage("Erreur réseau: " + err.message);
     }
   };
 
@@ -836,7 +836,7 @@ export default function AdminSimulator({
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        setSuccessMessage(`Produit "${productForm.name}" ajoutÃ© avec succÃ¨s !`);
+        setSuccessMessage(`Produit "${productForm.name}" ajouté avec succès !`);
         setProductForm({
           name: "",
           type: "code iptv",
@@ -852,7 +852,7 @@ export default function AdminSimulator({
         refreshAllData();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Ã‰chec de l'ajout.");
+        setErrorMessage(data.error || "Échec de l'ajout.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -877,12 +877,12 @@ export default function AdminSimulator({
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        setSuccessMessage("Produit mis Ã  jour avec succÃ¨s !");
+        setSuccessMessage("Produit mis à jour avec succès !");
         setEditingProduct(null);
         refreshAllData();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Ã‰chec de la modification.");
+        setErrorMessage(data.error || "Échec de la modification.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -898,7 +898,7 @@ export default function AdminSimulator({
         method: "DELETE"
       });
       if (res.ok) {
-        setSuccessMessage("Produit supprimÃ© avec succÃ¨s.");
+        setSuccessMessage("Produit supprimé avec succès.");
         refreshAllData();
       } else {
         setErrorMessage("Impossible de supprimer le produit.");
@@ -920,7 +920,7 @@ export default function AdminSimulator({
         body: JSON.stringify(tutorialForm)
       });
       if (res.ok) {
-        setSuccessMessage(`Tutoriel "${tutorialForm.title}" ajoutÃ© avec succÃ¨s !`);
+        setSuccessMessage(`Tutoriel "${tutorialForm.title}" ajouté avec succès !`);
         setTutorialForm({
           title: "",
           url: "",
@@ -932,7 +932,7 @@ export default function AdminSimulator({
         refreshAllData();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Ã‰chec de l'ajout.");
+        setErrorMessage(data.error || "Échec de l'ajout.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -951,12 +951,12 @@ export default function AdminSimulator({
         body: JSON.stringify(editingTutorial)
       });
       if (res.ok) {
-        setSuccessMessage("Tutoriel mis Ã  jour avec succÃ¨s !");
+        setSuccessMessage("Tutoriel mis à jour avec succès !");
         setEditingTutorial(null);
         refreshAllData();
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || "Ã‰chec de la modification.");
+        setErrorMessage(data.error || "Échec de la modification.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -972,10 +972,10 @@ export default function AdminSimulator({
         method: "DELETE"
       });
       if (res.ok) {
-        setSuccessMessage("Tutoriel supprimÃ©.");
+        setSuccessMessage("Tutoriel supprimé.");
         refreshAllData();
       } else {
-        setErrorMessage("Ã‰chec de la suppression.");
+        setErrorMessage("Échec de la suppression.");
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -990,8 +990,8 @@ export default function AdminSimulator({
           <span className="text-xs bg-amber-500/10 text-amber-700 border border-amber-500/30 px-2.5 py-1 rounded font-bold uppercase tracking-wider">
             Simulateur d'Administration Client/Serveur
           </span>
-          <h2 className="font-display text-2xl font-bold text-slate-900 mt-2">KURTAL IPTV Controller Hub âš™ï¸</h2>
-          <p className="text-slate-500 text-sm mt-1">Supervisez l'ensemble du site de vente en temps rÃ©el, vÃ©rifiez les emails reÃ§us et validez les comptes.</p>
+          <h2 className="font-display text-2xl font-bold text-slate-900 mt-2">KURTAL IPTV Controller Hub ⚙️</h2>
+          <p className="text-slate-500 text-sm mt-1">Supervisez l'ensemble du site de vente en temps réel, vérifiez les emails reçus et validez les comptes.</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1000,7 +1000,7 @@ export default function AdminSimulator({
           <button
             onClick={handleRefreshClick}
             className="p-2.5 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 transition-all cursor-pointer"
-            title="RafraÃ®chir les donnÃ©es"
+            title="Rafraîchir les données"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin text-amber-600" : ""}`} />
           </button>
@@ -1008,7 +1008,7 @@ export default function AdminSimulator({
           <button
             onClick={handleResetClick}
             className="px-3.5 py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-600 border border-red-500/20 rounded-xl font-bold text-sm transition-all cursor-pointer"
-            title="RÃ©initialiser toutes les donnÃ©es"
+            title="Réinitialiser toutes les données"
           >
             {t("admin.reset_db")}
           </button>
@@ -1050,15 +1050,15 @@ export default function AdminSimulator({
           <span className="text-2xl font-black font-display text-amber-600 mt-1 block">
             {stats.totalRevenueDA.toLocaleString()} DA
           </span>
-          <span className="text-[11px] text-slate-400 mt-1 block">DÃ©tail + Wholesale accumulÃ©s</span>
+          <span className="text-[11px] text-slate-400 mt-1 block">Détail + Wholesale accumulés</span>
         </div>
 
         <div className="glass-card p-5 rounded-2xl border border-slate-200">
-          <span className="text-xs text-slate-400 uppercase tracking-widest font-semibold block">Ventes Boutique DÃ©tail</span>
+          <span className="text-xs text-slate-400 uppercase tracking-widest font-semibold block">Ventes Boutique Détail</span>
           <span className="text-2xl font-black font-display text-blue-600 mt-1 block">
             {stats.totalRetailSales.toLocaleString()} DA
           </span>
-          <span className="text-[11px] text-blue-500/70 mt-1 block">Commandes validÃ©es</span>
+          <span className="text-[11px] text-blue-500/70 mt-1 block">Commandes validées</span>
         </div>
 
         <div className="glass-card p-5 rounded-2xl border border-slate-200">
@@ -1066,7 +1066,7 @@ export default function AdminSimulator({
           <span className="text-2xl font-black font-display text-indigo-600 mt-1 block">
             {stats.totalWholesaleSales.toLocaleString()} DA
           </span>
-          <span className="text-[11px] text-indigo-500/70 mt-1 block">Activations de crÃ©dits</span>
+          <span className="text-[11px] text-indigo-500/70 mt-1 block">Activations de crédits</span>
         </div>
 
         <div className="glass-card p-5 rounded-2xl border border-slate-200">
@@ -1074,7 +1074,7 @@ export default function AdminSimulator({
           <span className="text-2xl font-black font-display text-emerald-600 mt-1 block">
             {stats.activeWholesalers}
           </span>
-          <span className="text-[11px] text-emerald-500/70 mt-1 block">Commerces actifs approuvÃ©s</span>
+          <span className="text-[11px] text-emerald-500/70 mt-1 block">Commerces actifs approuvés</span>
         </div>
       </div>
 
@@ -1161,7 +1161,7 @@ export default function AdminSimulator({
             }`}
           >
             <Video className="h-4 w-4" />
-            <span>Tutoriels VidÃ©o ({tutorials.length})</span>
+            <span>Tutoriels Vidéo ({tutorials.length})</span>
           </button>
           )}
 
@@ -1221,7 +1221,7 @@ export default function AdminSimulator({
             }`}
           >
             <FolderOpen className="h-4 w-4 text-amber-600" />
-            <span>CatÃ©gories ({catalogCategories.length})</span>
+            <span>Catégories ({catalogCategories.length})</span>
           </button>
           )}
 
@@ -1236,7 +1236,7 @@ export default function AdminSimulator({
             }`}
           >
             <ImageIcon className="h-4 w-4 text-amber-600" />
-            <span>BanniÃ¨res Accueil ({heroSlides.length})</span>
+            <span>Bannières Accueil ({heroSlides.length})</span>
           </button>
           )}
 
@@ -1251,7 +1251,7 @@ export default function AdminSimulator({
             }`}
           >
             <Users className="h-4 w-4 text-amber-600" />
-            <span>Ã‰quipe ({teamMembers.length})</span>
+            <span>Équipe ({teamMembers.length})</span>
           </button>
           )}
         </div>
@@ -1265,7 +1265,7 @@ export default function AdminSimulator({
               <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-sm text-amber-700 leading-relaxed flex items-center space-x-2">
                 <Info className="h-4 w-4 text-amber-600 shrink-0" />
                 <span>
-                  ðŸ“¢ <strong>Intercepteur d'Alertes :</strong> ReÃ§oit toutes les notifications envoyÃ©es Ã  <strong>fares200976@gmail.com</strong> et les alertes WhatsApp sur le <strong>00213667719761</strong>.
+                  📢 <strong>Intercepteur d'Alertes :</strong> Reçoit toutes les notifications envoyées à <strong>fares200976@gmail.com</strong> et les alertes WhatsApp sur le <strong>00213667719761</strong>.
                 </span>
               </div>
 
@@ -1316,7 +1316,7 @@ export default function AdminSimulator({
               ) : (
                 <div className="p-8 text-center text-slate-400">
                   <Mail className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-sm">Aucune notification e-mail reÃ§ue pour le moment.</p>
+                  <p className="text-sm">Aucune notification e-mail reçue pour le moment.</p>
                 </div>
               )}
             </div>
@@ -1338,7 +1338,7 @@ export default function AdminSimulator({
 
               {showAddWholesaler && (
                 <form onSubmit={handleAddWholesalerSubmit} className="p-5 bg-white/60 rounded-2xl border border-slate-200 space-y-4 text-sm animate-in slide-in-from-top-4 duration-200">
-                  <h4 className="text-sm font-bold text-blue-600 uppercase">CrÃ©er un Compte Revendeur Directement</h4>
+                  <h4 className="text-sm font-bold text-blue-600 uppercase">Créer un Compte Revendeur Directement</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-slate-500 mb-1.5">Nom du Commerce / Boutique</label>
@@ -1367,7 +1367,7 @@ export default function AdminSimulator({
                       <input
                         type="password"
                         required
-                        placeholder="Min 6 caractÃ¨res"
+                        placeholder="Min 6 caractères"
                         value={wholesalerForm.password}
                         onChange={e => setWholesalerForm({ ...wholesalerForm, password: e.target.value })}
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
@@ -1377,7 +1377,7 @@ export default function AdminSimulator({
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-slate-500 mb-1.5">TÃ©lÃ©phone WhatsApp</label>
+                      <label className="block text-slate-500 mb-1.5">Téléphone WhatsApp</label>
                       <input
                         type="text"
                         required
@@ -1399,7 +1399,7 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-500 mb-1.5">CrÃ©dit Initial (DA)</label>
+                      <label className="block text-slate-500 mb-1.5">Crédit Initial (DA)</label>
                       <input
                         type="number"
                         required
@@ -1425,9 +1425,9 @@ export default function AdminSimulator({
                     <tr className="bg-white/40 text-slate-500 border-b border-slate-200">
                       <th className="p-3 font-semibold">Boutique</th>
                       <th className="p-3 font-semibold">User / Email</th>
-                      <th className="p-3 font-semibold">TÃ©lÃ©phone</th>
-                      <th className="p-3 font-semibold">CrÃ©ation</th>
-                      <th className="p-3 font-semibold">Solde CrÃ©dit</th>
+                      <th className="p-3 font-semibold">Téléphone</th>
+                      <th className="p-3 font-semibold">Création</th>
+                      <th className="p-3 font-semibold">Solde Crédit</th>
                       <th className="p-3 font-semibold">Statut</th>
                       <th className="p-3 font-semibold text-right">Actions de simulation</th>
                     </tr>
@@ -1447,7 +1447,7 @@ export default function AdminSimulator({
                         <td className="p-3">
                           {wholesaler.status === "approved" && (
                             <span className="px-2 py-0.5 bg-green-500/10 text-green-600 border border-green-500/20 rounded font-semibold text-[11px]">
-                              ApprouvÃ©
+                              Approuvé
                             </span>
                           )}
                           {wholesaler.status === "pending" && (
@@ -1485,7 +1485,7 @@ export default function AdminSimulator({
                                     ? "bg-red-500 text-white shadow-md font-extrabold"
                                     : "text-slate-500 hover:text-slate-900"
                                 }`}
-                                title="DÃ©sactiver / Suspendre le compte"
+                                title="Désactiver / Suspendre le compte"
                               >
                                 Inactif
                               </button>
@@ -1530,7 +1530,7 @@ export default function AdminSimulator({
                               title="Modifier les identifiants et mot de passe"
                             >
                               <Edit2 className="h-2.5 w-2.5" />
-                              <span>GÃ©rer</span>
+                              <span>Gérer</span>
                             </button>
                           </div>
                         </td>
@@ -1547,7 +1547,7 @@ export default function AdminSimulator({
                     <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                       <h3 className="font-display font-bold text-base text-slate-900 flex items-center gap-2">
                         <Users className="h-5 w-5 text-amber-500" />
-                        <span>GÃ©rer le Revendeur : {editingWholesaler.businessName}</span>
+                        <span>Gérer le Revendeur : {editingWholesaler.businessName}</span>
                       </h3>
                       <button
                         type="button"
@@ -1595,7 +1595,7 @@ export default function AdminSimulator({
                           />
                         </div>
                         <div>
-                          <label className="block text-slate-500 mb-1.5 font-bold font-sans">TÃ©lÃ©phone WhatsApp</label>
+                          <label className="block text-slate-500 mb-1.5 font-bold font-sans">Téléphone WhatsApp</label>
                           <input
                             type="text"
                             required
@@ -1618,7 +1618,7 @@ export default function AdminSimulator({
                           />
                         </div>
                         <div>
-                          <label className="block text-slate-500 mb-1.5 font-bold font-sans">Solde de CrÃ©dit (DA)</label>
+                          <label className="block text-slate-500 mb-1.5 font-bold font-sans">Solde de Crédit (DA)</label>
                           <input
                             type="number"
                             required
@@ -1636,7 +1636,7 @@ export default function AdminSimulator({
                           onChange={e => setEditingWholesaler({ ...editingWholesaler, status: e.target.value as any })}
                           className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
                         >
-                          <option value="approved">ApprouvÃ© (Actif)</option>
+                          <option value="approved">Approuvé (Actif)</option>
                           <option value="pending">En attente</option>
                           <option value="suspended">Suspendu (Inactif)</option>
                         </select>
@@ -1677,10 +1677,10 @@ export default function AdminSimulator({
                           <span className="text-xs text-slate-400">{new Date(req.createdAt).toLocaleString("fr-FR")}</span>
                         </div>
                         <p className="text-slate-600 mt-1">
-                          Montant demandÃ© : <strong className="text-amber-600 text-base font-bold font-display">{req.amountDA.toLocaleString()} DA</strong>
+                          Montant demandé : <strong className="text-amber-600 text-base font-bold font-display">{req.amountDA.toLocaleString()} DA</strong>
                         </p>
                         <p className="text-slate-500 mt-1">
-                          MÃ©thode : <span className="uppercase text-slate-900 font-semibold">{req.paymentMethod}</span> | ReÃ§u : <span className="font-mono text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded">{req.receiptReference}</span>
+                          Méthode : <span className="uppercase text-slate-900 font-semibold">{req.paymentMethod}</span> | Reçu : <span className="font-mono text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded">{req.receiptReference}</span>
                         </p>
                       </div>
 
@@ -1691,7 +1691,7 @@ export default function AdminSimulator({
                                onClick={() => onProcessCreditRequest(req.id, "approve")}
                               className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded font-bold text-xs cursor-pointer"
                             >
-                              Valider & CrÃ©diter
+                              Valider & Créditer
                             </button>
                             <button
                               onClick={() => onProcessCreditRequest(req.id, "reject")}
@@ -1706,7 +1706,7 @@ export default function AdminSimulator({
                               ? "bg-green-500/10 text-green-600 border border-green-500/20" 
                               : "bg-red-500/10 text-red-600 border border-red-500/20"
                           }`}>
-                            {req.status === "approved" ? "ApprouvÃ©e" : "RejetÃ©e"}
+                            {req.status === "approved" ? "Approuvée" : "Rejetée"}
                           </span>
                         )}
                       </div>
@@ -1735,13 +1735,13 @@ export default function AdminSimulator({
                           <span className="text-xs text-slate-400">{new Date(order.createdAt).toLocaleString("fr-FR")}</span>
                         </div>
                         <p className="text-slate-600">
-                          Produit : <strong className="text-slate-900">{order.productName}</strong> ({order.productType === "iptv" ? "IPTV" : "BoÃ®tier"})
+                          Produit : <strong className="text-slate-900">{order.productName}</strong> ({order.productType === "iptv" ? "IPTV" : "Boîtier"})
                         </p>
                         <p className="text-amber-600 font-bold font-display text-sm">
-                          Tarif payÃ© : {order.priceDA.toLocaleString()} DA
+                          Tarif payé : {order.priceDA.toLocaleString()} DA
                         </p>
                         <p className="text-slate-500">
-                          TÃ©l : <span className="font-mono text-slate-700">{order.customerPhone}</span> {order.customerEmail && `| Email: ${order.customerEmail}`}
+                          Tél : <span className="font-mono text-slate-700">{order.customerPhone}</span> {order.customerEmail && `| Email: ${order.customerEmail}`}
                         </p>
 
                         {/* RENDER NEW FIELDS FOR TV MODEL, APP INSTALLED, ANDROID STATUS, DOWNLOADER CODE */}
@@ -1749,13 +1749,13 @@ export default function AdminSimulator({
                           <div className="p-3 bg-blue-500/5 rounded-lg border border-blue-500/10 text-sm mt-2 grid grid-cols-2 gap-2">
                             {order.tvModel && (
                               <div>
-                                <span className="text-xs text-slate-500 block font-semibold">ModÃ¨le TV :</span>
+                                <span className="text-xs text-slate-500 block font-semibold">Modèle TV :</span>
                                 <span className="text-slate-700 font-medium">{order.tvModel}</span>
                               </div>
                             )}
                             {order.installedApp && (
                               <div>
-                                <span className="text-xs text-slate-500 block font-semibold">Application installÃ©e :</span>
+                                <span className="text-xs text-slate-500 block font-semibold">Application installée :</span>
                                 <span className="text-slate-700 font-medium">{order.installedApp}</span>
                               </div>
                             )}
@@ -1777,10 +1777,10 @@ export default function AdminSimulator({
                         {/* Livraison : wilaya, adresse, mode, prix (produits physiques) */}
                         {order.shippingWilaya && (
                           <div className="p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/15 text-sm mt-2 space-y-1.5">
-                            <span className="text-xs text-emerald-600 font-bold uppercase tracking-wider block">ðŸ“¦ Livraison</span>
+                            <span className="text-xs text-emerald-600 font-bold uppercase tracking-wider block">📦 Livraison</span>
                             <p className="text-slate-700">
-                              <strong className="text-slate-900">{order.shippingWilaya}</strong> â€” {order.shippingType === "domicile" ? "Ã€ domicile" : "Au bureau / agence"}
-                              {order.shippingDelay && <span className="text-slate-500"> (dÃ©lai estimÃ© {order.shippingDelay})</span>}
+                              <strong className="text-slate-900">{order.shippingWilaya}</strong> — {order.shippingType === "domicile" ? "À domicile" : "Au bureau / agence"}
+                              {order.shippingDelay && <span className="text-slate-500"> (délai estimé {order.shippingDelay})</span>}
                             </p>
                             {order.shippingAddress && (
                               <p className="text-slate-600">Adresse : {order.shippingAddress}</p>
@@ -1791,11 +1791,11 @@ export default function AdminSimulator({
                           </div>
                         )}
 
-                        {/* AccÃ¨s IPTV (Dino / 8K / Golden OTT) : Ã  fournir par l'admin/l'Ã©quipe */}
+                        {/* Accès IPTV (Dino / 8K / Golden OTT) : à fournir par l'admin/l'équipe */}
                         {isIptvOrderWithAccess(order) && (
                           <div className="p-3 bg-indigo-500/5 rounded-lg border border-indigo-500/15 text-sm mt-2 space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs text-indigo-600 font-bold uppercase tracking-wider">ðŸ”‘ AccÃ¨s IPTV Client</span>
+                              <span className="text-xs text-indigo-600 font-bold uppercase tracking-wider">🔑 Accès IPTV Client</span>
                               {order.adultContent !== undefined && (
                                 <span className={`px-2 py-0.5 rounded font-bold text-[11px] ${order.adultContent ? "bg-red-500/10 text-red-600 border border-red-500/20" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
                                   {order.adultContent ? "Adulte" : "Sans Adulte"}
@@ -1862,14 +1862,14 @@ export default function AdminSimulator({
                             ) : (
                               <div className="flex items-center justify-between">
                                 <span className="text-slate-500 text-xs">
-                                  {order.credentials?.m3uUrl ? "AccÃ¨s dÃ©jÃ  fournis â€” le client peut les voir via le suivi de commande." : "Aucun accÃ¨s fourni pour le moment."}
+                                  {order.credentials?.m3uUrl ? "Accès déjà fournis — le client peut les voir via le suivi de commande." : "Aucun accès fourni pour le moment."}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => startEditOrderCredentials(order)}
                                   className="px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 border border-indigo-500/20 rounded-lg font-bold text-xs cursor-pointer shrink-0 ml-2"
                                 >
-                                  {order.credentials?.m3uUrl ? "Modifier les AccÃ¨s" : "Fournir les AccÃ¨s"}
+                                  {order.credentials?.m3uUrl ? "Modifier les Accès" : "Fournir les Accès"}
                                 </button>
                               </div>
                             )}
@@ -1878,7 +1878,7 @@ export default function AdminSimulator({
 
                         <p className="text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-200 mt-1.5">
                           Mode de paiement : <span className="uppercase text-slate-700 font-semibold">{order.paymentMethod}</span> <br />
-                          Preuve : {order.paymentDetails || "Aucune information supplÃ©mentaire."}
+                          Preuve : {order.paymentDetails || "Aucune information supplémentaire."}
                         </p>
 
                         {/* Delivery Assignment and Tracking Section */}
@@ -1892,7 +1892,7 @@ export default function AdminSimulator({
                               }}
                               className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm text-slate-700 focus:border-amber-500 cursor-pointer"
                             >
-                              <option value="">Non assignÃ© (Attente)</option>
+                              <option value="">Non assigné (Attente)</option>
                               {livreurs.filter(l => l.status === "active").map(l => (
                                 <option key={l.id} value={l.id}>{l.name} ({l.wilaya})</option>
                               ))}
@@ -1907,11 +1907,11 @@ export default function AdminSimulator({
                               }}
                               className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm text-slate-700 focus:border-amber-500 cursor-pointer"
                             >
-                              <option value="pending">â³ En attente de traitement</option>
-                              <option value="preparing">ðŸ“¦ En prÃ©paration (Emballage)</option>
-                              <option value="shipped">ðŸšš ExpÃ©diÃ©e / En cours de route</option>
-                              <option value="delivered">âœ… LivrÃ©e & EncaissÃ©e</option>
-                              <option value="returned">âŒ RetournÃ©e au dÃ©pÃ´t</option>
+                              <option value="pending">⏳ En attente de traitement</option>
+                              <option value="preparing">📦 En préparation (Emballage)</option>
+                              <option value="shipped">🚚 Expédiée / En cours de route</option>
+                              <option value="delivered">✅ Livrée & Encaissée</option>
+                              <option value="returned">❌ Retournée au dépôt</option>
                             </select>
                           </div>
                         </div>
@@ -1925,7 +1925,7 @@ export default function AdminSimulator({
                             ? "bg-red-500/10 text-red-600 border border-red-500/20"
                             : "bg-amber-500/10 text-amber-600 border border-amber-500/20 animate-pulse"
                         }`}>
-                          {order.status === "pending" ? "En attente de livraison" : order.status === "completed" ? "LivrÃ©e & ActivÃ©e" : "AnnulÃ©e"}
+                          {order.status === "pending" ? "En attente de livraison" : order.status === "completed" ? "Livrée & Activée" : "Annulée"}
                         </span>
 
                         {order.status === "pending" && (
@@ -1948,16 +1948,16 @@ export default function AdminSimulator({
                         {isOwner && onDeleteOrder && (
                           <button
                             onClick={async () => {
-                              if (!confirm(`Supprimer dÃ©finitivement la commande de ${order.customerName} (${order.productName}) ? Cette action est irrÃ©versible.`)) {
+                              if (!confirm(`Supprimer définitivement la commande de ${order.customerName} (${order.productName}) ? Cette action est irréversible.`)) {
                                 return;
                               }
                               setErrorMessage("");
                               setSuccessMessage("");
                               try {
                                 await onDeleteOrder(order.id);
-                                setSuccessMessage("Commande supprimÃ©e avec succÃ¨s.");
+                                setSuccessMessage("Commande supprimée avec succès.");
                               } catch (err: any) {
-                                setErrorMessage(err.message || "Ã‰chec de la suppression de la commande.");
+                                setErrorMessage(err.message || "Échec de la suppression de la commande.");
                               }
                             }}
                             title="Supprimer cette commande"
@@ -1974,7 +1974,7 @@ export default function AdminSimulator({
               ) : (
                 <div className="p-8 text-center text-slate-400">
                   <FileText className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-sm">Aucune commande dÃ©tail enregistrÃ©e.</p>
+                  <p className="text-sm">Aucune commande détail enregistrée.</p>
                 </div>
               )}
             </div>
@@ -1984,7 +1984,7 @@ export default function AdminSimulator({
           {activeTab === "products" && (
             <div className="space-y-6 text-sm">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Catalogue des IPTV & MatÃ©riel Android</h3>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Catalogue des IPTV & Matériel Android</h3>
                 <button
                   onClick={() => {
                     setShowAddProduct(!showAddProduct);
@@ -2004,7 +2004,7 @@ export default function AdminSimulator({
                   <span>Liens de Gestion des Bouquets (Dino / 8K / Golden OTT)</span>
                 </h4>
                 <p className="text-slate-400 text-[11px]">
-                  Ces liens sont transmis automatiquement au revendeur aprÃ¨s chaque activation IPTV, pour qu'il configure les chaÃ®nes/bouquets de son client.
+                  Ces liens sont transmis automatiquement au revendeur après chaque activation IPTV, pour qu'il configure les chaînes/bouquets de son client.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
@@ -2048,7 +2048,7 @@ export default function AdminSimulator({
                     {bouquetLinksSaving ? "Enregistrement..." : "Enregistrer les liens"}
                   </button>
                   {bouquetLinksSaved && (
-                    <span className="text-emerald-600 text-xs font-semibold">âœ“ EnregistrÃ©</span>
+                    <span className="text-emerald-600 text-xs font-semibold">✓ Enregistré</span>
                   )}
                 </div>
               </div>
@@ -2086,10 +2086,10 @@ export default function AdminSimulator({
                         >
                           <option value="code iptv">Code IPTV</option>
                           <option value="abonnement iptv">Abonnement IPTV</option>
-                          <option value="televiseur">TÃ©lÃ©viseur</option>
-                          <option value="boitier android">BoÃ®tier Android</option>
+                          <option value="televiseur">Téléviseur</option>
+                          <option value="boitier android">Boîtier Android</option>
                           <option value="application">Application</option>
-                          <option value="demodulateur">DÃ©modulateur</option>
+                          <option value="demodulateur">Démodulateur</option>
                           <option value="code sat">Code Sat</option>
                           <option value="recharge adsl">Recharge ADSL / Fibre</option>
                           <option value="accessoire">Accessoire</option>
@@ -2097,7 +2097,7 @@ export default function AdminSimulator({
                         </select>
                         <button
                           type="button"
-                          title="Saisir un type personnalisÃ©"
+                          title="Saisir un type personnalisé"
                           onClick={() => setProductForm({ ...productForm, type: "" })}
                           className="px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-slate-900 font-bold cursor-pointer"
                         >
@@ -2108,7 +2108,7 @@ export default function AdminSimulator({
                         <div className="mt-2 animate-in fade-in duration-200">
                           <input
                             type="text"
-                            placeholder="Saisissez un type de produit personnalisÃ©..."
+                            placeholder="Saisissez un type de produit personnalisé..."
                             value={productForm.type}
                             onChange={e => setProductForm({ ...productForm, type: e.target.value })}
                             className="w-full bg-white border border-indigo-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
@@ -2118,21 +2118,21 @@ export default function AdminSimulator({
                       )}
                     </div>
                     <div>
-                      <label className="block text-slate-500 mb-1">CatÃ©gorie du Catalogue</label>
+                      <label className="block text-slate-500 mb-1">Catégorie du Catalogue</label>
                       <div className="flex gap-1.5">
                         <select
                           value={productForm.categoryId || ""}
                           onChange={e => setProductForm({ ...productForm, categoryId: e.target.value })}
                           className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                         >
-                          <option value="">-- Sans catÃ©gorie --</option>
+                          <option value="">-- Sans catégorie --</option>
                           {catalogCategories.map(cat => (
                             <option key={cat.id} value={cat.id}>{cat.name}</option>
                           ))}
                         </select>
                         <button
                           type="button"
-                          title="Ajouter une nouvelle catÃ©gorie"
+                          title="Ajouter une nouvelle catégorie"
                           onClick={() => setQuickAddCatOpenNew(v => !v)}
                           className="px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-slate-900 font-bold cursor-pointer"
                         >
@@ -2143,7 +2143,7 @@ export default function AdminSimulator({
                         <div className="mt-2 flex gap-1.5 animate-in fade-in duration-200">
                           <input
                             type="text"
-                            placeholder="Nom de la nouvelle catÃ©gorie..."
+                            placeholder="Nom de la nouvelle catégorie..."
                             value={quickAddCatNameNew}
                             onChange={e => setQuickAddCatNameNew(e.target.value)}
                             onKeyDown={e => {
@@ -2215,7 +2215,7 @@ export default function AdminSimulator({
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-slate-500 mb-1">Prix DÃ©tail (DA)</label>
+                      <label className="block text-slate-500 mb-1">Prix Détail (DA)</label>
                       <input
                         type="number"
                         required
@@ -2235,10 +2235,10 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-500 mb-1">CaractÃ©ristiques (sÃ©parÃ©es par des virgules)</label>
+                      <label className="block text-slate-500 mb-1">Caractéristiques (séparées par des virgules)</label>
                       <input
                         type="text"
-                        placeholder="Ex: QualitÃ© 4K, 12 Mois, Assistance 24/7"
+                        placeholder="Ex: Qualité 4K, 12 Mois, Assistance 24/7"
                         value={productForm.featuresString}
                         onChange={e => setProductForm({ ...productForm, featuresString: e.target.value })}
                         className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
@@ -2298,10 +2298,10 @@ export default function AdminSimulator({
                         >
                           <option value="code iptv">Code IPTV</option>
                           <option value="abonnement iptv">Abonnement IPTV</option>
-                          <option value="televiseur">TÃ©lÃ©viseur</option>
-                          <option value="boitier android">BoÃ®tier Android</option>
+                          <option value="televiseur">Téléviseur</option>
+                          <option value="boitier android">Boîtier Android</option>
                           <option value="application">Application</option>
-                          <option value="demodulateur">DÃ©modulateur</option>
+                          <option value="demodulateur">Démodulateur</option>
                           <option value="code sat">Code Sat</option>
                           <option value="recharge adsl">Recharge ADSL / Fibre</option>
                           <option value="accessoire">Accessoire</option>
@@ -2309,7 +2309,7 @@ export default function AdminSimulator({
                         </select>
                         <button
                           type="button"
-                          title="Saisir un type personnalisÃ©"
+                          title="Saisir un type personnalisé"
                           onClick={() => setEditingProduct({ ...editingProduct, type: "" })}
                           className="px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-slate-900 font-bold cursor-pointer"
                         >
@@ -2320,7 +2320,7 @@ export default function AdminSimulator({
                         <div className="mt-2 animate-in fade-in duration-200">
                           <input
                             type="text"
-                            placeholder="Saisissez un type de produit personnalisÃ©..."
+                            placeholder="Saisissez un type de produit personnalisé..."
                             value={editingProduct.type}
                             onChange={e => setEditingProduct({ ...editingProduct, type: e.target.value })}
                             className="w-full bg-white border border-amber-500/50 rounded-lg px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500"
@@ -2330,21 +2330,21 @@ export default function AdminSimulator({
                       )}
                     </div>
                     <div>
-                      <label className="block text-slate-500 mb-1">CatÃ©gorie du Catalogue</label>
+                      <label className="block text-slate-500 mb-1">Catégorie du Catalogue</label>
                       <div className="flex gap-1.5">
                         <select
                           value={editingProduct.categoryId || ""}
                           onChange={e => setEditingProduct({ ...editingProduct, categoryId: e.target.value })}
                           className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                         >
-                          <option value="">-- Sans catÃ©gorie --</option>
+                          <option value="">-- Sans catégorie --</option>
                           {catalogCategories.map(cat => (
                             <option key={cat.id} value={cat.id}>{cat.name}</option>
                           ))}
                         </select>
                         <button
                           type="button"
-                          title="Ajouter une nouvelle catÃ©gorie"
+                          title="Ajouter une nouvelle catégorie"
                           onClick={() => setQuickAddCatOpenEdit(v => !v)}
                           className="px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-slate-900 font-bold cursor-pointer"
                         >
@@ -2355,7 +2355,7 @@ export default function AdminSimulator({
                         <div className="mt-2 flex gap-1.5 animate-in fade-in duration-200">
                           <input
                             type="text"
-                            placeholder="Nom de la nouvelle catÃ©gorie..."
+                            placeholder="Nom de la nouvelle catégorie..."
                             value={quickAddCatNameEdit}
                             onChange={e => setQuickAddCatNameEdit(e.target.value)}
                             onKeyDown={e => {
@@ -2427,7 +2427,7 @@ export default function AdminSimulator({
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-slate-500 mb-1">Prix DÃ©tail (DA)</label>
+                      <label className="block text-slate-500 mb-1">Prix Détail (DA)</label>
                       <input
                         type="number"
                         required
@@ -2447,10 +2447,10 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-500 mb-1">CaractÃ©ristiques (sÃ©parÃ©es par des virgules)</label>
+                      <label className="block text-slate-500 mb-1">Caractéristiques (séparées par des virgules)</label>
                       <input
                         type="text"
-                        placeholder="QualitÃ© 4K, 12 Mois, etc."
+                        placeholder="Qualité 4K, 12 Mois, etc."
                         value={(editingProduct as any).featuresString !== undefined ? (editingProduct as any).featuresString : editingProduct.features.join(", ")}
                         onChange={e => setEditingProduct({ ...editingProduct, featuresString: e.target.value } as any)}
                         className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
@@ -2498,13 +2498,13 @@ export default function AdminSimulator({
                         </span>
                         {p.categoryId && (
                           <span className="px-1.5 py-0.2 text-[8px] bg-blue-950 text-blue-600 border border-blue-900 rounded uppercase font-bold">
-                            {catalogCategories.find(c => c.id === p.categoryId)?.name || "CatÃ©gorie inconnue"}
+                            {catalogCategories.find(c => c.id === p.categoryId)?.name || "Catégorie inconnue"}
                           </span>
                         )}
                       </div>
                       <p className="text-slate-500 text-sm line-clamp-1">{p.description}</p>
                       <div className="text-xs space-x-3 mt-1.5">
-                        <span className="text-amber-600">DÃ©tail: <strong>{p.priceRetail.toLocaleString()} DA</strong></span>
+                        <span className="text-amber-600">Détail: <strong>{p.priceRetail.toLocaleString()} DA</strong></span>
                         <span className="text-indigo-600">Gros: <strong>{p.priceWholesale.toLocaleString()} DA</strong></span>
                       </div>
                     </div>
@@ -2537,7 +2537,7 @@ export default function AdminSimulator({
           {activeTab === "tutorials" && (
             <div className="space-y-6 text-sm">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Tutoriels d'Installation VidÃ©o</h3>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Tutoriels d'Installation Vidéo</h3>
                 <button
                   onClick={() => {
                     setShowAddTutorial(!showAddTutorial);
@@ -2567,7 +2567,7 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-500 mb-1">CatÃ©gorie</label>
+                      <label className="block text-slate-500 mb-1">Catégorie</label>
                       <select
                         value={tutorialForm.category}
                         onChange={e => setTutorialForm({ ...tutorialForm, category: e.target.value as any })}
@@ -2583,7 +2583,7 @@ export default function AdminSimulator({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-slate-500 mb-1">YouTube Embed URL (Lien d'intÃ©gration)</label>
+                      <label className="block text-slate-500 mb-1">YouTube Embed URL (Lien d'intégration)</label>
                       <input
                         type="text"
                         required
@@ -2609,7 +2609,7 @@ export default function AdminSimulator({
                     <label className="block text-slate-500 mb-1">Description explicative</label>
                     <textarea
                       required
-                      placeholder="DÃ©crivez les Ã©tapes d'installation..."
+                      placeholder="Décrivez les étapes d'installation..."
                       value={tutorialForm.description}
                       onChange={e => setTutorialForm({ ...tutorialForm, description: e.target.value })}
                       className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
@@ -2641,7 +2641,7 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-500 mb-1">CatÃ©gorie</label>
+                      <label className="block text-slate-500 mb-1">Catégorie</label>
                       <select
                         value={editingTutorial.category}
                         onChange={e => setEditingTutorial({ ...editingTutorial, category: e.target.value as any })}
@@ -2753,7 +2753,7 @@ export default function AdminSimulator({
           {activeTab === "clients" && (
             <div className="space-y-6 text-sm animate-in fade-in duration-200">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Abonnements ActivÃ©s par les Grossistes</h3>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Abonnements Activés par les Grossistes</h3>
                 <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-xl font-bold text-xs">
                   {clients.length} Abonnements au total
                 </span>
@@ -2764,7 +2764,7 @@ export default function AdminSimulator({
                 <form onSubmit={handleEditClientSubmit} className="p-5 bg-white/60 rounded-2xl border border-amber-500/20 space-y-4">
                   <h4 className="font-bold text-amber-600 uppercase flex items-center gap-1.5">
                     <Edit2 className="h-4 w-4" />
-                    <span>Attribuer les AccÃ¨s / Modifier l'Abonnement de {editingClient.clientName}</span>
+                    <span>Attribuer les Accès / Modifier l'Abonnement de {editingClient.clientName}</span>
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -2799,7 +2799,7 @@ export default function AdminSimulator({
                         className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                       >
                         <option value="active">Actif</option>
-                        <option value="expired">ExpirÃ©</option>
+                        <option value="expired">Expiré</option>
                       </select>
                     </div>
                   </div>
@@ -2828,7 +2828,7 @@ export default function AdminSimulator({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-amber-600 font-bold mb-1">Lien M3U Complet (AttribuÃ© par l'Admin)</label>
+                      <label className="block text-amber-600 font-bold mb-1">Lien M3U Complet (Attribué par l'Admin)</label>
                       <input
                         type="text"
                         placeholder="Ex: http://dino-server.xyz:8080/get.php?username=..."
@@ -2888,7 +2888,7 @@ export default function AdminSimulator({
                       className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-lg cursor-pointer flex items-center space-x-1"
                     >
                       <Save className="h-3.5 w-3.5" />
-                      <span>Enregistrer les AccÃ¨s</span>
+                      <span>Enregistrer les Accès</span>
                     </button>
                     <button
                       type="button"
@@ -2909,7 +2909,7 @@ export default function AdminSimulator({
                       <th className="p-3 font-semibold">Client</th>
                       <th className="p-3 font-semibold">Revendeur (Grossiste)</th>
                       <th className="p-3 font-semibold">Serveur IPTV</th>
-                      <th className="p-3 font-semibold">DurÃ©e / Expiration</th>
+                      <th className="p-3 font-semibold">Durée / Expiration</th>
                       <th className="p-3 font-semibold">Identifiants Actuels</th>
                       <th className="p-3 font-semibold text-right">Actions</th>
                     </tr>
@@ -2942,15 +2942,15 @@ export default function AdminSimulator({
                             <span className="block font-medium text-slate-600">{client.durationMonths} Mois</span>
                             <span className="text-xs text-slate-400 block">Exp : {new Date(client.expirationDate).toLocaleDateString("fr-FR")}</span>
                             {isExpired ? (
-                              <span className="text-[11px] text-red-600 font-bold uppercase">ExpirÃ©</span>
+                              <span className="text-[11px] text-red-600 font-bold uppercase">Expiré</span>
                             ) : (
                               <span className="text-[11px] text-green-600 font-bold uppercase animate-pulse">Actif</span>
                             )}
                           </td>
                           <td className="p-3 font-mono text-xs space-y-1 max-w-xs">
-                            <div className="truncate text-slate-600"><span className="text-slate-400 font-sans font-bold">M3U :</span> {client.credentials?.m3uUrl || "Non attribuÃ©"}</div>
+                            <div className="truncate text-slate-600"><span className="text-slate-400 font-sans font-bold">M3U :</span> {client.credentials?.m3uUrl || "Non attribué"}</div>
                             <div className="text-slate-600">
-                              <span className="text-slate-400 font-sans font-bold">Host :</span> {client.credentials?.xtreamHost || "Non attribuÃ©"} <br />
+                              <span className="text-slate-400 font-sans font-bold">Host :</span> {client.credentials?.xtreamHost || "Non attribué"} <br />
                               <span className="text-slate-400 font-sans font-bold">User :</span> {client.credentials?.xtreamUser || "-"} | <span className="text-slate-400 font-sans font-bold">Pass :</span> {client.credentials?.xtreamPass || "-"}
                             </div>
                           </td>
@@ -2962,20 +2962,20 @@ export default function AdminSimulator({
                                 className="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20 rounded font-bold text-xs cursor-pointer inline-flex items-center gap-1"
                               >
                                 <Edit2 className="h-3 w-3" />
-                                <span>Attribuer AccÃ¨s</span>
+                                <span>Attribuer Accès</span>
                               </button>
                               {isOwner && onDeleteClient && (
                                 <button
                                   type="button"
                                   onClick={async () => {
-                                    if (!confirm(`Supprimer dÃ©finitivement l'abonnement de ${client.clientName} ? Cette action est irrÃ©versible.`)) return;
+                                    if (!confirm(`Supprimer définitivement l'abonnement de ${client.clientName} ? Cette action est irréversible.`)) return;
                                     setErrorMessage("");
                                     setSuccessMessage("");
                                     try {
                                       await onDeleteClient(client.id);
-                                      setSuccessMessage("Abonnement supprimÃ©.");
+                                      setSuccessMessage("Abonnement supprimé.");
                                     } catch (err: any) {
-                                      setErrorMessage(err.message || "Ã‰chec de la suppression.");
+                                      setErrorMessage(err.message || "Échec de la suppression.");
                                     }
                                   }}
                                   className="px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/20 rounded font-bold text-xs cursor-pointer inline-flex items-center gap-1"
@@ -2992,7 +2992,7 @@ export default function AdminSimulator({
                       <tr>
                         <td colSpan={6} className="p-8 text-center text-slate-400">
                           <Users className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                          <p className="text-sm">Aucun abonnement activÃ© par les grossistes pour le moment.</p>
+                          <p className="text-sm">Aucun abonnement activé par les grossistes pour le moment.</p>
                         </td>
                       </tr>
                     )}
@@ -3011,7 +3011,7 @@ export default function AdminSimulator({
                     <Truck className="h-4 w-4 text-amber-600" />
                     <span>Gestion des Livreurs & Suivi des Colis</span>
                   </h3>
-                  <p className="text-slate-500 text-xs mt-0.5">Enregistrez vos livreurs partenaires et suivez les expÃ©ditions de matÃ©riel (Box, Firestick, Cartes ADSL).</p>
+                  <p className="text-slate-500 text-xs mt-0.5">Enregistrez vos livreurs partenaires et suivez les expéditions de matériel (Box, Firestick, Cartes ADSL).</p>
                 </div>
                 <button
                   type="button"
@@ -3029,21 +3029,21 @@ export default function AdminSimulator({
               {/* Form to Add Livreur */}
               {showAddLivreur && (
                 <form onSubmit={handleAddLivreurSubmit} className="p-4 bg-white/60 rounded-xl border border-slate-200 space-y-4">
-                  <h4 className="font-bold text-slate-900 uppercase text-xs">âž• Nouveau Livreur AlgÃ©rie</h4>
+                  <h4 className="font-bold text-slate-900 uppercase text-xs">➕ Nouveau Livreur Algérie</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-slate-500 mb-1">Nom complet</label>
                       <input
                         type="text"
                         required
-                        placeholder="Ex: Yalidine ChÃ©raga / Mohamed"
+                        placeholder="Ex: Yalidine Chéraga / Mohamed"
                         value={livreurForm.name}
                         onChange={e => setLivreurForm({ ...livreurForm, name: e.target.value })}
                         className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-500 mb-1">NumÃ©ro de tÃ©lÃ©phone</label>
+                      <label className="block text-slate-500 mb-1">Numéro de téléphone</label>
                       <input
                         type="text"
                         required
@@ -3069,7 +3069,7 @@ export default function AdminSimulator({
                       type="submit"
                       className="px-4 py-2 bg-amber-500 text-black font-bold rounded cursor-pointer"
                     >
-                      CrÃ©er le Livreur
+                      Créer le Livreur
                     </button>
                   </div>
                 </form>
@@ -3078,7 +3078,7 @@ export default function AdminSimulator({
               {/* Form to Edit Livreur */}
               {editingLivreur && (
                 <form onSubmit={handleEditLivreurSubmit} className="p-4 bg-white/60 rounded-xl border border-amber-500/20 space-y-4">
-                  <h4 className="font-bold text-amber-600 uppercase text-xs">âœï¸ Modifier le Livreur</h4>
+                  <h4 className="font-bold text-amber-600 uppercase text-xs">✏️ Modifier le Livreur</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <div>
                       <label className="block text-slate-500 mb-1">Nom complet</label>
@@ -3091,7 +3091,7 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-500 mb-1">TÃ©lÃ©phone</label>
+                      <label className="block text-slate-500 mb-1">Téléphone</label>
                       <input
                         type="text"
                         required
@@ -3152,8 +3152,8 @@ export default function AdminSimulator({
                           {l.status === "active" ? "Actif" : "Inactif"}
                         </span>
                       </div>
-                      <p className="text-slate-600 mt-1">ðŸ“ž TÃ©l : <span className="font-semibold text-slate-900">{l.phone}</span></p>
-                      <p className="text-slate-500 mt-1">ðŸ“ Secteurs/Wilayas : <span className="text-slate-700">{l.wilaya || "AlgÃ©rie EntiÃ¨re"}</span></p>
+                      <p className="text-slate-600 mt-1">📞 Tél : <span className="font-semibold text-slate-900">{l.phone}</span></p>
+                      <p className="text-slate-500 mt-1">📍 Secteurs/Wilayas : <span className="text-slate-700">{l.wilaya || "Algérie Entière"}</span></p>
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -3181,7 +3181,7 @@ export default function AdminSimulator({
                 {livreurs.length === 0 && (
                   <div className="p-8 text-center text-slate-400 md:col-span-2">
                     <Truck className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-sm">Aucun livreur enregistrÃ©.</p>
+                    <p className="text-sm">Aucun livreur enregistré.</p>
                   </div>
                 )}
               </div>
@@ -3237,12 +3237,12 @@ export default function AdminSimulator({
                           )}
                           {req.status === "approved" && (
                             <span className="px-2.5 py-1 bg-green-500/10 text-green-600 border border-green-500/20 rounded font-semibold text-xs">
-                              Panel ActivÃ©
+                              Panel Activé
                             </span>
                           )}
                           {req.status === "rejected" && (
                             <span className="px-2.5 py-1 bg-red-500/10 text-red-600 border border-red-500/20 rounded font-semibold text-xs">
-                              RejetÃ©
+                              Rejeté
                             </span>
                           )}
                         </td>
@@ -3251,7 +3251,7 @@ export default function AdminSimulator({
                             <div className="flex flex-col items-end gap-2">
                               <input
                                 type="text"
-                                placeholder="Note admin (ex: Vos accÃ¨s sont...)"
+                                placeholder="Note admin (ex: Vos accès sont...)"
                                 value={panelActionNotes[req.id] || ""}
                                 onChange={(e) => setPanelActionNotes({ ...panelActionNotes, [req.id]: e.target.value })}
                                 className="bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-900 w-48 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
@@ -3261,7 +3261,7 @@ export default function AdminSimulator({
                                   type="button"
                                   onClick={() => {
                                     if (onProcessPanelRequest) {
-                                      onProcessPanelRequest(req.id, "approved", panelActionNotes[req.id] || "Panel crÃ©Ã© et configurÃ© avec succÃ¨s.");
+                                      onProcessPanelRequest(req.id, "approved", panelActionNotes[req.id] || "Panel créé et configuré avec succès.");
                                     }
                                   }}
                                   className="px-2.5 py-1.5 bg-green-500 hover:bg-green-400 text-black font-extrabold rounded text-xs cursor-pointer"
@@ -3272,7 +3272,7 @@ export default function AdminSimulator({
                                   type="button"
                                   onClick={() => {
                                     if (onProcessPanelRequest) {
-                                      onProcessPanelRequest(req.id, "rejected", panelActionNotes[req.id] || "Demande refusÃ©e par l'administrateur.");
+                                      onProcessPanelRequest(req.id, "rejected", panelActionNotes[req.id] || "Demande refusée par l'administrateur.");
                                     }
                                   }}
                                   className="px-2.5 py-1.5 bg-red-500/20 hover:bg-red-500 text-red-600 hover:text-black font-bold rounded text-xs cursor-pointer"
@@ -3282,7 +3282,7 @@ export default function AdminSimulator({
                               </div>
                             </div>
                           ) : (
-                            <span className="text-slate-400 italic text-xs">TraitÃ© (Note: {req.notes || "Aucune note"})</span>
+                            <span className="text-slate-400 italic text-xs">Traité (Note: {req.notes || "Aucune note"})</span>
                           )}
                         </td>
                       </tr>
@@ -3305,8 +3305,8 @@ export default function AdminSimulator({
             <div className="space-y-6 animate-in fade-in duration-300 text-left">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
-                  <h3 className="font-display font-black text-lg text-slate-900">Gestion des CatÃ©gories du Catalogue</h3>
-                  <p className="text-sm text-slate-500 mt-1">CrÃ©ez des catÃ©gories personnalisÃ©es pour votre boutique avec icÃ´ne, couleur et description.</p>
+                  <h3 className="font-display font-black text-lg text-slate-900">Gestion des Catégories du Catalogue</h3>
+                  <p className="text-sm text-slate-500 mt-1">Créez des catégories personnalisées pour votre boutique avec icône, couleur et description.</p>
                 </div>
               </div>
 
@@ -3314,16 +3314,16 @@ export default function AdminSimulator({
               <div className="p-5 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 rounded-2xl border border-indigo-200">
                 <h4 className="font-bold text-indigo-700 uppercase text-xs tracking-wider mb-3 flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                  <span>Grand Choix de CatÃ©gories PrÃªtes Ã  l'Emploi (Ajout en 1 clic)</span>
+                  <span>Grand Choix de Catégories Prêtes à l'Emploi (Ajout en 1 clic)</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {[
                     { name: "Abonnements IPTV", description: "Abonnements Premium 12 mois, 6 mois et 3 mois.", icon: "Tv", color: "indigo" },
-                    { name: "Codes de Recharge", description: "Codes de recharge et d'activation instantanÃ©s.", icon: "Key", color: "amber" },
-                    { name: "BoÃ®tiers & Box Android", description: "MatÃ©riel, clÃ©s Fire TV Stick et accessoires.", icon: "Box", color: "emerald" },
-                    { name: "Serveurs Satellite", description: "DÃ©cryptage satellite (Cccam, G-Share, Orca).", icon: "Flame", color: "rose" },
+                    { name: "Codes de Recharge", description: "Codes de recharge et d'activation instantanés.", icon: "Key", color: "amber" },
+                    { name: "Boîtiers & Box Android", description: "Matériel, clés Fire TV Stick et accessoires.", icon: "Box", color: "emerald" },
+                    { name: "Serveurs Satellite", description: "Décryptage satellite (Cccam, G-Share, Orca).", icon: "Flame", color: "rose" },
                     { name: "Applications & APKs", description: "Lecteurs officiels Premium et APK de visionnage.", icon: "Sparkles", color: "blue" },
-                    { name: "Abonnement VIP Premium", description: "Haute performance 4K sans latence avec serveurs dÃ©diÃ©s.", icon: "Zap", color: "purple" }
+                    { name: "Abonnement VIP Premium", description: "Haute performance 4K sans latence avec serveurs dédiés.", icon: "Zap", color: "purple" }
                   ].map((tpl) => {
                     // check color styles
                     const isAmber = tpl.color === "amber";
@@ -3379,11 +3379,11 @@ export default function AdminSimulator({
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Advanced Form to Add Category */}
                 <div className="lg:col-span-1 p-5 bg-white/60 rounded-2xl border border-slate-200 space-y-4">
-                  <h4 className="font-bold text-slate-900 uppercase text-xs tracking-wider text-indigo-600">âž• CrÃ©er CatÃ©gorie sur-mesure</h4>
+                  <h4 className="font-bold text-slate-900 uppercase text-xs tracking-wider text-indigo-600">➕ Créer Catégorie sur-mesure</h4>
                   
                   <div className="space-y-3.5 text-sm">
                     <div>
-                      <label className="block text-slate-500 mb-1 font-semibold">Nom de la catÃ©gorie</label>
+                      <label className="block text-slate-500 mb-1 font-semibold">Nom de la catégorie</label>
                       <input
                         type="text"
                         required
@@ -3398,7 +3398,7 @@ export default function AdminSimulator({
                       <label className="block text-slate-500 mb-1 font-semibold">Description courte</label>
                       <textarea
                         rows={2}
-                        placeholder="Ex: Serveur haute dÃ©finition idÃ©al pour Smart TV..."
+                        placeholder="Ex: Serveur haute définition idéal pour Smart TV..."
                         value={newCategoryDescription}
                         onChange={(e) => setNewCategoryDescription(e.target.value)}
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 placeholder-slate-400 resize-none"
@@ -3407,7 +3407,7 @@ export default function AdminSimulator({
 
                     {/* Icon Selection */}
                     <div>
-                      <label className="block text-slate-500 mb-1.5 font-semibold">IcÃ´ne de la catÃ©gorie</label>
+                      <label className="block text-slate-500 mb-1.5 font-semibold">Icône de la catégorie</label>
                       <div className="grid grid-cols-4 gap-2">
                         {[
                           { val: "Tv", label: "Tv" },
@@ -3495,7 +3495,7 @@ export default function AdminSimulator({
                 {/* Categories Grid List */}
                 <div className="lg:col-span-2 space-y-4">
                   <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-                    <h4 className="font-bold text-slate-900 text-sm">CatÃ©gories existantes ({catalogCategories.length})</h4>
+                    <h4 className="font-bold text-slate-900 text-sm">Catégories existantes ({catalogCategories.length})</h4>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {catalogCategories.map((cat) => {
@@ -3546,7 +3546,7 @@ export default function AdminSimulator({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (confirm("ÃŠtes-vous sÃ»r de vouloir supprimer cette catÃ©gorie ?") && onDeleteCategory) {
+                                  if (confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?") && onDeleteCategory) {
                                     onDeleteCategory(cat.id);
                                   }
                                 }}
@@ -3560,7 +3560,7 @@ export default function AdminSimulator({
                         );
                       })}
                       {catalogCategories.length === 0 && (
-                        <p className="text-sm text-slate-400 col-span-2 text-center py-6">Aucune catÃ©gorie personnalisÃ©e dans votre catalogue.</p>
+                        <p className="text-sm text-slate-400 col-span-2 text-center py-6">Aucune catégorie personnalisée dans votre catalogue.</p>
                       )}
                     </div>
                   </div>
@@ -3574,7 +3574,7 @@ export default function AdminSimulator({
                     <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                       <h3 className="font-display font-bold text-base text-slate-900 flex items-center gap-2">
                         <Edit2 className="h-4 w-4 text-amber-500" />
-                        <span>Modifier la CatÃ©gorie</span>
+                        <span>Modifier la Catégorie</span>
                       </h3>
                       <button
                         type="button"
@@ -3601,7 +3601,7 @@ export default function AdminSimulator({
                       className="space-y-4 text-sm"
                     >
                       <div>
-                        <label className="block text-slate-500 mb-1 font-semibold">Nom de la catÃ©gorie</label>
+                        <label className="block text-slate-500 mb-1 font-semibold">Nom de la catégorie</label>
                         <input
                           type="text"
                           required
@@ -3623,7 +3623,7 @@ export default function AdminSimulator({
 
                       {/* Icon Selection */}
                       <div>
-                        <label className="block text-slate-500 mb-1.5 font-semibold">IcÃ´ne de la catÃ©gorie</label>
+                        <label className="block text-slate-500 mb-1.5 font-semibold">Icône de la catégorie</label>
                         <div className="grid grid-cols-4 gap-2">
                           {[
                             { val: "Tv", label: "Tv" },
@@ -3706,13 +3706,13 @@ export default function AdminSimulator({
             </div>
           )}
 
-          {/* --- BANNIÃˆRES ACCUEIL (Carrousel) --- */}
+          {/* --- BANNIÈRES ACCUEIL (Carrousel) --- */}
           {activeTab === "slides" && (
             <div className="space-y-6 text-sm">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">BanniÃ¨res du Carrousel d'Accueil</h3>
-                  <p className="text-slate-400 text-xs mt-1">Ces banniÃ¨res dÃ©filent automatiquement en haut de la page d'accueil de la boutique.</p>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Bannières du Carrousel d'Accueil</h3>
+                  <p className="text-slate-400 text-xs mt-1">Ces bannières défilent automatiquement en haut de la page d'accueil de la boutique.</p>
                 </div>
                 <button
                   onClick={() => {
@@ -3723,13 +3723,13 @@ export default function AdminSimulator({
                   className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold flex items-center space-x-1.5 transition-all cursor-pointer shrink-0"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  <span>{showAddSlide ? "Masquer" : "Ajouter une BanniÃ¨re"}</span>
+                  <span>{showAddSlide ? "Masquer" : "Ajouter une Bannière"}</span>
                 </button>
               </div>
 
               {(showAddSlide || editingSlide) && (
                 <form onSubmit={editingSlide ? handleEditSlideSubmit : handleAddSlideSubmit} className="p-5 bg-white rounded-2xl border border-slate-200 space-y-4">
-                  <h4 className="font-bold text-blue-600 uppercase">{editingSlide ? "Modifier la banniÃ¨re" : "Ajouter une nouvelle banniÃ¨re"}</h4>
+                  <h4 className="font-bold text-blue-600 uppercase">{editingSlide ? "Modifier la bannière" : "Ajouter une nouvelle bannière"}</h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -3756,7 +3756,7 @@ export default function AdminSimulator({
                   </div>
 
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Titre de la BanniÃ¨re</label>
+                    <label className="block text-slate-600 font-semibold mb-1">Titre de la Bannière</label>
                     <input
                       type="text"
                       required
@@ -3768,19 +3768,19 @@ export default function AdminSimulator({
                   </div>
 
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Mot Ã  Mettre en Avant (Optionnel)</label>
+                    <label className="block text-slate-600 font-semibold mb-1">Mot à Mettre en Avant (Optionnel)</label>
                     <input
                       type="text"
-                      placeholder="Doit Ãªtre recopiÃ© exactement depuis le titre ci-dessus, ex: BoxTV 4K"
+                      placeholder="Doit être recopié exactement depuis le titre ci-dessus, ex: BoxTV 4K"
                       value={slideForm.highlightWord}
                       onChange={e => setSlideForm({ ...slideForm, highlightWord: e.target.value })}
                       className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                     />
-                    <p className="text-[11px] text-slate-400 mt-1">Ce mot sera affichÃ© en couleur dans le titre. Laissez vide pour un titre uni.</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Ce mot sera affiché en couleur dans le titre. Laissez vide pour un titre uni.</p>
                   </div>
 
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Image de la BanniÃ¨re</label>
+                    <label className="block text-slate-600 font-semibold mb-1">Image de la Bannière</label>
                     <input
                       type="file"
                       accept="image/*"
@@ -3796,13 +3796,13 @@ export default function AdminSimulator({
                       className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                     />
                     {slideForm.imageUrl && (
-                      <img src={slideForm.imageUrl} alt="AperÃ§u" className="mt-2 h-24 rounded-lg border border-slate-200 object-cover" />
+                      <img src={slideForm.imageUrl} alt="Aperçu" className="mt-2 h-24 rounded-lg border border-slate-200 object-cover" />
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-slate-600 font-semibold mb-1">Produit LiÃ© (Optionnel)</label>
+                      <label className="block text-slate-600 font-semibold mb-1">Produit Lié (Optionnel)</label>
                       <select
                         value={slideForm.productId}
                         onChange={e => setSlideForm({ ...slideForm, productId: e.target.value })}
@@ -3819,7 +3819,7 @@ export default function AdminSimulator({
                       <label className="block text-slate-600 font-semibold mb-1">Ou Lien Externe (Optionnel)</label>
                       <input
                         type="text"
-                        placeholder="https://... (ignorÃ© si produit liÃ©)"
+                        placeholder="https://... (ignoré si produit lié)"
                         value={slideForm.linkUrl}
                         onChange={e => setSlideForm({ ...slideForm, linkUrl: e.target.value })}
                         className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
@@ -3853,18 +3853,18 @@ export default function AdminSimulator({
                       type="submit"
                       className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl transition-colors shadow-lg cursor-pointer"
                     >
-                      {editingSlide ? "Enregistrer" : "Ajouter la BanniÃ¨re"}
+                      {editingSlide ? "Enregistrer" : "Ajouter la Bannière"}
                     </button>
                   </div>
                 </form>
               )}
 
-              {/* Liste des banniÃ¨res existantes */}
+              {/* Liste des bannières existantes */}
               <div className="space-y-3">
                 {heroSlides.length === 0 ? (
                   <div className="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
                     <ImageIcon className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-                    <p className="text-xs">Aucune banniÃ¨re configurÃ©e. La page d'accueil affiche le contenu par dÃ©faut.</p>
+                    <p className="text-xs">Aucune bannière configurée. La page d'accueil affiche le contenu par défaut.</p>
                   </div>
                 ) : (
                   heroSlides.sort((a, b) => a.order - b.order).map((slide) => (
@@ -3875,9 +3875,9 @@ export default function AdminSimulator({
                         <p className="font-bold text-slate-900 truncate">{slide.title}</p>
                         <p className="text-xs text-slate-400">
                           Bouton : "{slide.buttonText}"
-                          {slide.productId && <span className="text-emerald-600"> Â· liÃ© Ã  un produit</span>}
-                          {slide.linkUrl && <span className="text-indigo-600"> Â· lien externe</span>}
-                          {slide.isNew && <span className="text-amber-600"> Â· badge NEW</span>}
+                          {slide.productId && <span className="text-emerald-600"> · lié à un produit</span>}
+                          {slide.linkUrl && <span className="text-indigo-600"> · lien externe</span>}
+                          {slide.isNew && <span className="text-amber-600"> · badge NEW</span>}
                         </p>
                       </div>
                       <div className="flex gap-1.5 shrink-0">
@@ -3903,13 +3903,13 @@ export default function AdminSimulator({
             </div>
           )}
 
-          {/* --- Ã‰QUIPE (comptes admin secondaires) --- */}
+          {/* --- ÉQUIPE (comptes admin secondaires) --- */}
           {activeTab === "team" && (
             <div className="space-y-6 text-sm">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Comptes de l'Ã‰quipe</h3>
-                  <p className="text-slate-400 text-xs mt-1">Donnez Ã  un membre de votre Ã©quipe son propre accÃ¨s au panel admin, sans partager votre mot de passe principal.</p>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Comptes de l'Équipe</h3>
+                  <p className="text-slate-400 text-xs mt-1">Donnez à un membre de votre équipe son propre accès au panel admin, sans partager votre mot de passe principal.</p>
                 </div>
                 <button
                   onClick={() => setShowAddTeamMember(!showAddTeamMember)}
@@ -3921,12 +3921,12 @@ export default function AdminSimulator({
               </div>
 
               <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-xl text-xs">
-                âš ï¸ Ces comptes ont un accÃ¨s complet au panel admin (revendeurs, commandes, crÃ©dits, catalogue...). N'ajoutez que des personnes de confiance.
+                ⚠️ Ces comptes ont un accès complet au panel admin (revendeurs, commandes, crédits, catalogue...). N'ajoutez que des personnes de confiance.
               </div>
 
               {showAddTeamMember && (
                 <form onSubmit={handleAddTeamMember} className="p-5 bg-white rounded-2xl border border-slate-200 space-y-4">
-                  <h4 className="font-bold text-blue-600 uppercase">Nouveau membre de l'Ã©quipe</h4>
+                  <h4 className="font-bold text-blue-600 uppercase">Nouveau membre de l'équipe</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-slate-600 font-semibold mb-1">Nom complet</label>
@@ -3956,7 +3956,7 @@ export default function AdminSimulator({
                         type="text"
                         required
                         minLength={6}
-                        placeholder="6 caractÃ¨res minimum"
+                        placeholder="6 caractères minimum"
                         value={teamForm.password}
                         onChange={e => setTeamForm({ ...teamForm, password: e.target.value })}
                         className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
@@ -3966,7 +3966,7 @@ export default function AdminSimulator({
 
                   <div className="p-4 bg-indigo-500/5 border border-indigo-500/15 rounded-xl space-y-3">
                     <h5 className="font-bold text-indigo-700 text-xs uppercase tracking-wider">Alertes personnelles (Optionnel)</h5>
-                    <p className="text-[11px] text-slate-500">Ce membre recevra aussi un email/notification Ã  chaque nouvel Ã©vÃ©nement (commande, revendeur...), en plus de vous.</p>
+                    <p className="text-[11px] text-slate-500">Ce membre recevra aussi un email/notification à chaque nouvel événement (commande, revendeur...), en plus de vous.</p>
                     <div>
                       <label className="block text-slate-600 font-semibold mb-1">Email</label>
                       <input
@@ -3978,7 +3978,7 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
-                      <label className="block text-emerald-700 font-semibold mb-1">Telegram Chat ID <span className="font-normal text-emerald-600">(recommandÃ©, plus fiable)</span></label>
+                      <label className="block text-emerald-700 font-semibold mb-1">Telegram Chat ID <span className="font-normal text-emerald-600">(recommandé, plus fiable)</span></label>
                       <input
                         type="text"
                         placeholder="Ex: 123456789"
@@ -3992,7 +3992,7 @@ export default function AdminSimulator({
                       <summary className="cursor-pointer text-slate-500 font-semibold">WhatsApp (optionnel, moins fiable)</summary>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                         <div>
-                          <label className="block text-slate-600 font-semibold mb-1">NumÃ©ro WhatsApp</label>
+                          <label className="block text-slate-600 font-semibold mb-1">Numéro WhatsApp</label>
                           <input
                             type="text"
                             placeholder="Ex: +213xxxxxxxxx"
@@ -4002,10 +4002,10 @@ export default function AdminSimulator({
                           />
                         </div>
                         <div>
-                          <label className="block text-slate-600 font-semibold mb-1">ClÃ© CallMeBot</label>
+                          <label className="block text-slate-600 font-semibold mb-1">Clé CallMeBot</label>
                           <input
                             type="text"
-                            placeholder="ReÃ§ue par ce membre sur son WhatsApp"
+                            placeholder="Reçue par ce membre sur son WhatsApp"
                             value={teamForm.alertWhatsappApiKey}
                             onChange={e => setTeamForm({ ...teamForm, alertWhatsappApiKey: e.target.value })}
                             className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 font-mono"
@@ -4016,7 +4016,7 @@ export default function AdminSimulator({
                   </div>
 
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-2">TÃ¢ches autorisÃ©es <span className="text-slate-400 font-normal">(cochez ce qu'il/elle pourra gÃ©rer)</span></label>
+                    <label className="block text-slate-600 font-semibold mb-2">Tâches autorisées <span className="text-slate-400 font-normal">(cochez ce qu'il/elle pourra gérer)</span></label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {PERMISSION_TAB_LABELS.map(p => (
                         <label key={p.key} className="flex items-center space-x-2 p-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100">
@@ -4031,7 +4031,7 @@ export default function AdminSimulator({
                       ))}
                     </div>
                     {teamForm.permissions.length === 0 && (
-                      <p className="text-[11px] text-amber-600 mt-1.5">âš ï¸ Aucune tÃ¢che cochÃ©e : ce compte ne pourra rien faire tant que vous n'en cochez pas au moins une.</p>
+                      <p className="text-[11px] text-amber-600 mt-1.5">⚠️ Aucune tâche cochée : ce compte ne pourra rien faire tant que vous n'en cochez pas au moins une.</p>
                     )}
                   </div>
 
@@ -4047,7 +4047,7 @@ export default function AdminSimulator({
                       type="submit"
                       className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl transition-colors shadow-lg cursor-pointer"
                     >
-                      CrÃ©er le Compte
+                      Créer le Compte
                     </button>
                   </div>
                 </form>
@@ -4057,7 +4057,7 @@ export default function AdminSimulator({
                 {teamMembers.length === 0 ? (
                   <div className="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
                     <Users className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-                    <p className="text-xs">Aucun membre de l'Ã©quipe pour le moment. Vous Ãªtes seul(e) Ã  avoir accÃ¨s au panel admin.</p>
+                    <p className="text-xs">Aucun membre de l'équipe pour le moment. Vous êtes seul(e) à avoir accès au panel admin.</p>
                   </div>
                 ) : (
                   teamMembers.map((member) => (
@@ -4066,7 +4066,7 @@ export default function AdminSimulator({
                         <div className="min-w-0">
                           <p className="font-bold text-slate-900">{member.name}</p>
                           <p className="text-xs text-slate-400">
-                            Utilisateur : <span className="font-mono text-slate-600">{member.username}</span> Â· AjoutÃ© le {new Date(member.createdAt).toLocaleDateString("fr-FR")}
+                            Utilisateur : <span className="font-mono text-slate-600">{member.username}</span> · Ajouté le {new Date(member.createdAt).toLocaleDateString("fr-FR")}
                           </p>
                         </div>
                         <div className="flex gap-1.5 shrink-0">
@@ -4075,13 +4075,13 @@ export default function AdminSimulator({
                               onClick={() => startEditPermissions(member)}
                               className="px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 border border-indigo-500/20 rounded-lg font-bold text-xs cursor-pointer"
                             >
-                              Modifier les TÃ¢ches / Alertes
+                              Modifier les Tâches / Alertes
                             </button>
                           )}
                           <button
                             onClick={() => handleDeleteTeamMember(member.id, member.name)}
                             className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-lg cursor-pointer"
-                            title="Retirer l'accÃ¨s"
+                            title="Retirer l'accès"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -4100,21 +4100,21 @@ export default function AdminSimulator({
                             />
                             <input
                               type="text"
-                              placeholder="Telegram Chat ID (recommandÃ©)"
+                              placeholder="Telegram Chat ID (recommandé)"
                               value={editAlertDraft.alertTelegramChatId}
                               onChange={e => setEditAlertDraft({ ...editAlertDraft, alertTelegramChatId: e.target.value })}
                               className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-slate-900 text-xs font-mono"
                             />
                             <input
                               type="text"
-                              placeholder="NumÃ©ro WhatsApp (+213...)"
+                              placeholder="Numéro WhatsApp (+213...)"
                               value={editAlertDraft.alertWhatsappPhone}
                               onChange={e => setEditAlertDraft({ ...editAlertDraft, alertWhatsappPhone: e.target.value })}
                               className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-xs font-mono"
                             />
                             <input
                               type="text"
-                              placeholder="ClÃ© CallMeBot du membre"
+                              placeholder="Clé CallMeBot du membre"
                               value={editAlertDraft.alertWhatsappApiKey}
                               onChange={e => setEditAlertDraft({ ...editAlertDraft, alertWhatsappApiKey: e.target.value })}
                               className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-xs font-mono"
@@ -4152,7 +4152,7 @@ export default function AdminSimulator({
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-1.5">
                             {(member.permissions || []).length === 0 ? (
-                              <span className="text-[11px] text-amber-600 italic">Aucune tÃ¢che assignÃ©e â€” ce compte ne peut rien faire pour l'instant.</span>
+                              <span className="text-[11px] text-amber-600 italic">Aucune tâche assignée — ce compte ne peut rien faire pour l'instant.</span>
                             ) : (
                               PERMISSION_TAB_LABELS.filter(p => (member.permissions || []).includes(p.key)).map(p => (
                                 <span key={p.key} className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 rounded font-semibold text-[11px]">
@@ -4165,17 +4165,17 @@ export default function AdminSimulator({
                             <div className="flex flex-wrap gap-1.5">
                               {member.alertEmail && (
                                 <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-700 border border-indigo-500/20 rounded font-semibold text-[11px]">
-                                  ðŸ“§ {member.alertEmail}
+                                  📧 {member.alertEmail}
                                 </span>
                               )}
                               {member.alertTelegramChatId && (
                                 <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 rounded font-semibold text-[11px]">
-                                  âœˆï¸ Telegram configurÃ©
+                                  ✈️ Telegram configuré
                                 </span>
                               )}
                               {member.alertWhatsappPhone && (
                                 <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-700 border border-indigo-500/20 rounded font-semibold text-[11px]">
-                                  ðŸ“± {member.alertWhatsappPhone} {!member.alertWhatsappApiKey && "(clÃ© manquante)"}
+                                  📱 {member.alertWhatsappPhone} {!member.alertWhatsappApiKey && "(clé manquante)"}
                                 </span>
                               )}
                             </div>
