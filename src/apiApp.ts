@@ -822,31 +822,59 @@ if (!CALLMEBOT_APIKEY) {
   );
 }
 
-async function sendRealEmail(subject: string, textBody: string): Promise<void> {
-  if (!emailTransporter) return;
+// --- Envoi Telegram réel (alternative fiable à CallMeBot/WhatsApp) ---
+// Nécessite TELEGRAM_BOT_TOKEN (obtenu via @BotFather) + TELEGRAM_CHAT_ID
+// (l'identifiant de la conversation à qui envoyer les alertes).
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
+
+if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+  console.warn(
+    "[TELEGRAM WARNING] TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID non définis. " +
+    "Les alertes Telegram ne seront pas réellement envoyées (seulement journalisées)."
+  );
+}
+
+async function sendRealTelegram(text: string, chatId: string = TELEGRAM_CHAT_ID): Promise<void> {
+  if (!TELEGRAM_BOT_TOKEN || !chatId) return;
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text })
+    });
+  } catch (err) {
+    console.error(`Error sending real Telegram message to ${chatId}:`, err);
+  }
+}
+
+async function sendRealEmail(subject: string, textBody: string, to: string = ALERT_EMAIL): Promise<void> {
+  if (!emailTransporter || !to) return;
   try {
     await emailTransporter.sendMail({
       from: `"KURTAL IPTV - Alertes" <${GMAIL_USER}>`,
-      to: ALERT_EMAIL,
+      to,
       subject,
       text: textBody
     });
   } catch (err) {
-    console.error("Error sending real email via Gmail:", err);
+    console.error(`Error sending real email via Gmail to ${to}:`, err);
   }
 }
 
-async function sendRealWhatsApp(text: string): Promise<void> {
-  if (!CALLMEBOT_APIKEY) return;
+async function sendRealWhatsApp(text: string, phone: string = ALERT_WHATSAPP, apikey: string = CALLMEBOT_APIKEY): Promise<void> {
+  if (!apikey || !phone) return;
   try {
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(ALERT_WHATSAPP)}&text=${encodeURIComponent(text)}&apikey=${CALLMEBOT_APIKEY}`;
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}&apikey=${apikey}`;
     await fetch(url);
   } catch (err) {
-    console.error("Error sending real WhatsApp via CallMeBot:", err);
+    console.error(`Error sending real WhatsApp via CallMeBot to ${phone}:`, err);
   }
 }
 
-// Send Admin Email and WhatsApp Alert Helper
+// Send Admin Email and WhatsApp Alert Helper — notifie le compte principal ET
+// tous les membres de l'équipe qui ont configuré leurs propres alertes.
 async function sendAdminEmail(subject: string, body: string, type: EmailNotification['type']) {
   const db = await readDB();
   const fullBody = `${body}\n\n[Notification WhatsApp envoyée automatiquement au numéro ${ALERT_WHATSAPP}]`;
@@ -866,6 +894,24 @@ async function sendAdminEmail(subject: string, body: string, type: EmailNotifica
   // Envois réels (silencieux si les identifiants ne sont pas configurés)
   await sendRealEmail(subject, body);
   await sendRealWhatsApp(`🔔 KURTAL IPTV\n\n${subject}\n\n${body}`);
+  await sendRealTelegram(`🔔 KURTAL IPTV\n\n${subject}\n\n${body}`);
+
+  // Notifie aussi chaque membre de l'équipe ayant renseigné ses propres alertes
+  for (const member of db.teamMembers || []) {
+    if (member.alertEmail) {
+      await sendRealEmail(subject, body, member.alertEmail);
+    }
+    if (member.alertWhatsappPhone && member.alertWhatsappApiKey) {
+      await sendRealWhatsApp(
+        `🔔 KURTAL IPTV\n\n${subject}\n\n${body}`,
+        member.alertWhatsappPhone,
+        member.alertWhatsappApiKey
+      );
+    }
+    if (member.alertTelegramChatId) {
+      await sendRealTelegram(`🔔 KURTAL IPTV\n\n${subject}\n\n${body}`, member.alertTelegramChatId);
+    }
+  }
 
   console.log(`[ALERT SYSTEM] Email alert sent to ${ALERT_EMAIL}\nSubject: ${subject}\nBody: ${fullBody}\n---`);
   console.log(`[WHATSAPP ALERT] WhatsApp alert dispatched to ${ALERT_WHATSAPP} successfully.\n---`);
@@ -1750,7 +1796,7 @@ app.get("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => {
 });
 
 app.post("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => {
-  const { username, password, name, permissions } = req.body;
+  const { username, password, name, permissions, alertEmail, alertWhatsappPhone, alertWhatsappApiKey, alertTelegramChatId } = req.body;
   if (!username || !password || !name) {
     return res.status(400).json({ error: "Nom, nom d'utilisateur et mot de passe sont obligatoires." });
   }
@@ -1778,7 +1824,11 @@ app.post("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => 
     password: bcrypt.hashSync(password, 10),
     name,
     createdAt: new Date().toISOString(),
-    permissions: validPermissions
+    permissions: validPermissions,
+    alertEmail: alertEmail || undefined,
+    alertWhatsappPhone: alertWhatsappPhone || undefined,
+    alertWhatsappApiKey: alertWhatsappApiKey || undefined,
+    alertTelegramChatId: alertTelegramChatId || undefined
   };
   db.teamMembers.push(newMember);
   await writeDB(db);
@@ -1789,7 +1839,7 @@ app.post("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => 
 
 app.put("/api/admin/team/:id", requireAdminAuth, requireOwner, async (req, res) => {
   const { id } = req.params;
-  const { permissions, name } = req.body;
+  const { permissions, name, alertEmail, alertWhatsappPhone, alertWhatsappApiKey, alertTelegramChatId } = req.body;
   const db = await readDB();
   const member = (db.teamMembers || []).find(m => m.id === id);
   if (!member) {
@@ -1801,6 +1851,10 @@ app.put("/api/admin/team/:id", requireAdminAuth, requireOwner, async (req, res) 
       ? permissions.filter((p: string) => ADMIN_PERMISSION_TABS.includes(p))
       : [];
   }
+  if (alertEmail !== undefined) member.alertEmail = alertEmail || undefined;
+  if (alertWhatsappPhone !== undefined) member.alertWhatsappPhone = alertWhatsappPhone || undefined;
+  if (alertWhatsappApiKey !== undefined) member.alertWhatsappApiKey = alertWhatsappApiKey || undefined;
+  if (alertTelegramChatId !== undefined) member.alertTelegramChatId = alertTelegramChatId || undefined;
   await writeDB(db);
   const { password: _pw, ...safeMember } = member;
   res.json(safeMember);
@@ -2028,6 +2082,19 @@ app.put("/api/admin/clients/:id", requireAdminAuth, requireAdminPermission("clie
   res.json({ message: "Informations d'abonnement du client mises à jour.", client });
 });
 
+// Suppression d'un abonnement grossiste : réservée au compte principal.
+app.delete("/api/admin/clients/:id", requireAdminAuth, requireOwner, async (req, res) => {
+  const { id } = req.params;
+  const db = await readDB();
+  const existed = db.clients.some(c => c.id === id);
+  if (!existed) {
+    return res.status(404).json({ error: "Client introuvable." });
+  }
+  db.clients = db.clients.filter(c => c.id !== id);
+  await writeDB(db);
+  res.json({ success: true });
+});
+
 // --- DELIVERERS (LIVREURS) ENDPOINTS ---
 app.get("/api/admin/livreurs", requireAdminAuth, async (req, res) => {
   const db = await readDB();
@@ -2213,7 +2280,7 @@ app.delete("/api/admin/products/:id", requireAdminAuth, requireAdminPermission("
 });
 
 // --- ORDERS: suppression individuelle (admin) ---
-app.delete("/api/admin/orders/:id", requireAdminAuth, requireAdminPermission("orders"), async (req, res) => {
+app.delete("/api/admin/orders/:id", requireAdminAuth, requireOwner, async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   const existed = db.orders.some(o => o.id === id);
