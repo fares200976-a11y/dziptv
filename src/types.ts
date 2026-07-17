@@ -16,6 +16,16 @@ export interface TeamMember {
   // Sections du panel admin auxquelles ce membre a accès (voir ADMIN_TABS).
   // Vide = aucun accès (sauf le compte principal, qui a toujours accès à tout).
   permissions?: string[];
+  // Alertes personnelles (en plus de celles de l'administrateur principal).
+  alertEmail?: string;
+  // Clé CallMeBot du membre : chacun doit l'obtenir lui-même en envoyant
+  // "I allow callmebot to send me messages" depuis SON propre WhatsApp
+  // (une clé n'est valable que pour le numéro qui l'a générée).
+  alertWhatsappPhone?: string;
+  alertWhatsappApiKey?: string;
+  // Chat ID Telegram du membre (obtenu en lui faisant envoyer un message au
+  // bot puis en consultant /getUpdates) — canal recommandé, plus fiable que WhatsApp.
+  alertTelegramChatId?: string;
 }
 
 export interface CatalogCategory {
