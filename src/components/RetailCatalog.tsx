@@ -22,7 +22,11 @@ import {
   ZoomIn,
   Key,
   Copy,
-  Download
+  Download,
+  LayoutGrid,
+  Satellite,
+  Tv2,
+  Monitor
 } from "lucide-react";
 
 // Types de produits considérés comme "physiques" : nécessitent une livraison
@@ -39,10 +43,11 @@ interface RetailCatalogProps {
 
 export default function RetailCatalog({ products, catalogCategories = [], onOrderSubmit }: RetailCatalogProps) {
   const { t } = useTranslation();
-  const [filter, setFilter] = useState<"all" | "iptv" | "device" | "adsl" | "track">("all");
+  const [filter, setFilter] = useState<"all" | "iptv" | "box" | "led" | "codesat" | "accessoire" | "adsl" | "track">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [zoomedProduct, setZoomedProduct] = useState<Product | null>(null);
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   
   // Checkout Form State
   const [name, setName] = useState("");
@@ -81,8 +86,17 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
   const [trackedOrders, setTrackedOrders] = useState<any[] | null>(null);
   const [trackError, setTrackError] = useState("");
 
+  const FILTER_TYPE_MAP: Record<string, string[]> = {
+    iptv: ["iptv", "code iptv", "abonnement iptv"],
+    box: ["boitier android", "device"],
+    led: ["televiseur"],
+    codesat: ["code sat"],
+    accessoire: ["accessoire"],
+    adsl: ["adsl", "recharge adsl"]
+  };
+
   const filteredProducts = products.filter((p) => {
-    const matchesType = filter === "all" || p.type === filter;
+    const matchesType = filter === "all" || filter === "track" || (FILTER_TYPE_MAP[filter] || []).includes(p.type);
     const matchesCategory = selectedCategory === "all" || p.categoryId === selectedCategory;
     return matchesType && matchesCategory;
   });
@@ -208,78 +222,75 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
 
   return (
     <section id="shop-catalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Category Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-200 pb-5 mb-10">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-200 pb-5 mb-8">
         <div>
           <h2 className="font-display text-2xl font-bold text-slate-900">{t("shop.title")}</h2>
           <p className="text-slate-500 text-sm mt-1">{t("shop.subtitle")}</p>
         </div>
-        <div className="flex flex-wrap mt-4 md:mt-0 bg-slate-100 p-1.5 rounded-xl border border-slate-200 gap-1 self-start">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filter === "all"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            {t("shop.filter_all")}
-          </button>
-          <button
-            onClick={() => setFilter("iptv")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filter === "iptv"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            {t("shop.filter_iptv")}
-          </button>
-          <button
-            onClick={() => setFilter("device")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filter === "device"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            {t("shop.filter_device")}
-          </button>
-          <button
-            onClick={() => setFilter("adsl")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filter === "adsl"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            {t("shop.filter_adsl")}
-          </button>
-          <button
-            onClick={() => {
-              setFilter("track");
-              setTrackQuery("");
-              setTrackedOrders(null);
-              setTrackError("");
-            }}
-            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
-              filter === "track"
-                ? "bg-emerald-600 text-white shadow-md"
-                : "text-emerald-600 hover:text-white hover:bg-emerald-600/10"
-            }`}
-          >
-            <Search className="h-3.5 w-3.5" />
-            <span>{t("shop.track_order")}</span>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            setFilter(filter === "track" ? "all" : "track");
+            setTrackQuery("");
+            setTrackedOrders(null);
+            setTrackError("");
+          }}
+          className={`mt-4 md:mt-0 self-start px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 border ${
+            filter === "track"
+              ? "bg-emerald-600 text-white border-emerald-600 shadow-md"
+              : "text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+          }`}
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span>{t("shop.track_order")}</span>
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+        </button>
       </div>
 
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Sidebar Categories */}
+        {filter !== "track" && (
+          <aside className="lg:w-56 shrink-0">
+            <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 lg:sticky lg:top-24">
+              <span className="hidden lg:block text-[10px] uppercase font-bold tracking-wider text-slate-400 px-3 pb-1">
+                {t("shop.categories_title")}
+              </span>
+              {([
+                { key: "all", label: t("shop.filter_all"), icon: LayoutGrid },
+                { key: "box", label: t("shop.filter_box"), icon: Smartphone },
+                { key: "iptv", label: t("shop.filter_iptv"), icon: Tv2 },
+                { key: "led", label: t("shop.filter_led"), icon: Monitor },
+                { key: "codesat", label: t("shop.filter_codesat"), icon: Satellite },
+                { key: "accessoire", label: t("shop.filter_accessoire"), icon: Package },
+                { key: "adsl", label: t("shop.filter_adsl"), icon: RefreshCw }
+              ] as const).map(cat => {
+                const Icon = cat.icon;
+                return (
+                  <button
+                    key={cat.key}
+                    onClick={() => setFilter(cat.key as any)}
+                    className={`shrink-0 flex items-center space-x-2 px-4 py-2.5 lg:py-3 rounded-xl text-xs font-bold transition-all cursor-pointer border whitespace-nowrap ${
+                      filter === cat.key
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/10"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:bg-blue-50/50"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+        )}
+
+        {/* Main Content */}
+        <div className="flex-1 min-w-0">
       {catalogCategories.length > 0 && filter !== "track" && (
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/60 self-start max-w-full overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/60 self-start max-w-full overflow-x-auto mb-6">
           <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-3 py-1.5 border-r border-slate-200 shrink-0">
             Filtre Catalogue
           </span>
@@ -645,10 +656,16 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
 
               {/* Content info */}
               <div className="p-6 flex-1 flex flex-col bg-white">
-                <h3 className="font-display text-xl font-bold text-slate-900 mb-2">{product.name}</h3>
-                <p className="text-slate-600 text-sm line-clamp-3 mb-4 leading-relaxed flex-grow-0">
-                  {product.description}
-                </p>
+                <div
+                  onClick={() => setDetailProduct(product)}
+                  className="cursor-pointer group/detail"
+                  title={t("shop.view_details")}
+                >
+                  <h3 className="font-display text-xl font-bold text-slate-900 mb-2 group-hover/detail:text-blue-600 transition-colors">{product.name}</h3>
+                  <p className="text-slate-600 text-sm line-clamp-3 mb-4 leading-relaxed flex-grow-0">
+                    {product.description}
+                  </p>
+                </div>
 
                 {/* Bullet points */}
                 <ul className="space-y-2 mb-6 flex-grow">
@@ -681,6 +698,8 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
           ))}
         </div>
       )}
+        </div>
+      </div>
 
       {/* Checkout Modal Overlay */}
       {selectedProduct && (
@@ -1214,6 +1233,73 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 <ShoppingBag className="h-3.5 w-3.5" />
                 <span>{t("shop.order_button")}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fenêtre de descriptif détaillé (clic sur le titre/description d'un produit) */}
+      {detailProduct && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setDetailProduct(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative h-56 shrink-0 bg-slate-50">
+              <img
+                src={detailProduct.imageUrl}
+                alt={detailProduct.name}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover"
+              />
+              <button
+                onClick={() => setDetailProduct(null)}
+                className="absolute top-3 right-3 p-1.5 bg-white/90 hover:bg-white rounded-full text-slate-600 hover:text-slate-900 shadow-md transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              {detailProduct.isPopular && (
+                <span className="absolute top-3 left-3 bg-amber-500 text-black text-[9px] font-extrabold uppercase px-2 py-1 rounded shadow-md tracking-wider">
+                  {t("shop.badge_popular")}
+                </span>
+              )}
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              <h3 className="font-display text-2xl font-bold text-slate-900">{detailProduct.name}</h3>
+              <p className="text-slate-600 text-sm leading-relaxed">{detailProduct.description}</p>
+
+              {detailProduct.features && detailProduct.features.length > 0 && (
+                <ul className="space-y-2">
+                  {detailProduct.features.map((feature, i) => (
+                    <li key={i} className="flex items-start text-sm text-slate-700">
+                      <Check className="h-4 w-4 text-emerald-500 shrink-0 mr-2 mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                <div>
+                  <span className="text-xs text-slate-400 block">{t("shop.price_retail")}</span>
+                  <span className="text-2xl font-black font-display text-indigo-600">{detailProduct.priceRetail.toLocaleString()} DA</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const p = detailProduct;
+                    setDetailProduct(null);
+                    handleOpenCheckout(p);
+                  }}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-1.5 cursor-pointer shrink-0"
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  <span>{t("shop.order_button")}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
