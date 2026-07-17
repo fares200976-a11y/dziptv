@@ -30,6 +30,27 @@ html[dir="rtl"] .font-display {
   text-align: left;
 }
 
+/* Clignotement des éléments en attente (commandes, demandes de crédit,
+   demandes de panel...) dans le panel admin, jusqu'à leur traitement.
+   Pulse le fond/la bordure plutôt que l'opacité, pour rester lisible. */
+@keyframes pending-blink {
+  0%, 100% { background-color: rgba(254, 226, 226, 0.4); border-color: rgba(248, 113, 113, 0.9); }
+  50% { background-color: rgba(254, 226, 226, 1); border-color: rgba(248, 113, 113, 0.3); }
+}
+.animate-pending-blink {
+  animation: pending-blink 1.2s ease-in-out infinite;
+}
+
+/* Variante pour texte/icônes (badges de comptage dans les onglets) : pulse
+   la couleur sans jamais faire disparaître le texte. */
+@keyframes pending-blink-text {
+  0%, 100% { color: rgb(220, 38, 38); }
+  50% { color: rgb(248, 180, 180); }
+}
+.animate-pending-blink-text {
+  animation: pending-blink-text 1.2s ease-in-out infinite;
+}
+
 /* Glassmorphism utility classes */
 .glass-panel {
   background: rgba(17, 24, 39, 0.7);
