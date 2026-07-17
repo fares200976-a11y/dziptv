@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { Redis } from "@upstash/redis";
+import nodemailer from "nodemailer";
 import { getTariffForWilaya } from "./data/deliveryTariffs.js";
 import {
   Product,
@@ -20,7 +21,8 @@ import {
   CatalogCategory,
   PanelRequest,
   ServerBouquetLinks,
-  HeroSlide
+  HeroSlide,
+  TeamMember
 } from "./types.js";
 
 const app = express();
@@ -190,10 +192,10 @@ if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
 const ADMIN_TOKEN_COOKIE = "admin_token";
 const ADMIN_TOKEN_TTL_SECONDS = 2 * 24 * 60 * 60; // 2 jours
 
-function signAdminToken(): string {
+function signAdminToken(isOwner: boolean, teamMemberId?: string): string {
   const jti = crypto.randomUUID();
   return jwt.sign(
-    { role: "admin", jti },
+    { role: "admin", jti, isOwner, teamMemberId: teamMemberId || null },
     JWT_SECRET,
     { expiresIn: ADMIN_TOKEN_TTL_SECONDS }
   );
@@ -211,22 +213,56 @@ function adminCookieOptions() {
 
 // Protège toutes les routes /api/admin/*. Sans cookie admin_token valide
 // et non révoqué, la requête est rejetée AVANT d'atteindre la logique métier.
+// Attache aussi req.isOwner / req.teamMemberId pour le contrôle de permissions.
 async function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const token = req.cookies?.[ADMIN_TOKEN_COOKIE];
   if (!token) {
     return res.status(401).json({ error: "Accès administrateur non autorisé." });
   }
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { role: string; jti: string; exp: number };
+    const payload = jwt.verify(token, JWT_SECRET) as { role: string; jti: string; exp: number; isOwner?: boolean; teamMemberId?: string | null };
     if (payload.role !== "admin" || await isTokenRevoked(payload.jti)) {
       res.clearCookie(ADMIN_TOKEN_COOKIE, adminCookieOptions());
       return res.status(401).json({ error: "Session administrateur invalidée. Veuillez vous reconnecter." });
     }
+    // Rétrocompatibilité : les tokens émis avant l'ajout des comptes équipe
+    // n'ont pas isOwner -> on les traite comme propriétaire (comportement identique à avant).
+    (req as any).isOwner = payload.isOwner !== undefined ? payload.isOwner : true;
+    (req as any).teamMemberId = payload.teamMemberId || null;
     next();
   } catch (err) {
     res.clearCookie(ADMIN_TOKEN_COOKIE, adminCookieOptions());
     return res.status(401).json({ error: "Session administrateur expirée. Veuillez vous reconnecter." });
   }
+}
+
+// Sections du panel admin pouvant être accordées à un membre de l'équipe.
+// "team" et la réinitialisation de la base restent TOUJOURS réservées au
+// compte principal, quelles que soient les permissions cochées.
+const ADMIN_PERMISSION_TABS = [
+  "emails", "wholesalers", "requests", "orders", "products",
+  "tutorials", "clients", "livreurs", "panels", "categories", "slides"
+];
+
+// Protège une action précise : le compte principal a toujours accès, un
+// membre de l'équipe doit avoir la permission correspondante cochée par l'admin.
+function requireAdminPermission(tab: string) {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if ((req as any).isOwner) return next();
+    const teamMemberId = (req as any).teamMemberId;
+    const db = await readDB();
+    const member = (db.teamMembers || []).find(m => m.id === teamMemberId);
+    if (member && (member.permissions || []).includes(tab)) {
+      return next();
+    }
+    return res.status(403).json({ error: "Vous n'avez pas la permission d'effectuer cette action. Contactez l'administrateur principal." });
+  };
+}
+
+// Réservé exclusivement au compte principal (jamais accordable à l'équipe).
+function requireOwner(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if ((req as any).isOwner) return next();
+  return res.status(403).json({ error: "Cette action est réservée au compte administrateur principal." });
 }
 
 // ----------------------------------------------------------------------------
@@ -469,6 +505,7 @@ interface DBStructure {
   revokedTokens?: { jti: string; exp: number }[];
   bouquetLinks?: ServerBouquetLinks;
   heroSlides?: HeroSlide[];
+  teamMembers?: TeamMember[];
 }
 
 // Read database
@@ -630,7 +667,8 @@ async function readDB(): Promise<DBStructure> {
             imageUrl: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=800",
             order: 1
           }
-        ]
+        ],
+        teamMembers: []
       };
       await storageWriteRaw(JSON.stringify(initialDB, null, 2));
       return initialDB;
@@ -682,6 +720,10 @@ async function readDB(): Promise<DBStructure> {
       parsed.bouquetLinks = {};
       changed = true;
     }
+    if (!parsed.teamMembers) {
+      parsed.teamMembers = [];
+      changed = true;
+    }
     if (!parsed.heroSlides) {
       parsed.heroSlides = [
           {
@@ -729,7 +771,8 @@ async function readDB(): Promise<DBStructure> {
             imageUrl: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=800",
             order: 1
           }
-        ]
+        ],
+      teamMembers: []
     };
   }
 }
@@ -743,10 +786,67 @@ async function writeDB(data: DBStructure) {
   }
 }
 
-const ALERT_EMAIL = "fares200976@gmail.com";
-const ALERT_WHATSAPP = "00213667719761";
+const ALERT_EMAIL = process.env.ALERT_EMAIL || "fares200976@gmail.com";
+const ALERT_WHATSAPP = process.env.ALERT_WHATSAPP_PHONE || "+213667719761"; // format international avec "+", requis par CallMeBot
 
-// Send Admin Email and WhatsApp Simulation Helper
+// --- Envoi d'email réel via Gmail SMTP (nodemailer) ---
+// Nécessite GMAIL_USER + GMAIL_APP_PASSWORD (mot de passe d'application Google,
+// PAS le mot de passe normal du compte). Sans ces variables, l'envoi est
+// simplement journalisé (aucune erreur bloquante).
+const GMAIL_USER = process.env.GMAIL_USER || "";
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || "";
+const emailTransporter = (GMAIL_USER && GMAIL_APP_PASSWORD)
+  ? nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD }
+    })
+  : null;
+
+if (!emailTransporter) {
+  console.warn(
+    "[EMAIL WARNING] GMAIL_USER / GMAIL_APP_PASSWORD non définis. Les alertes " +
+    "email ne seront pas réellement envoyées (seulement journalisées)."
+  );
+}
+
+// --- Envoi WhatsApp réel via CallMeBot ---
+// Nécessite CALLMEBOT_APIKEY (obtenu en envoyant "I allow callmebot to send
+// me messages" au contact WhatsApp CallMeBot). Sans cette variable, l'envoi
+// est simplement journalisé.
+const CALLMEBOT_APIKEY = process.env.CALLMEBOT_APIKEY || "";
+
+if (!CALLMEBOT_APIKEY) {
+  console.warn(
+    "[WHATSAPP WARNING] CALLMEBOT_APIKEY non défini. Les alertes WhatsApp ne " +
+    "seront pas réellement envoyées (seulement journalisées)."
+  );
+}
+
+async function sendRealEmail(subject: string, textBody: string): Promise<void> {
+  if (!emailTransporter) return;
+  try {
+    await emailTransporter.sendMail({
+      from: `"KURTAL IPTV - Alertes" <${GMAIL_USER}>`,
+      to: ALERT_EMAIL,
+      subject,
+      text: textBody
+    });
+  } catch (err) {
+    console.error("Error sending real email via Gmail:", err);
+  }
+}
+
+async function sendRealWhatsApp(text: string): Promise<void> {
+  if (!CALLMEBOT_APIKEY) return;
+  try {
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(ALERT_WHATSAPP)}&text=${encodeURIComponent(text)}&apikey=${CALLMEBOT_APIKEY}`;
+    await fetch(url);
+  } catch (err) {
+    console.error("Error sending real WhatsApp via CallMeBot:", err);
+  }
+}
+
+// Send Admin Email and WhatsApp Alert Helper
 async function sendAdminEmail(subject: string, body: string, type: EmailNotification['type']) {
   const db = await readDB();
   const fullBody = `${body}\n\n[Notification WhatsApp envoyée automatiquement au numéro ${ALERT_WHATSAPP}]`;
@@ -762,6 +862,11 @@ async function sendAdminEmail(subject: string, body: string, type: EmailNotifica
   };
   db.notifications.unshift(newEmail);
   await writeDB(db);
+
+  // Envois réels (silencieux si les identifiants ne sont pas configurés)
+  await sendRealEmail(subject, body);
+  await sendRealWhatsApp(`🔔 KURTAL IPTV\n\n${subject}\n\n${body}`);
+
   console.log(`[ALERT SYSTEM] Email alert sent to ${ALERT_EMAIL}\nSubject: ${subject}\nBody: ${fullBody}\n---`);
   console.log(`[WHATSAPP ALERT] WhatsApp alert dispatched to ${ALERT_WHATSAPP} successfully.\n---`);
 }
@@ -789,7 +894,7 @@ app.get("/api/catalog-categories", async (req, res) => {
   res.json(db.catalogCategories || []);
 });
 
-app.post("/api/admin/catalog-categories", requireAdminAuth, async (req, res) => {
+app.post("/api/admin/catalog-categories", requireAdminAuth, requireAdminPermission("categories"), async (req, res) => {
   const { name, description, icon, color } = req.body;
   if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
   const db = await readDB();
@@ -806,7 +911,7 @@ app.post("/api/admin/catalog-categories", requireAdminAuth, async (req, res) => 
   res.json(newCat);
 });
 
-app.put("/api/admin/catalog-categories/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/catalog-categories/:id", requireAdminAuth, requireAdminPermission("categories"), async (req, res) => {
   const { id } = req.params;
   const { name, description, icon, color } = req.body;
   if (!name) return res.status(400).json({ error: "Le nom du catalogue est requis." });
@@ -821,7 +926,7 @@ app.put("/api/admin/catalog-categories/:id", requireAdminAuth, async (req, res) 
   res.json(cat);
 });
 
-app.delete("/api/admin/catalog-categories/:id", requireAdminAuth, async (req, res) => {
+app.delete("/api/admin/catalog-categories/:id", requireAdminAuth, requireAdminPermission("categories"), async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.catalogCategories = (db.catalogCategories || []).filter(c => c.id !== id);
@@ -888,7 +993,7 @@ app.get("/api/admin/panel-requests", requireAdminAuth, async (req, res) => {
   res.json(db.panelRequests || []);
 });
 
-app.put("/api/admin/panel-requests/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/panel-requests/:id", requireAdminAuth, requireAdminPermission("panels"), async (req, res) => {
   const { id } = req.params;
   const { status, notes } = req.body;
   if (!status) return res.status(400).json({ error: "Le statut est requis." });
@@ -905,7 +1010,7 @@ app.put("/api/admin/panel-requests/:id", requireAdminAuth, async (req, res) => {
 });
 
 // Reset database to default
-app.post("/api/admin/reset", requireAdminAuth, async (req, res) => {
+app.post("/api/admin/reset", requireAdminAuth, requireOwner, async (req, res) => {
   try {
     await storageDeleteRaw();
     const db = await readDB();
@@ -1087,23 +1192,50 @@ app.post("/api/auth/admin/login", async (req, res) => {
     return res.status(429).json({ error: `Trop de tentatives. Réessayez dans ${Math.ceil(rl.retryAfterSeconds / 60)} minute(s).` });
   }
 
-  if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
-    return res.status(503).json({ error: "Le panneau administrateur n'est pas configuré (identifiants manquants côté serveur)." });
+  // 1) Compte principal (variables d'environnement)
+  const isOwner = ADMIN_USERNAME && ADMIN_PASSWORD
+    && username.trim().toLowerCase() === ADMIN_USERNAME.toLowerCase()
+    && password === ADMIN_PASSWORD;
+
+  // 2) Comptes de l'équipe (stockés en base, mot de passe hashé)
+  let matchedTeamMemberId: string | undefined;
+  if (!isOwner) {
+    const db = await readDB();
+    const member = (db.teamMembers || []).find(
+      m => m.username.toLowerCase() === username.trim().toLowerCase()
+    );
+    if (member && member.password && bcrypt.compareSync(password, member.password)) {
+      matchedTeamMemberId = member.id;
+    }
   }
 
-  if (username.trim().toLowerCase() !== ADMIN_USERNAME.toLowerCase() || password !== ADMIN_PASSWORD) {
+  if (!isOwner && !matchedTeamMemberId) {
+    if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
+      return res.status(503).json({ error: "Le panneau administrateur n'est pas configuré (identifiants manquants côté serveur)." });
+    }
     return res.status(401).json({ error: "Nom d'utilisateur ou mot de passe incorrect." });
   }
 
-  const token = signAdminToken();
+  const token = signAdminToken(!!isOwner, matchedTeamMemberId);
   res.cookie(ADMIN_TOKEN_COOKIE, token, adminCookieOptions());
   res.json({ message: "Connexion administrateur réussie." });
 });
 
 // Reconnexion automatique au panneau admin tant que le cookie est valide
-// (même logique que pour l'espace revendeur).
+// (même logique que pour l'espace revendeur). Renvoie aussi le rôle et les
+// permissions, pour que le frontend n'affiche que les sections autorisées.
 app.get("/api/auth/admin/session", requireAdminAuth, async (req, res) => {
-  res.json({ ok: true });
+  const isOwner = (req as any).isOwner;
+  if (isOwner) {
+    return res.json({ ok: true, isOwner: true, name: "Administrateur", permissions: ADMIN_PERMISSION_TABS });
+  }
+  const teamMemberId = (req as any).teamMemberId;
+  const db = await readDB();
+  const member = (db.teamMembers || []).find(m => m.id === teamMemberId);
+  if (!member) {
+    return res.status(401).json({ error: "Compte introuvable. Veuillez vous reconnecter." });
+  }
+  res.json({ ok: true, isOwner: false, name: member.name, permissions: member.permissions || [] });
 });
 
 app.post("/api/auth/admin/logout-complete", async (req, res) => {
@@ -1552,7 +1684,7 @@ app.get("/api/orders/track", async (req, res) => {
 // l'admin, affichés au revendeur après activation IPTV pour qu'il règle les
 // chaînes de son client.
 // --- HERO SLIDES : CRUD admin (carrousel de bannières sur la page d'accueil) ---
-app.post("/api/admin/hero-slides", requireAdminAuth, async (req, res) => {
+app.post("/api/admin/hero-slides", requireAdminAuth, requireAdminPermission("slides"), async (req, res) => {
   const { badge, title, highlightWord, buttonText, imageUrl, productId, linkUrl, isNew } = req.body;
   if (!title || !buttonText || !imageUrl) {
     return res.status(400).json({ error: "Le titre, le texte du bouton et l'image sont obligatoires." });
@@ -1577,7 +1709,7 @@ app.post("/api/admin/hero-slides", requireAdminAuth, async (req, res) => {
   res.json(newSlide);
 });
 
-app.put("/api/admin/hero-slides/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/hero-slides/:id", requireAdminAuth, requireAdminPermission("slides"), async (req, res) => {
   const { id } = req.params;
   const { badge, title, highlightWord, buttonText, imageUrl, productId, linkUrl, isNew, order } = req.body;
   const db = await readDB();
@@ -1602,10 +1734,82 @@ app.put("/api/admin/hero-slides/:id", requireAdminAuth, async (req, res) => {
   res.json(db.heroSlides![index]);
 });
 
-app.delete("/api/admin/hero-slides/:id", requireAdminAuth, async (req, res) => {
+app.delete("/api/admin/hero-slides/:id", requireAdminAuth, requireAdminPermission("slides"), async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.heroSlides = (db.heroSlides || []).filter(s => s.id !== id);
+  await writeDB(db);
+  res.json({ success: true });
+});
+
+// --- ÉQUIPE : comptes admin secondaires (username/mot de passe hashé) ---
+app.get("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => {
+  const db = await readDB();
+  const safe = (db.teamMembers || []).map(({ password, ...rest }) => rest);
+  res.json(safe);
+});
+
+app.post("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => {
+  const { username, password, name, permissions } = req.body;
+  if (!username || !password || !name) {
+    return res.status(400).json({ error: "Nom, nom d'utilisateur et mot de passe sont obligatoires." });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: "Le mot de passe doit contenir au moins 6 caractères." });
+  }
+
+  const db = await readDB();
+  if (!db.teamMembers) db.teamMembers = [];
+
+  const usernameTaken = db.teamMembers.some(m => m.username.toLowerCase() === username.trim().toLowerCase())
+    || username.trim().toLowerCase() === ADMIN_USERNAME.toLowerCase();
+  if (usernameTaken) {
+    return res.status(400).json({ error: "Ce nom d'utilisateur est déjà utilisé." });
+  }
+
+  // Ne garder que des clés de permission valides et reconnues (jamais "team").
+  const validPermissions = Array.isArray(permissions)
+    ? permissions.filter((p: string) => ADMIN_PERMISSION_TABS.includes(p))
+    : [];
+
+  const newMember: TeamMember = {
+    id: "team-" + Math.random().toString(36).substr(2, 9),
+    username: username.trim(),
+    password: bcrypt.hashSync(password, 10),
+    name,
+    createdAt: new Date().toISOString(),
+    permissions: validPermissions
+  };
+  db.teamMembers.push(newMember);
+  await writeDB(db);
+
+  const { password: _pw, ...safeMember } = newMember;
+  res.json(safeMember);
+});
+
+app.put("/api/admin/team/:id", requireAdminAuth, requireOwner, async (req, res) => {
+  const { id } = req.params;
+  const { permissions, name } = req.body;
+  const db = await readDB();
+  const member = (db.teamMembers || []).find(m => m.id === id);
+  if (!member) {
+    return res.status(404).json({ error: "Membre introuvable." });
+  }
+  if (name !== undefined) member.name = name;
+  if (permissions !== undefined) {
+    member.permissions = Array.isArray(permissions)
+      ? permissions.filter((p: string) => ADMIN_PERMISSION_TABS.includes(p))
+      : [];
+  }
+  await writeDB(db);
+  const { password: _pw, ...safeMember } = member;
+  res.json(safeMember);
+});
+
+app.delete("/api/admin/team/:id", requireAdminAuth, requireOwner, async (req, res) => {
+  const { id } = req.params;
+  const db = await readDB();
+  db.teamMembers = (db.teamMembers || []).filter(m => m.id !== id);
   await writeDB(db);
   res.json({ success: true });
 });
@@ -1615,7 +1819,7 @@ app.get("/api/admin/bouquet-links", requireAdminAuth, async (req, res) => {
   res.json(db.bouquetLinks || {});
 });
 
-app.put("/api/admin/bouquet-links", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/bouquet-links", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
   const { dino, "8k": eightK, "golden ott": goldenOtt } = req.body;
   const db = await readDB();
   db.bouquetLinks = {
@@ -1655,7 +1859,7 @@ app.get("/api/admin/wholesalers", requireAdminAuth, async (req, res) => {
   res.json(db.wholesalers.map(sanitizeWholesaler));
 });
 
-app.put("/api/admin/wholesalers/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/wholesalers/:id", requireAdminAuth, requireAdminPermission("wholesalers"), async (req, res) => {
   const { id } = req.params;
   const { status, creditBalance, username, password, businessName, email, phone } = req.body;
 
@@ -1686,7 +1890,7 @@ app.get("/api/admin/orders", requireAdminAuth, async (req, res) => {
   res.json(db.orders);
 });
 
-app.put("/api/admin/orders/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/orders/:id", requireAdminAuth, requireAdminPermission("orders"), async (req, res) => {
   const { id } = req.params;
   const { status, credentials, adultContent } = req.body;
 
@@ -1715,7 +1919,7 @@ app.get("/api/admin/credit-requests", requireAdminAuth, async (req, res) => {
   res.json(db.creditRequests);
 });
 
-app.put("/api/admin/credit-requests/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/credit-requests/:id", requireAdminAuth, requireAdminPermission("requests"), async (req, res) => {
   const { id } = req.params;
   const { action } = req.body;
 
@@ -1760,7 +1964,7 @@ app.get("/api/admin/notifications", requireAdminAuth, async (req, res) => {
   res.json(db.notifications);
 });
 
-app.put("/api/admin/notifications/:id/read", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/notifications/:id/read", requireAdminAuth, requireAdminPermission("emails"), async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   const notif = db.notifications.find(n => n.id === id);
@@ -1771,7 +1975,7 @@ app.put("/api/admin/notifications/:id/read", requireAdminAuth, async (req, res) 
   res.json({ success: true });
 });
 
-app.delete("/api/admin/notifications/:id", requireAdminAuth, async (req, res) => {
+app.delete("/api/admin/notifications/:id", requireAdminAuth, requireAdminPermission("emails"), async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.notifications = db.notifications.filter(n => n.id !== id);
@@ -1784,7 +1988,7 @@ app.get("/api/admin/clients", requireAdminAuth, async (req, res) => {
   res.json(db.clients || []);
 });
 
-app.put("/api/admin/clients/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/clients/:id", requireAdminAuth, requireAdminPermission("clients"), async (req, res) => {
   const { id } = req.params;
   const { credentials, clientName, server, notes, status, durationMonths, adultContent } = req.body;
 
@@ -1830,7 +2034,7 @@ app.get("/api/admin/livreurs", requireAdminAuth, async (req, res) => {
   res.json(db.livreurs || []);
 });
 
-app.post("/api/admin/livreurs", requireAdminAuth, async (req, res) => {
+app.post("/api/admin/livreurs", requireAdminAuth, requireAdminPermission("livreurs"), async (req, res) => {
   const { name, phone, wilaya, status } = req.body;
   if (!name || !phone) {
     return res.status(400).json({ error: "Le nom et le numéro de téléphone sont requis." });
@@ -1850,7 +2054,7 @@ app.post("/api/admin/livreurs", requireAdminAuth, async (req, res) => {
   res.json(newLivreur);
 });
 
-app.put("/api/admin/livreurs/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/livreurs/:id", requireAdminAuth, requireAdminPermission("livreurs"), async (req, res) => {
   const { id } = req.params;
   const { name, phone, wilaya, status } = req.body;
   const db = await readDB();
@@ -1869,7 +2073,7 @@ app.put("/api/admin/livreurs/:id", requireAdminAuth, async (req, res) => {
   res.json(db.livreurs[index]);
 });
 
-app.delete("/api/admin/livreurs/:id", requireAdminAuth, async (req, res) => {
+app.delete("/api/admin/livreurs/:id", requireAdminAuth, requireAdminPermission("livreurs"), async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.livreurs = (db.livreurs || []).filter(l => l.id !== id);
@@ -1877,7 +2081,7 @@ app.delete("/api/admin/livreurs/:id", requireAdminAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-app.put("/api/admin/orders/:id/delivery", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/orders/:id/delivery", requireAdminAuth, requireAdminPermission("orders"), async (req, res) => {
   const { id } = req.params;
   const { assignedLivreurId, deliveryStatus, status } = req.body;
   const db = await readDB();
@@ -1899,7 +2103,7 @@ app.get("/api/tutorials", async (req, res) => {
   res.json(db.tutorials || []);
 });
 
-app.post("/api/admin/tutorials", requireAdminAuth, async (req, res) => {
+app.post("/api/admin/tutorials", requireAdminAuth, requireAdminPermission("tutorials"), async (req, res) => {
   const { title, url, description, category, downloaderCode } = req.body;
   if (!title || !url) {
     return res.status(400).json({ error: "Le titre et le lien sont obligatoires." });
@@ -1920,7 +2124,7 @@ app.post("/api/admin/tutorials", requireAdminAuth, async (req, res) => {
   res.json(newTutorial);
 });
 
-app.put("/api/admin/tutorials/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/tutorials/:id", requireAdminAuth, requireAdminPermission("tutorials"), async (req, res) => {
   const { id } = req.params;
   const { title, url, description, category, downloaderCode } = req.body;
   const db = await readDB();
@@ -1940,7 +2144,7 @@ app.put("/api/admin/tutorials/:id", requireAdminAuth, async (req, res) => {
   res.json(db.tutorials[index]);
 });
 
-app.delete("/api/admin/tutorials/:id", requireAdminAuth, async (req, res) => {
+app.delete("/api/admin/tutorials/:id", requireAdminAuth, requireAdminPermission("tutorials"), async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.tutorials = (db.tutorials || []).filter(t => t.id !== id);
@@ -1953,7 +2157,7 @@ app.delete("/api/admin/tutorials/:id", requireAdminAuth, async (req, res) => {
 // par requireAdminAuth. L'alias public "/api/products" est retiré ici : il ne
 // doit rester accessible qu'en LECTURE (voir la route GET plus haut), jamais
 // en écriture.
-app.post("/api/admin/products", requireAdminAuth, async (req, res) => {
+app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
   const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
   if (!name || !type || priceRetail === undefined || priceWholesale === undefined) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
@@ -1976,7 +2180,7 @@ app.post("/api/admin/products", requireAdminAuth, async (req, res) => {
   res.json(newProduct);
 });
 
-app.put("/api/admin/products/:id", requireAdminAuth, async (req, res) => {
+app.put("/api/admin/products/:id", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
   const { id } = req.params;
   const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
   const db = await readDB();
@@ -2000,7 +2204,7 @@ app.put("/api/admin/products/:id", requireAdminAuth, async (req, res) => {
   res.json(db.products[index]);
 });
 
-app.delete("/api/admin/products/:id", requireAdminAuth, async (req, res) => {
+app.delete("/api/admin/products/:id", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   db.products = db.products.filter(p => p.id !== id);
@@ -2009,7 +2213,7 @@ app.delete("/api/admin/products/:id", requireAdminAuth, async (req, res) => {
 });
 
 // --- ORDERS: suppression individuelle (admin) ---
-app.delete("/api/admin/orders/:id", requireAdminAuth, async (req, res) => {
+app.delete("/api/admin/orders/:id", requireAdminAuth, requireAdminPermission("orders"), async (req, res) => {
   const { id } = req.params;
   const db = await readDB();
   const existed = db.orders.some(o => o.id === id);
@@ -2022,7 +2226,7 @@ app.delete("/api/admin/orders/:id", requireAdminAuth, async (req, res) => {
 });
 
 // --- DIRECT WHOLESALER CREATION BY ADMIN ---
-app.post("/api/admin/wholesalers", requireAdminAuth, async (req, res) => {
+app.post("/api/admin/wholesalers", requireAdminAuth, requireAdminPermission("wholesalers"), async (req, res) => {
   const { username, password, businessName, phone, email, creditBalance } = req.body;
   if (!username || !businessName || !phone || !email) {
     return res.status(400).json({ error: "Tous les champs sont requis." });

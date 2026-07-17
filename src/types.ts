@@ -5,6 +5,19 @@ export type SubscriptionServer = 'Dino' | '8K' | 'V12' | 'Golden OTT';
 // Clé = nom du serveur en minuscules ("dino", "8k", "golden ott").
 export type ServerBouquetLinks = Record<string, string>;
 
+// Compte membre de l'équipe (accès admin secondaire, en plus du compte
+// principal ADMIN_USERNAME/ADMIN_PASSWORD).
+export interface TeamMember {
+  id: string;
+  username: string;
+  password?: string; // hashé (bcrypt) côté serveur, jamais renvoyé au client
+  name: string;
+  createdAt: string;
+  // Sections du panel admin auxquelles ce membre a accès (voir ADMIN_TABS).
+  // Vide = aucun accès (sauf le compte principal, qui a toujours accès à tout).
+  permissions?: string[];
+}
+
 export interface CatalogCategory {
   id: string;
   name: string;

@@ -26,6 +26,9 @@ export default function App() {
   // vérifié au chargement via /api/auth/admin/session (voir useEffect plus bas).
   // Ne JAMAIS se fier à un flag localStorage pour une décision de sécurité.
   const [isAdminUnlocked, setAdminUnlocked] = useState(false);
+  const [adminIsOwner, setAdminIsOwner] = useState(true);
+  const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
+  const [adminName, setAdminName] = useState("");
 
   // Secret Admin modal states
   const [showSecretModal, setShowSecretModal] = useState(false);
@@ -91,6 +94,12 @@ export default function App() {
           credentials: "include"
         });
         setAdminUnlocked(res.ok);
+        if (res.ok) {
+          const data = await res.json();
+          setAdminIsOwner(!!data.isOwner);
+          setAdminPermissions(data.permissions || []);
+          setAdminName(data.name || "");
+        }
       } catch (e) {
         setAdminUnlocked(false);
       }
@@ -355,6 +364,20 @@ export default function App() {
         return;
       }
 
+      // Récupère le rôle (propriétaire ou membre d'équipe) et les permissions
+      // associées, pour n'afficher que les sections autorisées dans le panel.
+      try {
+        const sessionRes = await fetch("/api/auth/admin/session", { credentials: "include" });
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          setAdminIsOwner(!!sessionData.isOwner);
+          setAdminPermissions(sessionData.permissions || []);
+          setAdminName(sessionData.name || "");
+        }
+      } catch (e) {
+        // Non bloquant : au pire le panel se rechargera sans détail au prochain accès.
+      }
+
       setUnlockSuccess(true);
       setTimeout(() => {
         setAdminUnlocked(true);
@@ -379,6 +402,9 @@ export default function App() {
       console.error("Error during admin logout:", e);
     }
     setAdminUnlocked(false);
+    setAdminIsOwner(true);
+    setAdminPermissions([]);
+    setAdminName("");
     setView("retail");
   };
 
@@ -788,6 +814,9 @@ export default function App() {
           <div className="animate-in fade-in duration-300">
             {isAdminUnlocked && !loggedWholesaler ? (
               <AdminSimulator 
+                isOwner={adminIsOwner}
+                permissions={adminPermissions}
+                adminName={adminName}
                 stats={adminStats}
                 wholesalers={adminWholesalers}
                 orders={adminOrders}
