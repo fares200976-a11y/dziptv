@@ -836,14 +836,23 @@ if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
 }
 
 async function sendRealTelegram(text: string, chatId: string = TELEGRAM_CHAT_ID): Promise<void> {
-  if (!TELEGRAM_BOT_TOKEN || !chatId) return;
+  if (!TELEGRAM_BOT_TOKEN || !chatId) {
+    console.warn(`[TELEGRAM] Envoi ignoré : TELEGRAM_BOT_TOKEN ou chatId manquant (chatId=${chatId || "vide"}).`);
+    return;
+  }
   try {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text })
     });
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      console.error(`[TELEGRAM ERROR] L'API Telegram a répondu ${res.status} pour chatId=${chatId} : ${errBody}`);
+    } else {
+      console.log(`[TELEGRAM ALERT] Message Telegram envoyé avec succès à ${chatId}.`);
+    }
   } catch (err) {
     console.error(`Error sending real Telegram message to ${chatId}:`, err);
   }
