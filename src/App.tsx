@@ -360,7 +360,13 @@ export default function App() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setSecretError(data.error || "Nom d'utilisateur ou mot de passe incorrect.");
+        if (data.error) {
+          setSecretError(data.error);
+        } else if (res.status >= 500) {
+          setSecretError(`Erreur serveur (code ${res.status}). Ce n'est pas un problème d'identifiants — contactez le support technique.`);
+        } else {
+          setSecretError("Nom d'utilisateur ou mot de passe incorrect.");
+        }
         return;
       }
 
