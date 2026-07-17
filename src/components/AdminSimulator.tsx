@@ -39,6 +39,8 @@ interface AdminSimulatorProps {
   isOwner?: boolean;
   permissions?: string[];
   adminName?: string;
+  adminCreditBalance?: number;
+  onStaffActivateClient?: (payload: any) => Promise<any>;
   stats: AppStats;
   wholesalers: Wholesaler[];
   orders: Order[];
@@ -110,6 +112,8 @@ export default function AdminSimulator({
   isOwner = true,
   permissions = [],
   adminName = "",
+  adminCreditBalance = 0,
+  onStaffActivateClient,
   stats,
   wholesalers,
   orders,
@@ -408,6 +412,7 @@ export default function AdminSimulator({
   const [editingPermissionsFor, setEditingPermissionsFor] = useState<string | null>(null);
   const [editPermissionsDraft, setEditPermissionsDraft] = useState<string[]>([]);
   const [editAlertDraft, setEditAlertDraft] = useState({ alertEmail: "", alertWhatsappPhone: "", alertWhatsappApiKey: "", alertTelegramChatId: "" });
+  const [editCreditDraft, setEditCreditDraft] = useState<string>("0");
 
   const startEditPermissions = (member: any) => {
     setEditingPermissionsFor(member.id);
@@ -418,6 +423,7 @@ export default function AdminSimulator({
       alertWhatsappApiKey: member.alertWhatsappApiKey || "",
       alertTelegramChatId: member.alertTelegramChatId || ""
     });
+    setEditCreditDraft(String(member.creditBalance ?? 0));
   };
 
   const toggleEditPermission = (key: string) => {
@@ -431,10 +437,10 @@ export default function AdminSimulator({
       const res = await fetch(`/api/admin/team/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ permissions: editPermissionsDraft, ...editAlertDraft })
+        body: JSON.stringify({ permissions: editPermissionsDraft, creditBalance: Number(editCreditDraft) || 0, ...editAlertDraft })
       });
       if (res.ok) {
-        setSuccessMessage("Tâches et alertes mises à jour.");
+        setSuccessMessage("Tâches, crédit et alertes mis à jour.");
         setEditingPermissionsFor(null);
         fetchTeamMembers();
       } else {
@@ -599,6 +605,62 @@ export default function AdminSimulator({
     xtreamUser: "",
     xtreamPass: ""
   });
+
+  // --- Auto-activation par un membre de l'équipe (avec son propre crédit) ---
+  const [showStaffActivate, setShowStaffActivate] = useState(false);
+  const [staffServiceType, setStaffServiceType] = useState<"iptv" | "sat" | "box">("iptv");
+  const [staffForm, setStaffForm] = useState({
+    clientName: "",
+    server: "Dino",
+    durationMonths: 12,
+    productId: "",
+    adultContent: false,
+    notes: ""
+  });
+  const [staffActivationResult, setStaffActivationResult] = useState<any>(null);
+  const [staffError, setStaffError] = useState("");
+  const [staffLoading, setStaffLoading] = useState(false);
+
+  const staffSatProducts = products.filter(p => p.type === "code sat");
+  const staffBoxProducts = products.filter(p => p.type === "boitier android" || p.type === "device");
+
+  const handleStaffActivateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onStaffActivateClient) return;
+    if (!staffForm.clientName) {
+      setStaffError("Le nom du client est requis.");
+      return;
+    }
+    if (staffServiceType !== "iptv" && !staffForm.productId) {
+      setStaffError("Veuillez sélectionner un produit dans le catalogue.");
+      return;
+    }
+    setStaffLoading(true);
+    setStaffError("");
+    try {
+      const payload: any = {
+        clientName: staffForm.clientName,
+        serviceType: staffServiceType,
+        notes: staffForm.notes
+      };
+      if (staffServiceType === "iptv") {
+        payload.server = staffForm.server;
+        payload.durationMonths = staffForm.durationMonths;
+        payload.adultContent = staffForm.adultContent;
+      } else {
+        payload.productId = staffForm.productId;
+        if (staffServiceType === "sat") payload.durationMonths = staffForm.durationMonths;
+      }
+      const result = await onStaffActivateClient(payload);
+      setStaffActivationResult(result.client);
+      setStaffForm({ clientName: "", server: "Dino", durationMonths: 12, productId: "", adultContent: false, notes: "" });
+      setShowStaffActivate(false);
+    } catch (err: any) {
+      setStaffError(err.message || "Échec de l'activation.");
+    } finally {
+      setStaffLoading(false);
+    }
+  };
 
   const handleEditClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2753,11 +2815,218 @@ export default function AdminSimulator({
           {activeTab === "clients" && (
             <div className="space-y-6 text-sm animate-in fade-in duration-200">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Abonnements Activés par les Grossistes</h3>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                  {isOwner ? "Abonnements Activés par les Grossistes" : "Mes Activations"}
+                </h3>
                 <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-xl font-bold text-xs">
                   {clients.length} Abonnements au total
                 </span>
               </div>
+
+              {/* Auto-activation pour les membres de l'équipe (avec leur propre crédit) */}
+              {!isOwner && (
+                <div className="p-5 bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-2xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-emerald-600 font-bold uppercase tracking-wider">Votre Crédit</span>
+                      <p className="text-2xl font-black text-emerald-700">{adminCreditBalance.toLocaleString()} DA</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowStaffActivate(!showStaffActivate); setStaffError(""); }}
+                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold flex items-center space-x-1.5 transition-all cursor-pointer shrink-0"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>{showStaffActivate ? "Masquer" : "Activer un Client"}</span>
+                    </button>
+                  </div>
+
+                  {showStaffActivate && (
+                    <form onSubmit={handleStaffActivateSubmit} className="space-y-4 pt-2 border-t border-emerald-100">
+                      {staffError && (
+                        <div className="p-2.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-medium">{staffError}</div>
+                      )}
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { key: "iptv", label: "IPTV" },
+                          { key: "sat", label: "Code Sat" },
+                          { key: "box", label: "Box Android" }
+                        ] as const).map(opt => (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            onClick={() => { setStaffServiceType(opt.key); setStaffForm({ ...staffForm, productId: "" }); }}
+                            className={`py-2 rounded-xl border text-center text-xs font-bold transition-all cursor-pointer ${
+                              staffServiceType === opt.key
+                                ? "bg-emerald-500/15 border-emerald-500 text-emerald-700"
+                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-600 font-semibold mb-1">Nom du Client</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: Mohamed Belkaid"
+                          value={staffForm.clientName}
+                          onChange={e => setStaffForm({ ...staffForm, clientName: e.target.value })}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900"
+                        />
+                      </div>
+
+                      {staffServiceType === "iptv" && (
+                        <>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-slate-600 font-semibold mb-1">Serveur IPTV</label>
+                              <select
+                                value={staffForm.server}
+                                onChange={e => setStaffForm({ ...staffForm, server: e.target.value })}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900"
+                              >
+                                <option value="Dino">Dino IPTV</option>
+                                <option value="8K">8K Premium</option>
+                                <option value="V12">V12 IPTV Pro</option>
+                                <option value="Golden OTT">Golden OTT</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-slate-600 font-semibold mb-1">Durée</label>
+                              <select
+                                value={staffForm.durationMonths}
+                                onChange={e => setStaffForm({ ...staffForm, durationMonths: Number(e.target.value) })}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900"
+                              >
+                                <option value={1}>1 Mois</option>
+                                <option value={6}>6 Mois</option>
+                                <option value={12}>12 Mois</option>
+                              </select>
+                            </div>
+                          </div>
+                          {["Dino", "8K", "Golden OTT"].includes(staffForm.server) && (
+                            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                              <label className="text-slate-600 font-semibold">Contenu Adulte</label>
+                              <div className="flex rounded-lg overflow-hidden border border-slate-300 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setStaffForm({ ...staffForm, adultContent: false })}
+                                  className={`px-3 py-1.5 font-bold transition-colors cursor-pointer ${!staffForm.adultContent ? "bg-slate-700 text-white" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+                                >
+                                  Non
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setStaffForm({ ...staffForm, adultContent: true })}
+                                  className={`px-3 py-1.5 font-bold transition-colors cursor-pointer ${staffForm.adultContent ? "bg-red-600 text-white" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+                                >
+                                  Adulte
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {staffServiceType === "sat" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-slate-600 font-semibold mb-1">Produit Code Sat</label>
+                            <select
+                              value={staffForm.productId}
+                              onChange={e => setStaffForm({ ...staffForm, productId: e.target.value })}
+                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900"
+                            >
+                              <option value="">-- Choisir --</option>
+                              {staffSatProducts.map(p => (
+                                <option key={p.id} value={p.id}>{p.name} ({p.priceWholesale.toLocaleString()} DA)</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-slate-600 font-semibold mb-1">Durée</label>
+                            <select
+                              value={staffForm.durationMonths}
+                              onChange={e => setStaffForm({ ...staffForm, durationMonths: Number(e.target.value) })}
+                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900"
+                            >
+                              <option value={6}>6 Mois</option>
+                              <option value={12}>12 Mois</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {staffServiceType === "box" && (
+                        <div>
+                          <label className="block text-slate-600 font-semibold mb-1">Modèle de Box Android</label>
+                          <select
+                            value={staffForm.productId}
+                            onChange={e => setStaffForm({ ...staffForm, productId: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900"
+                          >
+                            <option value="">-- Choisir --</option>
+                            {staffBoxProducts.map(p => (
+                              <option key={p.id} value={p.id}>{p.name} ({p.priceWholesale.toLocaleString()} DA)</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-slate-600 font-semibold mb-1">Notes (Optionnel)</label>
+                        <input
+                          type="text"
+                          value={staffForm.notes}
+                          onChange={e => setStaffForm({ ...staffForm, notes: e.target.value })}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={staffLoading}
+                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl font-bold text-sm cursor-pointer"
+                      >
+                        {staffLoading ? "Activation en cours..." : "Confirmer l'activation"}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
+
+              {/* Résultat de l'activation (codes générés) */}
+              {staffActivationResult && (
+                <div className="p-5 bg-white border border-emerald-200 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-emerald-700 flex items-center gap-1.5">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Activation réussie : {staffActivationResult.clientName}</span>
+                    </h4>
+                    <button onClick={() => setStaffActivationResult(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {staffActivationResult.credentials?.m3uUrl && (
+                    <div className="text-xs font-mono bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                      <p><span className="text-slate-400">Host:</span> {staffActivationResult.credentials.xtreamHost}</p>
+                      <p><span className="text-slate-400">User:</span> {staffActivationResult.credentials.xtreamUser}</p>
+                      <p><span className="text-slate-400">Pass:</span> {staffActivationResult.credentials.xtreamPass}</p>
+                      <p className="break-all"><span className="text-slate-400">M3U:</span> {staffActivationResult.credentials.m3uUrl}</p>
+                    </div>
+                  )}
+                  {staffActivationResult.credentials?.satCode && (
+                    <div className="text-xs font-mono bg-slate-50 p-3 rounded-lg border border-slate-200">
+                      <span className="text-slate-400">Code Sat:</span> {staffActivationResult.credentials.satCode}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Edit Client Form */}
               {editingClient && (
@@ -4068,6 +4337,9 @@ export default function AdminSimulator({
                           <p className="text-xs text-slate-400">
                             Utilisateur : <span className="font-mono text-slate-600">{member.username}</span> · Ajouté le {new Date(member.createdAt).toLocaleDateString("fr-FR")}
                           </p>
+                          <p className="text-xs font-bold text-emerald-600 mt-0.5">
+                            💰 Crédit : {(member.creditBalance ?? 0).toLocaleString()} DA
+                          </p>
                         </div>
                         <div className="flex gap-1.5 shrink-0">
                           {editingPermissionsFor !== member.id && (
@@ -4090,6 +4362,16 @@ export default function AdminSimulator({
 
                       {editingPermissionsFor === member.id ? (
                         <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                          <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+                            <label className="block text-emerald-700 font-semibold mb-1 text-xs">Crédit accordé (DA)</label>
+                            <input
+                              type="number"
+                              value={editCreditDraft}
+                              onChange={e => setEditCreditDraft(e.target.value)}
+                              className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-slate-900 text-sm font-bold"
+                            />
+                            <p className="text-[10px] text-emerald-600 mt-1">Ce membre peut activer des abonnements IPTV/Sat/Box avec ce crédit, comme un revendeur.</p>
+                          </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <input
                               type="email"
