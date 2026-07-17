@@ -1180,8 +1180,10 @@ export default function AdminSimulator({
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
-            <Clock className="h-4 w-4" />
-            <span>Recharges ({requests.filter(r => r.status === "pending").length})</span>
+            <Clock className={`h-4 w-4 ${requests.filter(r => r.status === "pending").length > 0 ? "animate-pending-blink-text" : ""}`} />
+            <span className={requests.filter(r => r.status === "pending").length > 0 ? "animate-pending-blink-text" : ""}>
+              Recharges ({requests.filter(r => r.status === "pending").length})
+            </span>
           </button>
           )}
 
@@ -1194,8 +1196,10 @@ export default function AdminSimulator({
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
-            <FileText className="h-4 w-4" />
-            <span>Commandes ({orders.filter(o => o.status === "pending").length})</span>
+            <FileText className={`h-4 w-4 ${orders.filter(o => o.status === "pending").length > 0 ? "animate-pending-blink-text" : ""}`} />
+            <span className={orders.filter(o => o.status === "pending").length > 0 ? "animate-pending-blink-text" : ""}>
+              Commandes ({orders.filter(o => o.status === "pending").length})
+            </span>
           </button>
           )}
 
@@ -1237,8 +1241,10 @@ export default function AdminSimulator({
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
-            <Users className="h-4 w-4 text-amber-600" />
-            <span>Abonnements Grossistes ({clients.length})</span>
+            <Users className={`h-4 w-4 ${clients.filter(c => c.status === "pending").length > 0 ? "animate-pending-blink-text" : "text-amber-600"}`} />
+            <span className={clients.filter(c => c.status === "pending").length > 0 ? "animate-pending-blink-text" : ""}>
+              Abonnements Grossistes ({clients.length})
+            </span>
           </button>
           )}
 
@@ -1267,8 +1273,10 @@ export default function AdminSimulator({
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
-            <Key className="h-4 w-4 text-amber-600" />
-            <span>Demandes Panels ({panelRequests.filter(p => p.status === "pending").length})</span>
+            <Key className={`h-4 w-4 ${panelRequests.filter(p => p.status === "pending").length > 0 ? "animate-pending-blink-text" : "text-amber-600"}`} />
+            <span className={panelRequests.filter(p => p.status === "pending").length > 0 ? "animate-pending-blink-text" : ""}>
+              Demandes Panels ({panelRequests.filter(p => p.status === "pending").length})
+            </span>
           </button>
           )}
 
@@ -1732,7 +1740,9 @@ export default function AdminSimulator({
               {requests.length > 0 ? (
                 <div className="space-y-3">
                   {requests.map((req) => (
-                    <div key={req.id} className="p-4 bg-white/60 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm">
+                    <div key={req.id} className={`p-4 bg-white/60 rounded-xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm ${
+                      req.status === "pending" ? "border-red-300 animate-pending-blink" : "border-slate-200"
+                    }`}>
                       <div>
                         <div className="flex items-center space-x-2">
                           <strong className="text-slate-900 text-sm">{req.wholesalerName}</strong>
@@ -1790,7 +1800,9 @@ export default function AdminSimulator({
               {orders.length > 0 ? (
                 <div className="space-y-3">
                   {orders.map((order) => (
-                    <div key={order.id} className="p-4 bg-white/60 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start gap-4 text-sm">
+                    <div key={order.id} className={`p-4 bg-white/60 rounded-xl border flex flex-col sm:flex-row justify-between items-start gap-4 text-sm ${
+                      order.status === "pending" ? "border-red-300 animate-pending-blink" : "border-slate-200"
+                    }`}>
                       <div className="space-y-1.5 flex-1">
                         <div className="flex items-center space-x-2">
                           <span className="font-bold text-slate-900 text-sm">{order.customerName}</span>
@@ -3188,7 +3200,7 @@ export default function AdminSimulator({
                       const clientWholesaler = wholesalers.find(w => w.id === client.wholesalerId);
                       const isExpired = new Date(client.expirationDate) < new Date();
                       return (
-                        <tr key={client.id} className="hover:bg-slate-50">
+                        <tr key={client.id} className={`hover:bg-slate-50 ${client.status === "pending" ? "animate-pending-blink" : ""}`}>
                           <td className="p-3">
                             <span className="font-bold text-slate-900 block">{client.clientName}</span>
                             <span className="text-xs text-slate-400 font-mono">ID : {client.id}</span>
@@ -3481,7 +3493,9 @@ export default function AdminSimulator({
                   </thead>
                   <tbody>
                     {panelRequests.map((req) => (
-                      <tr key={req.id} className="border-b border-slate-200 hover:bg-slate-50">
+                      <tr key={req.id} className={`border-b hover:bg-slate-50 ${
+                        req.status === "pending" ? "border-red-300 animate-pending-blink" : "border-slate-200"
+                      }`}>
                         <td className="p-4 font-mono text-xs">
                           <span className="text-slate-500 block">{new Date(req.createdAt).toLocaleString("fr-FR")}</span>
                           <span className="text-slate-400">ID: {req.id}</span>
