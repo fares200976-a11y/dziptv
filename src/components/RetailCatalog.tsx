@@ -720,8 +720,8 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
 
       {/* Checkout Modal Overlay */}
       {selectedProduct && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-4">
+          <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-8 sm:my-0">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
               <div className="flex items-center space-x-2.5">
@@ -1149,7 +1149,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
       {/* Lightbox : image agrandie au clic sur une carte produit */}
       {zoomedProduct && (
         <div
-          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-y-auto"
           onClick={() => setZoomedProduct(null)}
         >
           <button
@@ -1194,11 +1194,11 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
       {/* Fenêtre de descriptif détaillé (clic sur le titre/description d'un produit) */}
       {detailProduct && (
         <div
-          className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 animate-in fade-in duration-200 overflow-y-auto"
           onClick={() => setDetailProduct(null)}
         >
           <div
-            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col my-8 sm:my-0"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative h-56 shrink-0 bg-slate-50">

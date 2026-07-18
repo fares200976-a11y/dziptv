@@ -1768,8 +1768,8 @@ export default function AdminSimulator({
 
               {/* Modal de modification Grossiste */}
               {editingWholesaler && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                  <div className="w-full max-w-lg p-6 bg-white border border-slate-200 rounded-2xl shadow-2xl space-y-4 text-left">
+                <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+                  <div className="w-full max-w-lg p-6 bg-white border border-slate-200 rounded-2xl shadow-2xl space-y-4 text-left my-8 sm:my-0 max-h-[85vh] overflow-y-auto">
                     <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                       <h3 className="font-display font-bold text-base text-slate-900 flex items-center gap-2">
                         <Users className="h-5 w-5 text-amber-500" />
@@ -4160,8 +4160,8 @@ export default function AdminSimulator({
 
               {/* Edit Category Modal */}
               {editingCategory && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 text-left">
-                  <div className="w-full max-w-md p-6 bg-white border border-slate-200 rounded-2xl shadow-2xl space-y-4">
+                <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 text-left overflow-y-auto">
+                  <div className="w-full max-w-md p-6 bg-white border border-slate-200 rounded-2xl shadow-2xl space-y-4 my-8 sm:my-0 max-h-[85vh] overflow-y-auto">
                     <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                       <h3 className="font-display font-bold text-base text-slate-900 flex items-center gap-2">
                         <Edit2 className="h-4 w-4 text-amber-500" />
