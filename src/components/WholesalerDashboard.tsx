@@ -73,6 +73,15 @@ export default function WholesalerDashboard({
   const [businessName, setBusinessName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState("");
+  const [teamMemberOptions, setTeamMemberOptions] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/team-members-public")
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setTeamMemberOptions(Array.isArray(data) ? data : []))
+      .catch(() => setTeamMemberOptions([]));
+  }, []);
 
   const [authError, setAuthError] = useState("");
   const [authSuccess, setAuthSuccess] = useState("");
@@ -149,7 +158,8 @@ export default function WholesalerDashboard({
         password: regPassword,
         businessName,
         phone,
-        email
+        email,
+        handledByTeamMemberId: selectedTeamMemberId || undefined
       };
       const res = await onRegister(payload);
       setAuthSuccess(res.message);
@@ -474,6 +484,24 @@ export default function WholesalerDashboard({
                     className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
+                {teamMemberOptions.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-600 mb-1">
+                      Votre contact chez KURTAL IPTV <span className="text-slate-400 font-normal">(Optionnel)</span>
+                    </label>
+                    <select
+                      value={selectedTeamMemberId}
+                      onChange={(e) => setSelectedTeamMemberId(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">-- Aucune préférence --</option>
+                      {teamMemberOptions.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-slate-400 mt-1">Cette personne suivra votre compte (recharges, activations...).</p>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-semibold text-slate-600 mb-1">{t("wholesaler.password")}</label>
                   <input
