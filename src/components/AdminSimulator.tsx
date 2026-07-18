@@ -56,6 +56,8 @@ interface AdminSimulatorProps {
   onUpdateClient: (id: string, payload: any) => Promise<void>;
   onApproveWholesaler: (id: string, currentStatus: string) => Promise<void>;
   onAssignWholesalerTeamMember?: (id: string, teamMemberId: string) => Promise<void>;
+  onDeleteWholesaler?: (id: string) => Promise<void>;
+  onDeleteCreditRequest?: (id: string) => Promise<void>;
   onAddCreditManual: (id: string, amount: number) => Promise<void>;
   onUpdateOrderStatus: (id: string, status: "completed" | "cancelled") => Promise<void>;
   onUpdateOrderCredentials?: (id: string, payload: any) => Promise<void>;
@@ -130,6 +132,8 @@ export default function AdminSimulator({
   onUpdateClient,
   onApproveWholesaler,
   onAssignWholesalerTeamMember,
+  onDeleteWholesaler,
+  onDeleteCreditRequest,
   onAddCreditManual,
   onUpdateOrderStatus,
   onUpdateOrderCredentials,
@@ -1758,6 +1762,27 @@ export default function AdminSimulator({
                               <Edit2 className="h-2.5 w-2.5" />
                               <span>Gérer</span>
                             </button>
+
+                            {isOwner && onDeleteWholesaler && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!confirm(`Supprimer définitivement le revendeur "${wholesaler.businessName}" ? Cette action est irréversible.`)) return;
+                                  setErrorMessage("");
+                                  setSuccessMessage("");
+                                  try {
+                                    await onDeleteWholesaler(wholesaler.id);
+                                    setSuccessMessage("Revendeur supprimé.");
+                                  } catch (err: any) {
+                                    setErrorMessage(err.message || "Échec de la suppression.");
+                                  }
+                                }}
+                                className="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/20 font-bold text-[11px] rounded cursor-pointer flex items-center gap-1"
+                                title="Supprimer définitivement ce revendeur"
+                              >
+                                <Trash2 className="h-2.5 w-2.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1912,7 +1937,7 @@ export default function AdminSimulator({
                         </p>
                       </div>
 
-                      <div>
+                      <div className="flex items-center gap-2">
                         {req.status === "pending" ? (
                           <div className="flex gap-2">
                             <button
@@ -1936,6 +1961,26 @@ export default function AdminSimulator({
                           }`}>
                             {req.status === "approved" ? "Approuvée" : "Rejetée"}
                           </span>
+                        )}
+                        {isOwner && onDeleteCreditRequest && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm(`Supprimer cette demande de recharge de "${req.wholesalerName}" ?`)) return;
+                              setErrorMessage("");
+                              setSuccessMessage("");
+                              try {
+                                await onDeleteCreditRequest(req.id);
+                                setSuccessMessage("Demande supprimée.");
+                              } catch (err: any) {
+                                setErrorMessage(err.message || "Échec de la suppression.");
+                              }
+                            }}
+                            className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/20 rounded cursor-pointer"
+                            title="Supprimer cette demande"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
                         )}
                       </div>
                     </div>
