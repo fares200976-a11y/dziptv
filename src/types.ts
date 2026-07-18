@@ -174,6 +174,7 @@ export interface Order {
     xtreamPass?: string;
     xtreamHost?: string;
     bouquetLink?: string;
+    satCode?: string; // Code Sat / IPTV à code d'activation, puisé du stock
   };
 }
 

@@ -2251,6 +2251,41 @@ app.put("/api/admin/orders/:id", requireAdminAuth, requireAdminPermission("order
   res.json({ message: "Commande mise à jour.", order: db.orders[orderIndex] });
 });
 
+// Puise un code disponible du stock pour cette commande (Code Sat / IPTV à
+// code d'activation) et le lie directement à la commande. Le client le verra
+// via le suivi de commande, comme les autres accès.
+app.post("/api/admin/orders/:id/draw-stock-code", requireAdminAuth, requireAdminPermission("orders"), async (req, res) => {
+  const { id } = req.params;
+  const db = await readDB();
+  const orderIndex = db.orders.findIndex(o => o.id === id);
+  if (orderIndex === -1) {
+    return res.status(404).json({ error: "Commande introuvable." });
+  }
+  const order = db.orders[orderIndex];
+
+  if (!(req as any).isOwner && order.handledByTeamMemberId && order.handledByTeamMemberId !== (req as any).teamMemberId) {
+    return res.status(403).json({ error: "Cette commande est déjà prise en charge par un autre membre de l'équipe." });
+  }
+  if (!(req as any).isOwner && !order.handledByTeamMemberId) {
+    order.handledByTeamMemberId = (req as any).teamMemberId;
+  }
+
+  const product = db.products.find(p => p.id === order.productId);
+  if (!product || !product.usesCodeStock) {
+    return res.status(400).json({ error: "Ce produit n'utilise pas de stock de codes." });
+  }
+
+  const code = await drawStockCode(db, product.id, order.id);
+  if (!code) {
+    return res.status(400).json({ error: `Stock de codes épuisé pour "${product.name}". Réapprovisionnez avant de continuer.` });
+  }
+
+  order.credentials = { ...order.credentials, satCode: code };
+  await writeDB(db);
+
+  res.json({ message: "Code attribué avec succès.", order });
+});
+
 app.get("/api/admin/credit-requests", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   if ((req as any).isOwner) {
