@@ -804,7 +804,8 @@ export default function AdminSimulator({
     imageUrl: "https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?auto=format&fit=crop&w=400&q=80",
     imageUrl2: "",
     categoryId: "",
-    usesCodeStock: false
+    usesCodeStock: false,
+    appName: ""
   });
 
   // Ajout rapide d'une catégorie directement depuis le formulaire produit
@@ -1028,7 +1029,8 @@ export default function AdminSimulator({
           imageUrl: "https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?auto=format&fit=crop&w=400&q=80",
           imageUrl2: "",
           categoryId: "",
-          usesCodeStock: false
+          usesCodeStock: false,
+          appName: ""
         });
         setShowAddProduct(false);
         refreshAllData();
@@ -2659,6 +2661,18 @@ export default function AdminSimulator({
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-slate-500 mb-1">Nom de l'Application (Optionnel)</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: IPTV Smarters Pro, TiviMate, SmartOne..."
+                      value={productForm.appName}
+                      onChange={e => setProductForm({ ...productForm, appName: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">Affiché sur la page dédiée du produit, pour indiquer quelle application utiliser.</p>
+                  </div>
+
                   <label className="flex items-center space-x-2.5 p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl cursor-pointer w-fit">
                     <input
                       type="checkbox"
@@ -2882,6 +2896,17 @@ export default function AdminSimulator({
                       value={editingProduct.description}
                       onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })}
                       className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-500 mb-1">Nom de l'Application (Optionnel)</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: IPTV Smarters Pro, TiviMate, SmartOne..."
+                      value={editingProduct.appName || ""}
+                      onChange={e => setEditingProduct({ ...editingProduct, appName: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
                     />
                   </div>
 
