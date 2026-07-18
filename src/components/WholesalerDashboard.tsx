@@ -606,8 +606,8 @@ export default function WholesalerDashboard({
 
       {/* PARAMÈTRES DU COMPTE MODAL */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 sm:my-0 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 max-h-[85vh] overflow-y-auto">
             <button
               onClick={() => {
                 setShowSettingsModal(false);
@@ -916,8 +916,8 @@ export default function WholesalerDashboard({
 
       {/* MODAL 3: REQUEST RESELLER PANEL */}
       {showPanelModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 sm:my-0 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 max-h-[85vh] overflow-y-auto">
             <button
               onClick={() => setShowPanelModal(false)}
               className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900 cursor-pointer"
@@ -989,8 +989,8 @@ export default function WholesalerDashboard({
 
       {/* MODAL 1: NEW ACTIVATION */}
       {showActivateModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 sm:my-0 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 max-h-[85vh] overflow-y-auto">
             <button
               onClick={() => setShowActivateModal(false)}
               className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900"
@@ -1204,8 +1204,8 @@ export default function WholesalerDashboard({
 
       {/* MODAL 2: REQUEST RECHARGE */}
       {showRechargeModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 sm:my-0 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 max-h-[85vh] overflow-y-auto">
             <button
               onClick={() => setShowRechargeModal(false)}
               className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900"
@@ -1309,8 +1309,8 @@ export default function WholesalerDashboard({
 
       {/* CREDENTIALS VIEWER DRAWER / SHEET */}
       {selectedClientCredentials && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-md bg-white border border-indigo-500/30 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 sm:my-0 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-white border border-indigo-500/30 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8 max-h-[85vh] overflow-y-auto">
             <button
               onClick={() => setSelectedClientCredentials(null)}
               className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900"

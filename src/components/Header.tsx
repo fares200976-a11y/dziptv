@@ -301,11 +301,11 @@ export default function Header({
     {showTrackModal && createPortal(
       (
         <div
-          className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+          className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
           onClick={() => setShowTrackModal(false)}
         >
           <div
-            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl my-8 sm:my-0 overflow-hidden"
+            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl my-8 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white">
