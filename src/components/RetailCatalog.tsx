@@ -83,7 +83,6 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
   const [shippingWilaya, setShippingWilaya] = useState("");
   const [shippingType, setShippingType] = useState<"domicile" | "bureau">("domicile");
   const [shippingAddress, setShippingAddress] = useState("");
-  const [shippingBaladia, setShippingBaladia] = useState("");
 
   // Order Tracking States
   const [trackQuery, setTrackQuery] = useState("");
@@ -150,7 +149,6 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
     setShippingWilaya("");
     setShippingType("domicile");
     setShippingAddress("");
-    setShippingBaladia("");
     setAdultContent(false);
   };
 
@@ -209,7 +207,6 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
         orderPayload.shippingWilaya = shippingWilaya;
         orderPayload.shippingType = shippingType;
         orderPayload.shippingAddress = shippingAddress;
-        orderPayload.shippingBaladia = shippingBaladia;
         orderPayload.shippingPriceDA = shippingPrice;
         orderPayload.shippingDelay = selectedTariff?.delai || "";
       }
@@ -852,23 +849,6 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                         />
                         <div className="px-3.5 py-3 bg-slate-50 border-l border-slate-200 text-slate-400">
                           <Phone className="h-4 w-4" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Baladia (Commune) <span className="text-red-500">*</span></label>
-                      <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-emerald-500 transition-colors">
-                        <input
-                          type="text"
-                          required
-                          placeholder="Ex: Draria, Bab Ezzouar, Oran..."
-                          value={shippingBaladia}
-                          onChange={(e) => setShippingBaladia(e.target.value)}
-                          className="flex-1 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
-                        />
-                        <div className="px-3.5 py-3 bg-slate-50 border-l border-slate-200 text-slate-400">
-                          <Building2 className="h-4 w-4" />
                         </div>
                       </div>
                     </div>
