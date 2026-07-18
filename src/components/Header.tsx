@@ -11,6 +11,7 @@ interface HeaderProps {
   setView: (view: "retail" | "wholesaler" | "admin") => void;
   loggedWholesaler: Wholesaler | null;
   onLogout: () => void;
+  onFullLogout?: () => void;
   isAdminUnlocked: boolean;
   setAdminUnlocked: (unlocked: boolean) => void;
 }
@@ -20,6 +21,7 @@ export default function Header({
   setView, 
   loggedWholesaler, 
   onLogout,
+  onFullLogout,
   isAdminUnlocked,
   setAdminUnlocked
 }: HeaderProps) {
@@ -184,8 +186,8 @@ export default function Header({
                     {loggedWholesaler.businessName}
                   </span>
                   <button
-                    onClick={onLogout}
-                    title={t("wholesaler.leave_panel")}
+                    onClick={() => (onFullLogout || onLogout)()}
+                    title="Se déconnecter complètement"
                     className="p-1 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
                   >
                     <LogOut className="h-3.5 w-3.5" />
@@ -266,8 +268,8 @@ export default function Header({
                   </span>
                 </div>
                 <button
-                  onClick={() => { onLogout(); setMobileMenuOpen(false); }}
-                  title={t("wholesaler.leave_panel")}
+                  onClick={() => { (onFullLogout || onLogout)(); setMobileMenuOpen(false); }}
+                  title="Se déconnecter complètement"
                   className="p-1 text-gray-400 hover:text-red-500 transition-colors cursor-pointer shrink-0 ml-2"
                 >
                   <LogOut className="h-3.5 w-3.5" />
