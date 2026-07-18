@@ -1835,7 +1835,6 @@ app.post("/api/orders", async (req, res) => {
     shippingWilaya,
     shippingType,
     shippingAddress,
-    shippingBaladia,
     adultContent
   } = req.body;
 
@@ -1863,8 +1862,8 @@ app.post("/api/orders", async (req, res) => {
   let shippingPriceDA = 0;
   let shippingDelay = "";
   if (isPhysical) {
-    if (!shippingWilaya || !shippingBaladia || !shippingAddress || (shippingType !== "domicile" && shippingType !== "bureau")) {
-      return res.status(400).json({ error: "Wilaya, baladia, adresse et mode de livraison sont obligatoires pour ce produit." });
+    if (!shippingWilaya || !shippingAddress || (shippingType !== "domicile" && shippingType !== "bureau")) {
+      return res.status(400).json({ error: "Wilaya, adresse et mode de livraison sont obligatoires pour ce produit." });
     }
     const tariff = getTariffForWilaya(shippingWilaya);
     if (!tariff) {
@@ -1897,7 +1896,6 @@ app.post("/api/orders", async (req, res) => {
       shippingWilaya,
       shippingType: shippingType as "domicile" | "bureau",
       shippingAddress,
-      shippingBaladia,
       shippingPriceDA,
       shippingDelay
     } : {}),
@@ -1916,7 +1914,7 @@ app.post("/api/orders", async (req, res) => {
     `- Produit: ${product.name} (${product.type === "iptv" ? "Abonnement IPTV" : "Matériel Box/Firestick"})\n` +
     `- Prix produit: ${product.priceRetail} DA\n` +
     (supportsAdultToggle ? `- Contenu Adulte: ${adultContent ? "Oui" : "Non"}\n` : ``) +
-    (isPhysical ? `- Livraison (${shippingType === "domicile" ? "domicile" : "bureau"}) vers ${shippingWilaya}, ${shippingBaladia}: ${shippingPriceDA} DA (délai ${shippingDelay})\n- Adresse: ${shippingAddress}\n` : ``) +
+    (isPhysical ? `- Livraison (${shippingType === "domicile" ? "domicile" : "bureau"}) vers ${shippingWilaya}: ${shippingPriceDA} DA (délai ${shippingDelay})\n- Adresse: ${shippingAddress}\n` : ``) +
     `- Total: ${totalPrice} DA\n` +
     `- Méthode de paiement: ${paymentMethod.toUpperCase()}\n` +
     `- Détails paiement: ${paymentDetails || 'Aucun'}\n\n` +

@@ -162,7 +162,6 @@ export interface Order {
   shippingWilaya?: string;
   shippingType?: 'domicile' | 'bureau';
   shippingAddress?: string;
-  shippingBaladia?: string; // Commune / Baladia (plus précis que la wilaya)
   shippingPriceDA?: number;
   shippingDelay?: string; // ex: "J+1"
   // IPTV (Dino / 8K / Golden OTT) : choix contenu adulte, fait par le client au
