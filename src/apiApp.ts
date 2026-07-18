@@ -1076,9 +1076,17 @@ app.post("/api/admin/reset", requireAdminAuth, requireOwner, async (req, res) =>
 });
 
 // Wholesaler Registration
+// Liste publique (nom + id uniquement) des membres de l'équipe, utilisée par
+// le formulaire d'inscription revendeur pour choisir son contact.
+app.get("/api/team-members-public", async (req, res) => {
+  const db = await readDB();
+  const list = (db.teamMembers || []).map(m => ({ id: m.id, name: m.name }));
+  res.json(list);
+});
+
 app.post("/api/auth/wholesaler/register", async (req, res) => {
   try {
-    const { username, password, businessName, phone, email } = req.body;
+    const { username, password, businessName, phone, email, handledByTeamMemberId } = req.body;
     if (!username || !password || !businessName || !phone || !email) {
       return res.status(400).json({ error: "Tous les champs sont requis." });
     }
@@ -1096,6 +1104,11 @@ app.post("/api/auth/wholesaler/register", async (req, res) => {
       return res.status(400).json({ error: "Ce nom d'utilisateur ou cet email est déjà enregistré." });
     }
 
+    // Validation : le membre choisi doit exister réellement.
+    const validTeamMemberId = handledByTeamMemberId && (db.teamMembers || []).some(m => m.id === handledByTeamMemberId)
+      ? handledByTeamMemberId
+      : undefined;
+
     const newWholesaler: any = {
       id: "w-" + Math.random().toString(36).substr(2, 9),
       username,
@@ -1105,7 +1118,8 @@ app.post("/api/auth/wholesaler/register", async (req, res) => {
       email,
       status: "pending",
       creditBalance: 0,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      handledByTeamMemberId: validTeamMemberId
     };
 
     db.wholesalers.push(newWholesaler);
@@ -2086,7 +2100,12 @@ app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
 
 app.get("/api/admin/wholesalers", requireAdminAuth, async (req, res) => {
   const db = await readDB();
-  res.json(db.wholesalers.map(sanitizeWholesaler));
+  if ((req as any).isOwner) {
+    return res.json(db.wholesalers.map(sanitizeWholesaler));
+  }
+  const teamMemberId = (req as any).teamMemberId;
+  const visible = db.wholesalers.filter(w => !w.handledByTeamMemberId || w.handledByTeamMemberId === teamMemberId);
+  res.json(visible.map(sanitizeWholesaler));
 });
 
 app.put("/api/admin/wholesalers/:id", requireAdminAuth, requireAdminPermission("wholesalers"), async (req, res) => {
@@ -2100,7 +2119,21 @@ app.put("/api/admin/wholesalers/:id", requireAdminAuth, requireAdminPermission("
     return res.status(404).json({ error: "Grossiste introuvable." });
   }
 
+  // Un membre de l'équipe ne peut pas agir sur un revendeur déjà pris en
+  // charge par un autre membre.
+  if (!(req as any).isOwner
+    && db.wholesalers[wholesalerIndex].handledByTeamMemberId
+    && db.wholesalers[wholesalerIndex].handledByTeamMemberId !== (req as any).teamMemberId) {
+    return res.status(403).json({ error: "Ce revendeur est déjà pris en charge par un autre membre de l'équipe." });
+  }
+
   const updated = { ...db.wholesalers[wholesalerIndex] };
+
+  // Prise en charge automatique dès la première action (comme pour les commandes).
+  if (!(req as any).isOwner && !updated.handledByTeamMemberId) {
+    updated.handledByTeamMemberId = (req as any).teamMemberId;
+  }
+
   if (status !== undefined) updated.status = status;
   if (creditBalance !== undefined) updated.creditBalance = Number(creditBalance);
   if (username !== undefined) updated.username = username;
@@ -2167,7 +2200,15 @@ app.put("/api/admin/orders/:id", requireAdminAuth, requireAdminPermission("order
 
 app.get("/api/admin/credit-requests", requireAdminAuth, async (req, res) => {
   const db = await readDB();
-  res.json(db.creditRequests);
+  if ((req as any).isOwner) {
+    return res.json(db.creditRequests);
+  }
+  const teamMemberId = (req as any).teamMemberId;
+  const visible = db.creditRequests.filter(r => {
+    const wholesaler = db.wholesalers.find(w => w.id === r.wholesalerId);
+    return !wholesaler?.handledByTeamMemberId || wholesaler.handledByTeamMemberId === teamMemberId;
+  });
+  res.json(visible);
 });
 
 app.put("/api/admin/credit-requests/:id", requireAdminAuth, requireAdminPermission("requests"), async (req, res) => {
@@ -2186,6 +2227,13 @@ app.put("/api/admin/credit-requests/:id", requireAdminAuth, requireAdminPermissi
   }
 
   const request = db.creditRequests[requestIndex];
+
+  if (!(req as any).isOwner) {
+    const wholesaler = db.wholesalers.find(w => w.id === request.wholesalerId);
+    if (wholesaler?.handledByTeamMemberId && wholesaler.handledByTeamMemberId !== (req as any).teamMemberId) {
+      return res.status(403).json({ error: "Ce revendeur est pris en charge par un autre membre de l'équipe." });
+    }
+  }
 
   if (request.status !== "pending") {
     return res.status(400).json({ error: "Cette demande a déjà été traitée." });
@@ -2527,7 +2575,8 @@ app.post("/api/admin/wholesalers", requireAdminAuth, requireAdminPermission("who
     email,
     status: "approved",
     creditBalance: creditBalance ? Number(creditBalance) : 0,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    handledByTeamMemberId: !(req as any).isOwner ? (req as any).teamMemberId : undefined
   };
   db.wholesalers.push(newWholesaler);
   await writeDB(db);
