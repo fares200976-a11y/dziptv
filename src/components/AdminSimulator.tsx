@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 import { Wholesaler, Order, CreditRequest, EmailNotification, AppStats, Product, VideoTutorial, IptvClient, Livreur, PanelRequest, CatalogCategory } from "../types";
 import { useTranslation } from "../i18n/LanguageContext";
 import LanguageToggle from "./LanguageToggle";
@@ -16,6 +17,7 @@ import {
   UserCheck, 
   Plus, 
   RefreshCw,
+  Download,
   Clock,
   AlertCircle,
   Video,
@@ -859,6 +861,40 @@ export default function AdminSimulator({
     }
   };
 
+  // Exporte toutes les commandes boutique en fichier Excel (.xlsx), pour
+  // archivage / sauvegarde manuelle par l'admin.
+  const handleExportOrdersExcel = () => {
+    const rows = orders.map(o => ({
+      "N° Commande": o.id,
+      "Date": new Date(o.createdAt).toLocaleString("fr-FR"),
+      "Client": o.customerName,
+      "Téléphone": o.customerPhone,
+      "Email": o.customerEmail || "",
+      "Produit": o.productName,
+      "Type": o.productType,
+      "Prix (DA)": o.priceDA,
+      "Statut": o.status,
+      "Méthode Paiement": o.paymentMethod,
+      "Détails Paiement": o.paymentDetails || "",
+      "Contenu Adulte": o.adultContent === undefined ? "" : (o.adultContent ? "Oui" : "Non"),
+      "Wilaya Livraison": o.shippingWilaya || "",
+      "Type Livraison": o.shippingType || "",
+      "Adresse Livraison": o.shippingAddress || "",
+      "Frais Livraison (DA)": o.shippingPriceDA || "",
+      "Xtream Host": o.credentials?.xtreamHost || "",
+      "Xtream User": o.credentials?.xtreamUser || "",
+      "Xtream Pass": o.credentials?.xtreamPass || "",
+      "Lien M3U": o.credentials?.m3uUrl || "",
+      "Code": o.credentials?.satCode || ""
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Commandes");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `kurtal-commandes-${dateStr}.xlsx`);
+  };
+
   // Direct Wholesaler Creation Submit
   const handleAddWholesalerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1136,13 +1172,16 @@ export default function AdminSimulator({
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin text-amber-600" : ""}`} />
           </button>
 
+          {isOwner && (
           <button
-            onClick={handleResetClick}
-            className="px-3.5 py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-600 border border-red-500/20 rounded-xl font-bold text-sm transition-all cursor-pointer"
-            title="Réinitialiser toutes les données"
+            onClick={handleExportOrdersExcel}
+            className="px-3.5 py-2.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 border border-emerald-500/20 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center space-x-1.5"
+            title="Télécharger toutes les commandes en Excel"
           >
-            {t("admin.reset_db")}
+            <Download className="h-3.5 w-3.5" />
+            <span>Backup Commandes</span>
           </button>
+          )}
 
           {onLogoutAdmin && (
             <button
