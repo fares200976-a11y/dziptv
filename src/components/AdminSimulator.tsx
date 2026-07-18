@@ -55,6 +55,7 @@ interface AdminSimulatorProps {
   catalogCategories?: CatalogCategory[];
   onUpdateClient: (id: string, payload: any) => Promise<void>;
   onApproveWholesaler: (id: string, currentStatus: string) => Promise<void>;
+  onAssignWholesalerTeamMember?: (id: string, teamMemberId: string) => Promise<void>;
   onAddCreditManual: (id: string, amount: number) => Promise<void>;
   onUpdateOrderStatus: (id: string, status: "completed" | "cancelled") => Promise<void>;
   onUpdateOrderCredentials?: (id: string, payload: any) => Promise<void>;
@@ -128,6 +129,7 @@ export default function AdminSimulator({
   catalogCategories = [],
   onUpdateClient,
   onApproveWholesaler,
+  onAssignWholesalerTeamMember,
   onAddCreditManual,
   onUpdateOrderStatus,
   onUpdateOrderCredentials,
@@ -1618,6 +1620,7 @@ export default function AdminSimulator({
                       <th className="p-3 font-semibold">Création</th>
                       <th className="p-3 font-semibold">Solde Crédit</th>
                       <th className="p-3 font-semibold">Statut</th>
+                      {isOwner && <th className="p-3 font-semibold">Assigné à</th>}
                       <th className="p-3 font-semibold text-right">Actions de simulation</th>
                     </tr>
                   </thead>
@@ -1650,6 +1653,30 @@ export default function AdminSimulator({
                             </span>
                           )}
                         </td>
+                        {isOwner && (
+                          <td className="p-3">
+                            <select
+                              value={wholesaler.handledByTeamMemberId || ""}
+                              onChange={async (e) => {
+                                if (!onAssignWholesalerTeamMember) return;
+                                setErrorMessage("");
+                                setSuccessMessage("");
+                                try {
+                                  await onAssignWholesalerTeamMember(wholesaler.id, e.target.value);
+                                  setSuccessMessage("Revendeur réassigné.");
+                                } catch (err: any) {
+                                  setErrorMessage(err.message || "Échec de la réassignation.");
+                                }
+                              }}
+                              className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 cursor-pointer"
+                            >
+                              <option value="">-- Aucune (vous seul) --</option>
+                              {teamMembers.map(m => (
+                                <option key={m.id} value={m.id}>{m.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
                         <td className="p-3 text-right">
                           <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
                             {/* Account Status Switch (Actif / Inactif) */}
