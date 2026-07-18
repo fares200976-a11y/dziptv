@@ -885,83 +885,6 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                       </div>
                     </div>
                   )}
-                  <h4 className="text-xs font-bold uppercase text-indigo-700 tracking-wider">
-                    Informations de Configuration (Recommandé pour activation rapide)
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Modèle de votre Téléviseur (Optionnel)</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ex: Samsung QLED, LG OLED, TCL..."
-                        value={tvModel}
-                        onChange={(e) => setTvModel(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Choix de l'application IPTV <span className="text-red-500">*</span></label>
-                      <div className="space-y-1.5">
-                        <select
-                          value={installedApp}
-                          onChange={(e) => setInstalledApp(e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
-                        >
-                          <option value="">-- Choisir une option --</option>
-                          <optgroup label="TV Connectée Samsung & LG WebOS">
-                            <option value="Samsung Smart TV (Smarters Pro)">Samsung Smart TV - IPTV Smarters Pro</option>
-                            <option value="LG WebOS (SmartOne IPTV)">LG WebOS - SmartOne IPTV (Très stable)</option>
-                            <option value="IBO Player">IBO Player (Moderne & Fluide)</option>
-                            <option value="Smart IPTV (SIPTV)">Smart IPTV / SIPTV (Classique)</option>
-                            <option value="NetIPTV">NetIPTV (Simple)</option>
-                            <option value="Set IPTV">Set IPTV (Rapide)</option>
-                          </optgroup>
-                          <optgroup label="Boîtier Android / Firestick / Autre">
-                            <option value="Smarters Pro (Android App)">IPTV Smarters Pro (Android)</option>
-                            <option value="TiviMate Player">TiviMate (Recommandé premium Android)</option>
-                            <option value="XCIPTV Player">XCIPTV Player</option>
-                            <option value="Downloader Code Choice">Downloader App (AFTVnews)</option>
-                          </optgroup>
-                          <option value="other">Autre application (Saisir manuellement)...</option>
-                        </select>
-                        
-                        {(installedApp === "other" || (!["", "Samsung Smart TV (Smarters Pro)", "LG WebOS (SmartOne IPTV)", "IBO Player", "Smart IPTV (SIPTV)", "NetIPTV", "Set IPTV", "Smarters Pro (Android App)", "TiviMate Player", "XCIPTV Player", "Downloader Code Choice"].includes(installedApp) && installedApp.length > 0)) && (
-                          <input 
-                            type="text" 
-                            placeholder="Nom de l'application installée..."
-                            value={installedApp === "other" ? "" : installedApp}
-                            onChange={(e) => setInstalledApp(e.target.value)}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    <div className="flex items-center space-x-2.5 bg-white p-3 rounded-xl border border-slate-200">
-                      <input 
-                        type="checkbox"
-                        id="hasAndroidBox"
-                        checked={hasAndroidBox}
-                        onChange={(e) => setHasAndroidBox(e.target.checked)}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-0 h-4 w-4 bg-white cursor-pointer"
-                      />
-                      <label htmlFor="hasAndroidBox" className="text-xs font-medium text-slate-700 select-none cursor-pointer">
-                        Je possède un Boîtier/Box Android
-                      </label>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1.5">Code Downloader AFTVnews (Optionnel)</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ex: 283749"
-                        value={downloaderCode}
-                        onChange={(e) => setDownloaderCode(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                  </div>
                 </div>
                 )}
 
@@ -1165,6 +1088,10 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                   <p className="text-slate-500 text-xs mt-2 max-w-md mx-auto">
                     Votre commande <span className="text-blue-600 font-mono font-semibold">#{successOrder.id}</span> a été enregistrée avec succès.
                   </p>
+                  <p className="text-emerald-600 text-xs font-semibold mt-1.5 flex items-center justify-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>Paiement 100% sécurisé et livraison rapide</span>
+                  </p>
                 </div>
 
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 text-left text-xs text-slate-600 space-y-1.5 max-w-md mx-auto">
@@ -1175,10 +1102,19 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                   <p><strong className="text-slate-800">Méthode de paiement :</strong> {successOrder.paymentMethod.toUpperCase()}</p>
                 </div>
 
-                <div className="pt-2">
-                  <p className="text-xs text-amber-800 font-medium bg-amber-50 border border-amber-200 py-2.5 px-4 rounded-lg inline-block max-w-sm">
-                    ⚡ Notre administrateur a reçu une notification immédiate par e-mail. Nous allons vous appeler au téléphone pour valider l'accès.
+                <div className="pt-2 space-y-2 max-w-sm mx-auto">
+                  <p className="text-xs text-amber-800 font-medium bg-amber-50 border border-amber-200 py-2.5 px-4 rounded-lg">
+                    ⚡ Notre administrateur a reçu une notification immédiate par e-mail. Vous pouvez, dans 5 minutes, aller sur la page d'accueil pour suivre votre commande. Nous allons vous appeler au téléphone pour valider l'accès.
                   </p>
+                  <a
+                    href={`https://wa.me/213553494318?text=${encodeURIComponent(`Bonjour, je viens de passer la commande #${successOrder.id} (${successOrder.productName}).`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 px-4 rounded-lg transition-colors"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.48 1.32 4.99L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15h-.01c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.146 8.146 0 01-1.25-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.176 8.176 0 012.41 5.83c0 4.55-3.7 8.24-8.24 8.24z"/></svg>
+                    <span>Nous contacter sur WhatsApp</span>
+                  </a>
                 </div>
 
                 <button
