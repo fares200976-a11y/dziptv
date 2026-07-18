@@ -803,6 +803,7 @@ export default function App() {
         setView={handleSetView} 
         loggedWholesaler={loggedWholesaler}
         onLogout={handleWholesalerLogout}
+        onFullLogout={handleWholesalerLogoutComplete}
         isAdminUnlocked={isAdminUnlocked}
         setAdminUnlocked={setAdminUnlocked}
       />
