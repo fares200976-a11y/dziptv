@@ -482,6 +482,7 @@ export default function AdminSimulator({
   const [editPermissionsDraft, setEditPermissionsDraft] = useState<string[]>([]);
   const [editAlertDraft, setEditAlertDraft] = useState({ alertEmail: "", alertWhatsappPhone: "", alertWhatsappApiKey: "", alertTelegramChatId: "" });
   const [editCreditDraft, setEditCreditDraft] = useState<string>("0");
+  const [editPasswordDraft, setEditPasswordDraft] = useState<string>("");
 
   const startEditPermissions = (member: any) => {
     setEditingPermissionsFor(member.id);
@@ -493,6 +494,7 @@ export default function AdminSimulator({
       alertTelegramChatId: member.alertTelegramChatId || ""
     });
     setEditCreditDraft(String(member.creditBalance ?? 0));
+    setEditPasswordDraft("");
   };
 
   const toggleEditPermission = (key: string) => {
@@ -500,17 +502,24 @@ export default function AdminSimulator({
   };
 
   const handleSaveMemberPermissions = async (id: string) => {
+    if (editPasswordDraft && editPasswordDraft.length < 6) {
+      setErrorMessage("Le nouveau mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
     setErrorMessage("");
     setSuccessMessage("");
     try {
+      const payload: any = { permissions: editPermissionsDraft, creditBalance: Number(editCreditDraft) || 0, ...editAlertDraft };
+      if (editPasswordDraft) payload.password = editPasswordDraft;
       const res = await fetch(`/api/admin/team/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ permissions: editPermissionsDraft, creditBalance: Number(editCreditDraft) || 0, ...editAlertDraft })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
-        setSuccessMessage("Tâches, crédit et alertes mis à jour.");
+        setSuccessMessage(editPasswordDraft ? "Tâches, crédit, alertes et mot de passe mis à jour." : "Tâches, crédit et alertes mis à jour.");
         setEditingPermissionsFor(null);
+        setEditPasswordDraft("");
         fetchTeamMembers();
       } else {
         setErrorMessage("Échec de la mise à jour des tâches.");
@@ -4647,6 +4656,17 @@ export default function AdminSimulator({
                               className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-slate-900 text-sm font-bold"
                             />
                             <p className="text-[10px] text-emerald-600 mt-1">Ce membre peut activer des abonnements IPTV/Sat/Box avec ce crédit, comme un revendeur.</p>
+                          </div>
+                          <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                            <label className="block text-amber-700 font-semibold mb-1 text-xs">Nouveau mot de passe</label>
+                            <input
+                              type="text"
+                              value={editPasswordDraft}
+                              onChange={e => setEditPasswordDraft(e.target.value)}
+                              placeholder="Laisser vide pour ne pas changer"
+                              className="w-full bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-slate-900 text-sm font-mono"
+                            />
+                            <p className="text-[10px] text-amber-600 mt-1">6 caractères minimum. Communiquez-le au membre concerné une fois enregistré.</p>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <input
