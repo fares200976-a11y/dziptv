@@ -60,10 +60,11 @@ export default function Header({
       const res = await fetch(`/api/orders/track?query=${encodeURIComponent(trackQuery.trim())}`);
       const data = await res.json();
       if (res.ok) {
-        if (data.length === 0) {
+        const orders = data.orders || [];
+        if (orders.length === 0) {
           setTrackError("Aucune commande trouvée avec ces informations. Vérifiez votre numéro de téléphone ou votre email.");
         } else {
-          setTrackedOrders(data);
+          setTrackedOrders(orders);
         }
       } else {
         setTrackError(data.error || "Erreur lors de la recherche.");
