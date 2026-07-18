@@ -23,6 +23,10 @@ import {
   Key,
   Copy,
   Download,
+  User,
+  Phone,
+  Building2,
+  Milestone,
   LayoutGrid,
   Satellite,
   Tv2,
@@ -79,6 +83,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
   const [shippingWilaya, setShippingWilaya] = useState("");
   const [shippingType, setShippingType] = useState<"domicile" | "bureau">("domicile");
   const [shippingAddress, setShippingAddress] = useState("");
+  const [shippingBaladia, setShippingBaladia] = useState("");
 
   // Order Tracking States
   const [trackQuery, setTrackQuery] = useState("");
@@ -145,6 +150,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
     setShippingWilaya("");
     setShippingType("domicile");
     setShippingAddress("");
+    setShippingBaladia("");
     setAdultContent(false);
   };
 
@@ -203,6 +209,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
         orderPayload.shippingWilaya = shippingWilaya;
         orderPayload.shippingType = shippingType;
         orderPayload.shippingAddress = shippingAddress;
+        orderPayload.shippingBaladia = shippingBaladia;
         orderPayload.shippingPriceDA = shippingPrice;
         orderPayload.shippingDelay = selectedTariff?.delai || "";
       }
@@ -770,6 +777,8 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                   )}
                 </div>
 
+                {!isPhysicalCheckout && (
+                <>
                 {/* Grid Input */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -806,74 +815,157 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
+                </>
+                )}
 
                 {isPhysicalCheckout ? (
-                  /* Formulaire LIVRAISON — produits physiques (Box Android, Démodulateur, TV...) */
-                  <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-4">
-                    <h4 className="text-xs font-bold uppercase text-emerald-700 tracking-wider flex items-center space-x-1.5">
-                      <Truck className="h-3.5 w-3.5" />
-                      <span>{t("checkout.delivery_info")}</span>
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.wilaya")} <span className="text-red-500">*</span></label>
+                  /* Formulaire de demande — Box Android / TV LED / Démodulateur / Accessoire */
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.name")} <span className="text-red-500">*</span></label>
+                      <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-emerald-500 transition-colors">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Nom complet"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="flex-1 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
+                        />
+                        <div className="px-3.5 py-3 bg-slate-50 border-l border-slate-200 text-slate-400">
+                          <User className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.phone")} <span className="text-red-500">*</span></label>
+                      <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-emerald-500 transition-colors">
+                        <span className="px-3 py-3 text-xs font-bold text-slate-500 bg-slate-50 border-r border-slate-200 shrink-0">DZ +213</span>
+                        <input
+                          type="tel"
+                          required
+                          placeholder="Numéro de téléphone"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="flex-1 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none min-w-0"
+                        />
+                        <div className="px-3.5 py-3 bg-slate-50 border-l border-slate-200 text-slate-400">
+                          <Phone className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Baladia (Commune) <span className="text-red-500">*</span></label>
+                      <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-emerald-500 transition-colors">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: Draria, Bab Ezzouar, Oran..."
+                          value={shippingBaladia}
+                          onChange={(e) => setShippingBaladia(e.target.value)}
+                          className="flex-1 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
+                        />
+                        <div className="px-3.5 py-3 bg-slate-50 border-l border-slate-200 text-slate-400">
+                          <Building2 className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.wilaya")} <span className="text-red-500">*</span></label>
+                      <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-emerald-500 transition-colors">
                         <select
                           required
                           value={shippingWilaya}
                           onChange={(e) => setShippingWilaya(e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
+                          className="flex-1 px-4 py-3 text-sm text-slate-900 focus:outline-none cursor-pointer bg-transparent"
                         >
                           <option value="">-- Choisir votre wilaya --</option>
                           {DELIVERY_TARIFFS.map(t => (
                             <option key={t.wilaya} value={t.wilaya}>{t.wilaya}</option>
                           ))}
                         </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.delivery_mode")} <span className="text-red-500">*</span></label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setShippingType("domicile")}
-                            className={`py-2.5 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
-                              shippingType === "domicile"
-                                ? "bg-emerald-50 border-emerald-500 text-emerald-700"
-                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                            }`}
-                          >
-                            {t("checkout.home_delivery")}{selectedTariff ? ` (${selectedTariff.domicile.toLocaleString()} DA)` : ""}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setShippingType("bureau")}
-                            className={`py-2.5 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
-                              shippingType === "bureau"
-                                ? "bg-emerald-50 border-emerald-500 text-emerald-700"
-                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                            }`}
-                          >
-                            {t("checkout.office_delivery")}{selectedTariff ? ` (${selectedTariff.bureau.toLocaleString()} DA)` : ""}
-                          </button>
+                        <div className="px-3.5 py-3 bg-slate-50 border-l border-slate-200 text-slate-400">
+                          <Milestone className="h-4 w-4" />
                         </div>
                       </div>
                     </div>
+
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.address")} (Commune, Quartier...) <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.delivery_mode")} <span className="text-red-500">*</span></label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShippingType("domicile")}
+                          className={`py-2.5 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
+                            shippingType === "domicile"
+                              ? "bg-emerald-50 border-emerald-500 text-emerald-700"
+                              : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                          }`}
+                        >
+                          {t("checkout.home_delivery")}{selectedTariff ? ` (${selectedTariff.domicile.toLocaleString()} DA)` : ""}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShippingType("bureau")}
+                          className={`py-2.5 rounded-xl border text-center text-[11px] font-bold transition-all cursor-pointer ${
+                            shippingType === "bureau"
+                              ? "bg-emerald-50 border-emerald-500 text-emerald-700"
+                              : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                          }`}
+                        >
+                          {t("checkout.office_delivery")}{selectedTariff ? ` (${selectedTariff.bureau.toLocaleString()} DA)` : ""}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Adresse détaillée (Quartier, rue...) <span className="text-red-500">*</span></label>
                       <input
                         type="text"
                         required
-                        placeholder="Ex: Cité 500 logts, Bt 12, Draria, Alger"
+                        placeholder="Ex: Cité 500 logts, Bt 12"
                         value={shippingAddress}
                         onChange={(e) => setShippingAddress(e.target.value)}
                         className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("checkout.email")}</label>
+                      <input
+                        type="email"
+                        placeholder="Ex: sofiane@gmail.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                      />
+                    </div>
+
                     {selectedTariff && (
                       <div className="flex items-center space-x-1.5 text-[11px] text-emerald-700 bg-emerald-100/60 border border-emerald-200 rounded-lg px-3 py-2">
                         <Clock className="h-3.5 w-3.5 shrink-0" />
                         <span>Délai de livraison estimé pour {shippingWilaya} : <strong>{selectedTariff.delai}</strong></span>
                       </div>
                     )}
+
+                    {/* Récapitulatif prix, façon "Formulaire de demande" */}
+                    <div className="border border-slate-200 rounded-xl overflow-hidden text-sm">
+                      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+                        <span className="text-slate-400">Prix du produit</span>
+                        <span className="font-bold text-slate-900">{selectedProduct?.priceRetail.toLocaleString()} DA</span>
+                      </div>
+                      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+                        <span className="text-slate-400">Prix de livraison</span>
+                        <span className="font-bold text-slate-900">{shippingWilaya ? `${shippingPrice.toLocaleString()} DA` : "--"}</span>
+                      </div>
+                      <div className="flex items-center justify-between px-4 py-3 bg-slate-50">
+                        <span className="font-bold text-slate-700">Total</span>
+                        <span className="font-extrabold text-emerald-600 text-base">{totalWithShipping.toLocaleString()} DA</span>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                 /* Configuration Client Specifics (TV Model, App Installed, Android Box, Downloader Code) */
@@ -1078,7 +1170,11 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-55 text-white rounded-xl font-bold shadow-lg shadow-blue-500/10 transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                    className={`w-full py-3.5 disabled:opacity-55 text-white rounded-xl font-bold shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer ${
+                      isPhysicalCheckout
+                        ? "bg-red-600 hover:bg-red-500 shadow-red-500/10"
+                        : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/10"
+                    }`}
                   >
                     {isSubmitting ? (
                       <>
@@ -1087,7 +1183,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                       </>
                     ) : (
                       <>
-                        <Check className="h-4 w-4" />
+                        <ShoppingBag className="h-4 w-4" />
                         <span>{t("checkout.confirm")} ({totalWithShipping.toLocaleString()} DA)</span>
                       </>
                     )}
