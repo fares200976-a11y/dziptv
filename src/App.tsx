@@ -997,8 +997,8 @@ export default function App() {
 
       {/* Admin Unlock Modal — authentification vérifiée côté serveur */}
       {showSecretModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-          <div className="w-full max-w-sm p-6 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl space-y-4 text-gray-200 my-8 sm:my-0">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+          <div className="w-full max-w-sm p-6 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl space-y-4 text-gray-200 my-8">
             <div className="text-center space-y-1">
               <div className="inline-flex p-3 bg-amber-500/10 text-amber-400 rounded-full mb-2">
                 <ShieldCheck className="h-6 w-6" />
