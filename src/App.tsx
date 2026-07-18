@@ -121,6 +121,20 @@ export default function App() {
     fetchAdminData();
   }, [loggedWholesaler]);
 
+  // Actualisation automatique des données toutes les 3 minutes, uniquement
+  // quand un panel admin ou revendeur est actif (pas sur la boutique publique,
+  // pour éviter des requêtes inutiles).
+  useEffect(() => {
+    const shouldAutoRefresh = (currentView === "admin" && isAdminUnlocked) || (currentView === "wholesaler" && !!loggedWholesaler);
+    if (!shouldAutoRefresh) return;
+
+    const intervalId = setInterval(() => {
+      refreshAllData();
+    }, 3 * 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [currentView, isAdminUnlocked, loggedWholesaler]);
+
   // Fetch Routines
   const fetchProducts = async () => {
     try {
