@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Tv, User, Settings, LogOut, Wallet, ShieldCheck, Lock, Check, Menu, X, Search, Package, Copy, Key } from "lucide-react";
 import { Wholesaler } from "../types";
 import logoImg from "../assets/images/kurtal_logo_1783773370106.jpg";
@@ -100,6 +101,7 @@ export default function Header({
   const isDark = currentView !== "retail";
 
   return (
+    <>
     <header className={`sticky top-0 z-50 border-b transition-all duration-300 backdrop-blur-md ${
       currentView === "retail"
         ? "bg-white/95 border-slate-200 text-slate-800 shadow-sm"
@@ -289,9 +291,12 @@ export default function Header({
           </div>
         )}
       </div>
+    </header>
 
-      {/* Fenêtre de suivi de commande (accessible depuis n'importe quelle page) */}
-      {showTrackModal && (
+    {/* Fenêtre de suivi de commande, rendue via portail (hors du header pour
+        éviter tout conflit de position "fixed" avec le flou du header). */}
+    {showTrackModal && createPortal(
+      (
         <div
           className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
           onClick={() => setShowTrackModal(false)}
@@ -399,7 +404,9 @@ export default function Header({
             </div>
           </div>
         </div>
-      )}
-    </header>
+      ),
+      document.body
+    )}
+    </>
   );
 }
