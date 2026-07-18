@@ -195,6 +195,73 @@ export default function AdminSimulator({
     }
   };
 
+  // --- Stock de codes pré-chargés (Code Sat / IPTV à code d'activation) ---
+  const [codeStock, setCodeStock] = useState<any[]>([]);
+  const [stockProductId, setStockProductId] = useState("");
+  const [bulkCodesText, setBulkCodesText] = useState("");
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockMessage, setStockMessage] = useState("");
+
+  const fetchCodeStock = () => {
+    fetch("/api/admin/code-stock")
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setCodeStock(Array.isArray(data) ? data : []))
+      .catch(() => setCodeStock([]));
+  };
+
+  useEffect(() => {
+    fetchCodeStock();
+  }, []);
+
+  const codeStockProducts = products.filter(p => p.usesCodeStock);
+
+  const handleAddBulkCodes = async () => {
+    if (!stockProductId) {
+      setStockMessage("Choisissez d'abord un produit.");
+      return;
+    }
+    const codes = bulkCodesText.split("\n").map(c => c.trim()).filter(c => c.length > 0);
+    if (codes.length === 0) {
+      setStockMessage("Collez au moins un code (un par ligne).");
+      return;
+    }
+    setStockLoading(true);
+    setStockMessage("");
+    try {
+      const res = await fetch("/api/admin/code-stock/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: stockProductId, codes })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setStockMessage(data.message);
+        setBulkCodesText("");
+        fetchCodeStock();
+      } else {
+        setStockMessage(data.error || "Échec de l'ajout.");
+      }
+    } catch (err: any) {
+      setStockMessage(err.message);
+    } finally {
+      setStockLoading(false);
+    }
+  };
+
+  const handleDeleteStockCode = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/code-stock/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchCodeStock();
+      } else {
+        const data = await res.json();
+        setStockMessage(data.error || "Échec de la suppression.");
+      }
+    } catch (err: any) {
+      setStockMessage(err.message);
+    }
+  };
+
   // Saisie des accès IPTV (M3U, Xtream, lien bouquets) pour une commande boutique
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [orderCredForm, setOrderCredForm] = useState({
@@ -719,7 +786,8 @@ export default function AdminSimulator({
     featuresString: "",
     imageUrl: "https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?auto=format&fit=crop&w=400&q=80",
     imageUrl2: "",
-    categoryId: ""
+    categoryId: "",
+    usesCodeStock: false
   });
 
   // Ajout rapide d'une catégorie directement depuis le formulaire produit
@@ -908,7 +976,8 @@ export default function AdminSimulator({
           featuresString: "",
           imageUrl: "https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?auto=format&fit=crop&w=400&q=80",
           imageUrl2: "",
-          categoryId: ""
+          categoryId: "",
+          usesCodeStock: false
         });
         setShowAddProduct(false);
         refreshAllData();
@@ -1166,8 +1235,10 @@ export default function AdminSimulator({
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
-            <Users className="h-4 w-4" />
-            <span>Revendeurs ({wholesalers.length})</span>
+            <Users className={`h-4 w-4 ${wholesalers.filter(w => w.status === "pending").length > 0 ? "animate-pending-blink-text" : ""}`} />
+            <span className={wholesalers.filter(w => w.status === "pending").length > 0 ? "animate-pending-blink-text" : ""}>
+              Revendeurs ({wholesalers.length})
+            </span>
           </button>
           )}
 
@@ -1504,7 +1575,7 @@ export default function AdminSimulator({
                   </thead>
                   <tbody className="divide-y divide-slate-200/40">
                     {wholesalers.map((wholesaler) => (
-                      <tr key={wholesaler.id} className="hover:bg-slate-50">
+                      <tr key={wholesaler.id} className={`hover:bg-slate-50 ${wholesaler.status === "pending" ? "animate-pending-blink" : ""}`}>
                         <td className="p-3 font-bold text-slate-900">{wholesaler.businessName}</td>
                         <td className="p-3">
                           <span className="font-mono text-slate-600 block">User: {wholesaler.username}</span>
@@ -2127,6 +2198,91 @@ export default function AdminSimulator({
                 </div>
               </div>
 
+              {/* Stock de codes pré-chargés (Code Sat / IPTV à code d'activation) */}
+              <div className="p-5 bg-white rounded-2xl border border-slate-200 space-y-4">
+                <h4 className="font-bold text-slate-900 uppercase text-xs tracking-wider flex items-center gap-1.5">
+                  <Key className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Stock de Codes (Code Sat / IPTV à code d'activation)</span>
+                </h4>
+                <p className="text-slate-400 text-[11px]">
+                  Ajoutez ici vos vrais codes achetés chez votre fournisseur. À chaque activation d'un produit marqué "Utilise un stock de codes", un code est puisé automatiquement et retiré du stock.
+                </p>
+
+                {codeStockProducts.length === 0 ? (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-lg text-xs">
+                    Aucun produit n'utilise le stock de codes pour l'instant. Cochez "Utilise un stock de codes pré-chargés" sur un produit Code Sat (ou IPTV à code) ci-dessous pour l'activer.
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-600 font-semibold mb-1 text-xs">Produit</label>
+                        <select
+                          value={stockProductId}
+                          onChange={e => setStockProductId(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900 text-xs"
+                        >
+                          <option value="">-- Choisir un produit --</option>
+                          {codeStockProducts.map(p => {
+                            const available = codeStock.filter(c => c.productId === p.id && !c.isUsed).length;
+                            return <option key={p.id} value={p.id}>{p.name} ({available} disponible{available > 1 ? "s" : ""})</option>;
+                          })}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1 text-xs">Coller les codes (un par ligne)</label>
+                      <textarea
+                        value={bulkCodesText}
+                        onChange={e => setBulkCodesText(e.target.value)}
+                        placeholder={"ABC123\nDEF456\nGHI789..."}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900 text-xs font-mono h-28"
+                      />
+                    </div>
+
+                    {stockMessage && (
+                      <p className="text-xs font-semibold text-indigo-600">{stockMessage}</p>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleAddBulkCodes}
+                      disabled={stockLoading}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer"
+                    >
+                      {stockLoading ? "Ajout en cours..." : "Ajouter ces codes au stock"}
+                    </button>
+
+                    {stockProductId && (
+                      <div className="pt-2 border-t border-slate-100">
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                          Codes disponibles pour ce produit ({codeStock.filter(c => c.productId === stockProductId && !c.isUsed).length})
+                        </p>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {codeStock.filter(c => c.productId === stockProductId && !c.isUsed).map(c => (
+                            <div key={c.id} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5">
+                              <span className="font-mono text-xs text-slate-700">{c.code}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteStockCode(c.id)}
+                                className="text-red-500 hover:text-red-700 cursor-pointer"
+                                title="Supprimer ce code"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          {codeStock.filter(c => c.productId === stockProductId && !c.isUsed).length === 0 && (
+                            <p className="text-xs text-slate-400 italic">Aucun code disponible — collez-en ci-dessus.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
               {/* Add Product Form */}
               {showAddProduct && (
                 <form onSubmit={handleAddProductSubmit} className="p-5 bg-white/60 rounded-2xl border border-slate-200 space-y-4">
@@ -2330,6 +2486,21 @@ export default function AdminSimulator({
                       className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
                     />
                   </div>
+
+                  <label className="flex items-center space-x-2.5 p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl cursor-pointer w-fit">
+                    <input
+                      type="checkbox"
+                      checked={productForm.usesCodeStock}
+                      onChange={e => setProductForm({ ...productForm, usesCodeStock: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span className="text-emerald-700 font-semibold">Utilise un stock de codes pré-chargés</span>
+                  </label>
+                  {productForm.usesCodeStock && (
+                    <p className="text-[11px] text-slate-400 -mt-2">
+                      À l'activation, un vrai code sera puisé automatiquement dans le stock (onglet "Stock de Codes" une fois le produit créé) au lieu d'en générer un faux.
+                    </p>
+                  )}
 
                   <button
                     type="submit"
@@ -2541,6 +2712,16 @@ export default function AdminSimulator({
                       className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 h-20"
                     />
                   </div>
+
+                  <label className="flex items-center space-x-2.5 p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl cursor-pointer w-fit">
+                    <input
+                      type="checkbox"
+                      checked={!!editingProduct.usesCodeStock}
+                      onChange={e => setEditingProduct({ ...editingProduct, usesCodeStock: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span className="text-emerald-700 font-semibold">Utilise un stock de codes pré-chargés</span>
+                  </label>
 
                   <div className="flex space-x-2">
                     <button

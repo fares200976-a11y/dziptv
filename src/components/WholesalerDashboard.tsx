@@ -1375,8 +1375,8 @@ export default function WholesalerDashboard({
                   Fermer
                 </button>
               </div>
-            ) : selectedClientCredentials.serviceType === "sat" ? (
-              /* CODE SAT : afficher uniquement le code généré */
+            ) : selectedClientCredentials.serviceType === "sat" || (selectedClientCredentials.serviceType === "iptv" && selectedClientCredentials.credentials?.satCode) ? (
+              /* CODE SAT (ou IPTV à code d'activation) : afficher uniquement le code généré */
               <div className="space-y-4 text-sm">
                 {copiedField && (
                   <div className="p-2 bg-indigo-500/15 border border-indigo-500/20 text-indigo-600 rounded-lg text-xs text-center font-semibold mb-2">
@@ -1384,11 +1384,13 @@ export default function WholesalerDashboard({
                   </div>
                 )}
                 <div className="space-y-2 p-3.5 bg-white rounded-xl border border-slate-200">
-                  <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Code Satellite</span>
+                  <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">
+                    {selectedClientCredentials.serviceType === "sat" ? "Code Satellite" : "Code d'Activation"}
+                  </span>
                   <div className="flex items-center justify-between bg-slate-50 p-3 rounded border border-slate-200 font-mono">
                     <span className="text-slate-800 text-sm tracking-wider select-all">{selectedClientCredentials.credentials?.satCode}</span>
                     <button
-                      onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.satCode || "", "Code Sat")}
+                      onClick={() => handleCopyToClipboard(selectedClientCredentials.credentials?.satCode || "", "Code")}
                       className="p-1 text-slate-400 hover:text-slate-900 shrink-0 ml-2"
                     >
                       <Copy className="h-3.5 w-3.5" />
@@ -1396,7 +1398,7 @@ export default function WholesalerDashboard({
                   </div>
                 </div>
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-lg text-xs leading-relaxed">
-                  💡 Transmettez ce code à votre client pour qu'il l'active sur son récepteur satellite.
+                  💡 Transmettez ce code à votre client pour qu'il l'active {selectedClientCredentials.serviceType === "sat" ? "sur son récepteur satellite" : "dans son application"}.
                 </div>
                 <button
                   onClick={() => setSelectedClientCredentials(null)}
