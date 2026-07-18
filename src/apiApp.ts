@@ -1264,7 +1264,7 @@ app.post("/api/auth/admin/login", async (req, res) => {
   }
 
   // Anti brute-force : max 5 tentatives / 15 minutes, par IP.
-  const rl = await checkRateLimit(`admin-login:${getClientIp(req)}`, 5, 15 * 60);
+  const rl = await checkRateLimit(`admin-login:${getClientIp(req)}`, 8, 10 * 60);
   if (!rl.allowed) {
     return res.status(429).json({ error: `Trop de tentatives. Réessayez dans ${Math.ceil(rl.retryAfterSeconds / 60)} minute(s).` });
   }
