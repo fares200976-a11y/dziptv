@@ -2081,7 +2081,7 @@ app.post("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => 
 
 app.put("/api/admin/team/:id", requireAdminAuth, requireOwner, async (req, res) => {
   const { id } = req.params;
-  const { permissions, name, alertEmail, alertWhatsappPhone, alertWhatsappApiKey, alertTelegramChatId, creditBalance } = req.body;
+  const { permissions, name, alertEmail, alertWhatsappPhone, alertWhatsappApiKey, alertTelegramChatId, creditBalance, password } = req.body;
   const db = await readDB();
   const member = (db.teamMembers || []).find(m => m.id === id);
   if (!member) {
@@ -2089,6 +2089,12 @@ app.put("/api/admin/team/:id", requireAdminAuth, requireOwner, async (req, res) 
   }
   if (name !== undefined) member.name = name;
   if (creditBalance !== undefined) member.creditBalance = Number(creditBalance);
+  if (password !== undefined && password !== "") {
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Le mot de passe doit contenir au moins 6 caractères." });
+    }
+    member.password = bcrypt.hashSync(password, 10);
+  }
   if (permissions !== undefined) {
     member.permissions = Array.isArray(permissions)
       ? permissions.filter((p: string) => ADMIN_PERMISSION_TABS.includes(p))
