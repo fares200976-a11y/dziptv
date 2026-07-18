@@ -22,7 +22,8 @@ import {
   PanelRequest,
   ServerBouquetLinks,
   HeroSlide,
-  TeamMember
+  TeamMember,
+  StockCode
 } from "./types.js";
 
 const app = express();
@@ -506,6 +507,7 @@ interface DBStructure {
   bouquetLinks?: ServerBouquetLinks;
   heroSlides?: HeroSlide[];
   teamMembers?: TeamMember[];
+  codeStock?: StockCode[];
 }
 
 // Read database
@@ -668,7 +670,8 @@ async function readDB(): Promise<DBStructure> {
             order: 1
           }
         ],
-        teamMembers: []
+        teamMembers: [],
+        codeStock: []
       };
       await storageWriteRaw(JSON.stringify(initialDB, null, 2));
       return initialDB;
@@ -724,6 +727,10 @@ async function readDB(): Promise<DBStructure> {
       parsed.teamMembers = [];
       changed = true;
     }
+    if (!parsed.codeStock) {
+      parsed.codeStock = [];
+      changed = true;
+    }
     if (!parsed.heroSlides) {
       parsed.heroSlides = [
           {
@@ -772,7 +779,8 @@ async function readDB(): Promise<DBStructure> {
             order: 1
           }
         ],
-      teamMembers: []
+      teamMembers: [],
+      codeStock: []
     };
   }
 }
@@ -1418,8 +1426,17 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
     const expirationDate = new Date();
     expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths));
 
+    const newClientIptvId = "c-" + Math.random().toString(36).substr(2, 9);
+    let iptvStockCode: string | null = null;
+    if (product.usesCodeStock) {
+      iptvStockCode = await drawStockCode(db, product.id, newClientIptvId);
+      if (!iptvStockCode) {
+        return res.status(400).json({ error: `Stock de codes épuisé pour "${product.name}". Contactez l'administrateur pour un réapprovisionnement.` });
+      }
+    }
+
     const newClient: IptvClient = {
-      id: "c-" + Math.random().toString(36).substr(2, 9),
+      id: newClientIptvId,
       wholesalerId,
       clientName,
       serviceType: "iptv",
@@ -1431,7 +1448,10 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
       status: "active",
       notes: notes || "",
       adultContent: finalAdultContent,
-      credentials: {
+      credentials: iptvStockCode ? {
+        satCode: iptvStockCode,
+        bouquetLink: bouquetLink || undefined
+      } : {
         m3uUrl,
         xtreamUser: username,
         xtreamPass: password,
@@ -1504,8 +1524,21 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
     expirationDate.setFullYear(expirationDate.getFullYear() + 50);
   }
 
+  const newClientId = "c-" + Math.random().toString(36).substr(2, 9);
+  let drawnCode: string | null = null;
+  if (type === "sat") {
+    if (product.usesCodeStock) {
+      drawnCode = await drawStockCode(db, product.id, newClientId);
+      if (!drawnCode) {
+        return res.status(400).json({ error: `Stock de codes épuisé pour "${product.name}". Contactez l'administrateur pour un réapprovisionnement.` });
+      }
+    } else {
+      drawnCode = Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+    }
+  }
+
   const newClient: IptvClient = {
-    id: "c-" + Math.random().toString(36).substr(2, 9),
+    id: newClientId,
     wholesalerId,
     clientName,
     serviceType: type,
@@ -1516,9 +1549,7 @@ app.post("/api/wholesaler/clients", requireWholesalerAuth, async (req, res) => {
     expirationDate: expirationDate.toISOString(),
     status: "active",
     notes: notes || "",
-    credentials: type === "sat" ? {
-      satCode: Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase()
-    } : undefined
+    credentials: type === "sat" ? { satCode: drawnCode || undefined } : undefined
   };
 
   wholesaler.creditBalance -= pricePaid;
@@ -1609,8 +1640,17 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
     const expirationDate = new Date();
     expirationDate.setMonth(expirationDate.getMonth() + Number(durationMonths));
 
+    const newClientIptvId2 = "c-" + Math.random().toString(36).substr(2, 9);
+    let iptvStockCode2: string | null = null;
+    if (product.usesCodeStock) {
+      iptvStockCode2 = await drawStockCode(db, product.id, newClientIptvId2);
+      if (!iptvStockCode2) {
+        return res.status(400).json({ error: `Stock de codes épuisé pour "${product.name}". Contactez l'administrateur pour un réapprovisionnement.` });
+      }
+    }
+
     const newClient: IptvClient = {
-      id: "c-" + Math.random().toString(36).substr(2, 9),
+      id: newClientIptvId2,
       createdByTeamMemberId: teamMemberId,
       clientName,
       serviceType: "iptv",
@@ -1622,7 +1662,9 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
       status: "active",
       notes: notes || "",
       adultContent: finalAdultContent,
-      credentials: { m3uUrl, xtreamUser: username, xtreamPass: password, xtreamHost: host, bouquetLink: bouquetLink || undefined }
+      credentials: iptvStockCode2
+        ? { satCode: iptvStockCode2, bouquetLink: bouquetLink || undefined }
+        : { m3uUrl, xtreamUser: username, xtreamPass: password, xtreamHost: host, bouquetLink: bouquetLink || undefined }
     };
 
     member.creditBalance -= pricePaid;
@@ -1671,8 +1713,21 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
     expirationDate.setFullYear(expirationDate.getFullYear() + 50);
   }
 
+  const newClientId2 = "c-" + Math.random().toString(36).substr(2, 9);
+  let drawnCode2: string | null = null;
+  if (type === "sat") {
+    if (product.usesCodeStock) {
+      drawnCode2 = await drawStockCode(db, product.id, newClientId2);
+      if (!drawnCode2) {
+        return res.status(400).json({ error: `Stock de codes épuisé pour "${product.name}". Contactez l'administrateur pour un réapprovisionnement.` });
+      }
+    } else {
+      drawnCode2 = Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+    }
+  }
+
   const newClient: IptvClient = {
-    id: "c-" + Math.random().toString(36).substr(2, 9),
+    id: newClientId2,
     createdByTeamMemberId: teamMemberId,
     clientName,
     serviceType: type,
@@ -1683,9 +1738,7 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
     expirationDate: expirationDate.toISOString(),
     status: "active",
     notes: notes || "",
-    credentials: type === "sat" ? {
-      satCode: Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase()
-    } : undefined
+    credentials: type === "sat" ? { satCode: drawnCode2 || undefined } : undefined
   };
 
   member.creditBalance -= pricePaid;
@@ -2485,8 +2538,71 @@ app.delete("/api/admin/tutorials/:id", requireAdminAuth, requireAdminPermission(
 // par requireAdminAuth. L'alias public "/api/products" est retiré ici : il ne
 // doit rester accessible qu'en LECTURE (voir la route GET plus haut), jamais
 // en écriture.
+// --- STOCK DE CODES (Code Sat / IPTV à code d'activation) ---
+app.get("/api/admin/code-stock", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
+  const db = await readDB();
+  res.json(db.codeStock || []);
+});
+
+app.post("/api/admin/code-stock/bulk", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
+  const { productId, codes } = req.body;
+  if (!productId || !Array.isArray(codes) || codes.length === 0) {
+    return res.status(400).json({ error: "Produit et liste de codes requis." });
+  }
+  const db = await readDB();
+  if (!db.codeStock) db.codeStock = [];
+
+  const existingCodes = new Set(db.codeStock.map(c => c.code.trim().toLowerCase()));
+  let added = 0;
+  let skipped = 0;
+  for (const raw of codes) {
+    const code = String(raw).trim();
+    if (!code) continue;
+    if (existingCodes.has(code.toLowerCase())) {
+      skipped++;
+      continue;
+    }
+    db.codeStock.push({
+      id: "code-" + Math.random().toString(36).substr(2, 9),
+      productId,
+      code,
+      isUsed: false,
+      addedAt: new Date().toISOString()
+    });
+    existingCodes.add(code.toLowerCase());
+    added++;
+  }
+  await writeDB(db);
+  res.json({ message: `${added} code(s) ajouté(s)${skipped > 0 ? `, ${skipped} doublon(s) ignoré(s)` : ""}.`, added, skipped });
+});
+
+app.delete("/api/admin/code-stock/:id", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
+  const { id } = req.params;
+  const db = await readDB();
+  const code = (db.codeStock || []).find(c => c.id === id);
+  if (code?.isUsed) {
+    return res.status(400).json({ error: "Impossible de supprimer un code déjà attribué à un client." });
+  }
+  db.codeStock = (db.codeStock || []).filter(c => c.id !== id);
+  await writeDB(db);
+  res.json({ success: true });
+});
+
+// Puise un code disponible dans le stock pour un produit donné, le marque
+// utilisé, et le lie au client créé. Retourne null si le stock est vide.
+async function drawStockCode(db: DBStructure, productId: string, clientId: string): Promise<string | null> {
+  if (!db.codeStock) db.codeStock = [];
+  const available = db.codeStock.find(c => c.productId === productId && !c.isUsed);
+  if (!available) return null;
+  available.isUsed = true;
+  available.usedByClientId = clientId;
+  available.usedAt = new Date().toISOString();
+  return available.code;
+}
+
+
 app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
-  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock } = req.body;
   if (!name || !type || priceRetail === undefined || priceWholesale === undefined) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
@@ -2501,7 +2617,8 @@ app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("produc
     features: Array.isArray(features) ? features : [],
     imageUrl: imageUrl || "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=300",
     imageUrl2: imageUrl2 || "",
-    isPopular: !!isPopular
+    isPopular: !!isPopular,
+    usesCodeStock: !!usesCodeStock
   };
   db.products.push(newProduct);
   await writeDB(db);
@@ -2510,7 +2627,7 @@ app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("produc
 
 app.put("/api/admin/products/:id", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
   const { id } = req.params;
-  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular } = req.body;
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock } = req.body;
   const db = await readDB();
   const index = db.products.findIndex(p => p.id === id);
   if (index === -1) {
@@ -2526,7 +2643,8 @@ app.put("/api/admin/products/:id", requireAdminAuth, requireAdminPermission("pro
     features: features !== undefined ? (Array.isArray(features) ? features : []) : db.products[index].features,
     imageUrl: imageUrl !== undefined ? imageUrl : db.products[index].imageUrl,
     imageUrl2: imageUrl2 !== undefined ? imageUrl2 : db.products[index].imageUrl2,
-    isPopular: isPopular !== undefined ? !!isPopular : db.products[index].isPopular
+    isPopular: isPopular !== undefined ? !!isPopular : db.products[index].isPopular,
+    usesCodeStock: usesCodeStock !== undefined ? !!usesCodeStock : db.products[index].usesCodeStock
   };
   await writeDB(db);
   res.json(db.products[index]);

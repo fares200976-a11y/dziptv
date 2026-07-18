@@ -65,6 +65,21 @@ export interface Product {
   imageUrl2?: string; // Second product image for gallery
   isPopular?: boolean;
   categoryId?: string; // category link
+  // Si vrai, ce produit puise un code depuis un stock pré-chargé par l'admin
+  // (au lieu de générer des identifiants automatiquement) — pour Code Sat et
+  // certains produits IPTV vendus avec un simple "code d'activation".
+  usesCodeStock?: boolean;
+}
+
+// Un code du stock pré-chargé, rattaché à un produit précis.
+export interface StockCode {
+  id: string;
+  productId: string;
+  code: string;
+  isUsed: boolean;
+  usedByClientId?: string;
+  addedAt: string;
+  usedAt?: string;
 }
 
 export interface Wholesaler {
@@ -77,6 +92,10 @@ export interface Wholesaler {
   status: 'pending' | 'approved' | 'suspended';
   creditBalance: number; // in DA
   createdAt: string;
+  // Membre de l'équipe qui gère ce revendeur (créé par lui, ou pris en charge
+  // à la première action sur une inscription auto). Absent = pas encore assigné,
+  // visible par tous les membres ayant la permission "wholesalers" jusqu'à prise en charge.
+  handledByTeamMemberId?: string;
 }
 
 export interface IptvClient {
