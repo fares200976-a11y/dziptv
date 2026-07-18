@@ -1170,6 +1170,16 @@ export default function AdminSimulator({
           </span>
           <h2 className="font-display text-2xl font-bold text-slate-900 mt-2">KURTAL IPTV Controller Hub ⚙️</h2>
           <p className="text-slate-500 text-sm mt-1">Supervisez l'ensemble du site de vente en temps réel, vérifiez les emails reçus et validez les comptes.</p>
+          <div className="mt-2 inline-flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${isOwner ? "bg-amber-500" : "bg-indigo-500"} animate-pulse`}></span>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+              isOwner
+                ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                : "bg-indigo-500/10 text-indigo-700 border-indigo-500/30"
+            }`}>
+              👋 Bienvenue, {isOwner ? "Administrateur" : adminName} {isOwner ? "(Compte Principal)" : "(Équipe)"}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
