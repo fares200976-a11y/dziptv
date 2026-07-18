@@ -2021,6 +2021,48 @@ export default function AdminSimulator({
                           </div>
                         )}
 
+                        {/* Code Sat / IPTV à code d'activation : puiser un code du stock */}
+                        {products.find(p => p.id === order.productId)?.usesCodeStock && (
+                          <div className="p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/15 text-sm mt-2 space-y-2">
+                            <span className="text-xs text-emerald-700 font-bold uppercase tracking-wider">🔑 Code Client (Stock)</span>
+                            {order.credentials?.satCode ? (
+                              <div className="flex items-center justify-between bg-white p-2 rounded border border-slate-200 font-mono">
+                                <span className="text-slate-800 text-sm tracking-wider">{order.credentials.satCode}</span>
+                                <span className="text-emerald-600 text-[10px] font-bold">✓ Attribué</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-500 text-xs">
+                                  {(codeStock.filter(c => c.productId === order.productId && !c.isUsed).length)} code(s) disponible(s) en stock
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setErrorMessage("");
+                                    setSuccessMessage("");
+                                    try {
+                                      const res = await fetch(`/api/admin/orders/${order.id}/draw-stock-code`, { method: "POST" });
+                                      const data = await res.json();
+                                      if (res.ok) {
+                                        setSuccessMessage("Code attribué et visible par le client.");
+                                        fetchCodeStock();
+                                        refreshAllData();
+                                      } else {
+                                        setErrorMessage(data.error || "Échec de l'attribution du code.");
+                                      }
+                                    } catch (err: any) {
+                                      setErrorMessage(err.message);
+                                    }
+                                  }}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs cursor-pointer shrink-0 ml-2"
+                                >
+                                  Puiser un Code du Stock
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <p className="text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-200 mt-1.5">
                           Mode de paiement : <span className="uppercase text-slate-700 font-semibold">{order.paymentMethod}</span> <br />
                           Preuve : {order.paymentDetails || "Aucune information supplémentaire."}

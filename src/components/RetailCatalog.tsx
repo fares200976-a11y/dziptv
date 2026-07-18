@@ -456,6 +456,23 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                         </p>
                       </div>
 
+                      {/* Code Sat / IPTV à code d'activation, fourni par l'admin */}
+                      {order.credentials?.satCode && (
+                        <div className="p-4 bg-emerald-500/5 border border-emerald-500/15 rounded-xl space-y-2">
+                          <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
+                            <Key className="h-4 w-4" />
+                            <span>Votre Code</span>
+                          </div>
+                          <div className="flex items-center justify-between bg-black/30 p-2 rounded border border-slate-800 font-mono text-sm">
+                            <span className="text-gray-200 select-all">{order.credentials.satCode}</span>
+                            <button onClick={() => handleCopyToClipboard(order.credentials.satCode || "", "Code")} className="p-1 text-gray-500 hover:text-white shrink-0 ml-2">
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-gray-400">Utilisez ce code pour activer votre abonnement.</p>
+                        </div>
+                      )}
+
                       {/* Accès IPTV fournis par l'admin (M3U, Xtream, lien de bouquets) */}
                       {order.credentials && (order.credentials.m3uUrl || order.credentials.xtreamUser) && (
                         <div className="p-4 bg-indigo-500/5 border border-indigo-500/15 rounded-xl space-y-3">
