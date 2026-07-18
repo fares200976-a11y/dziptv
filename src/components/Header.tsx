@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Tv, User, Settings, LogOut, Wallet, ShieldCheck, Lock, Check, Menu, X } from "lucide-react";
+import { Tv, User, Settings, LogOut, Wallet, ShieldCheck, Lock, Check, Menu, X, Search, Package, Copy, Key } from "lucide-react";
 import { Wholesaler } from "../types";
 import logoImg from "../assets/images/kurtal_logo_1783773370106.jpg";
 import { useTranslation } from "../i18n/LanguageContext";
@@ -24,6 +24,12 @@ export default function Header({
 }: HeaderProps) {
   const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showTrackModal, setShowTrackModal] = useState(false);
+  const [trackQuery, setTrackQuery] = useState("");
+  const [trackedOrders, setTrackedOrders] = useState<any[] | null>(null);
+  const [trackLoading, setTrackLoading] = useState(false);
+  const [trackError, setTrackError] = useState("");
+  const [copiedField, setCopiedField] = useState("");
 
   const handleLogoClick = () => {
     setView("retail");
@@ -33,6 +39,62 @@ export default function Header({
   const handleNavClick = (view: "retail" | "wholesaler" | "admin") => {
     setView(view);
     setMobileMenuOpen(false);
+  };
+
+  const openTrackModal = () => {
+    setMobileMenuOpen(false);
+    setShowTrackModal(true);
+    setTrackQuery("");
+    setTrackedOrders(null);
+    setTrackError("");
+  };
+
+  const handleTrackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackQuery.trim()) return;
+    setTrackLoading(true);
+    setTrackError("");
+    setTrackedOrders(null);
+    try {
+      const res = await fetch(`/api/orders/track?query=${encodeURIComponent(trackQuery.trim())}`);
+      const data = await res.json();
+      if (res.ok) {
+        if (data.length === 0) {
+          setTrackError("Aucune commande trouvée avec ces informations. Vérifiez votre numéro de téléphone ou votre email.");
+        } else {
+          setTrackedOrders(data);
+        }
+      } else {
+        setTrackError(data.error || "Erreur lors de la recherche.");
+      }
+    } catch (err) {
+      setTrackError("Impossible de contacter le serveur. Réessayez.");
+    } finally {
+      setTrackLoading(false);
+    }
+  };
+
+  const handleCopy = (text: string, field: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(""), 2000);
+    }).catch(() => {});
+  };
+
+  const statusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      pending: "En attente de traitement",
+      completed: "Terminée",
+      cancelled: "Annulée"
+    };
+    return map[status] || status;
+  };
+
+  const statusColor = (status: string) => {
+    if (status === "completed") return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+    if (status === "cancelled") return "bg-red-500/10 text-red-600 border-red-500/20";
+    return "bg-amber-500/10 text-amber-600 border-amber-500/20";
   };
 
   const isDark = currentView !== "retail";
@@ -92,26 +154,11 @@ export default function Header({
               <span>{t("nav.shop")}</span>
             </button>
 
-            <button
-              id="nav-wholesaler"
-              onClick={() => handleNavClick("wholesaler")}
-              className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
-                currentView === "wholesaler"
-                  ? "bg-indigo-600/15 text-indigo-400 border border-indigo-500/20 font-semibold"
-                  : currentView === "retail"
-                  ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800/40"
-              }`}
-            >
-              <User className="h-4 w-4" />
-              <span>{t("nav.wholesaler_space")}</span>
-            </button>
-
             <LanguageToggle variant={currentView === "retail" ? "light" : "dark"} className="ml-1" />
           </nav>
 
           {/* Right Session Status — visible uniquement à partir de md */}
-          <div className="hidden md:flex items-center space-x-3 shrink-0">
+          <div className="hidden md:flex items-center space-x-2.5 shrink-0">
             {loggedWholesaler ? (
               <div className="flex items-center space-x-3">
                 <div className={`hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-full border ${
@@ -143,13 +190,23 @@ export default function Header({
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => setView("wholesaler")}
-                className="flex items-center space-x-1.5 px-4 py-2 text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 rounded-lg shadow-md hover:shadow-blue-500/10 transition-all cursor-pointer"
-              >
-                <User className="h-3.5 w-3.5" />
-                <span>{t("nav.wholesaler_login")}</span>
-              </button>
+              <>
+                <button
+                  onClick={() => handleNavClick("wholesaler")}
+                  className={`text-xs font-medium underline-offset-2 hover:underline transition-colors cursor-pointer ${
+                    currentView === "retail" ? "text-slate-400 hover:text-slate-600" : "text-gray-500 hover:text-gray-300"
+                  }`}
+                >
+                  {t("nav.wholesaler_space")}
+                </button>
+                <button
+                  onClick={openTrackModal}
+                  className="flex items-center space-x-1.5 px-4 py-2 text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 rounded-lg shadow-md hover:shadow-blue-500/10 transition-all cursor-pointer"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  <span>Suivre ma Commande</span>
+                </button>
+              </>
             )}
           </div>
 
@@ -184,17 +241,15 @@ export default function Header({
               <span>{t("nav.shop")}</span>
             </button>
 
-            <button
-              onClick={() => handleNavClick("wholesaler")}
-              className={`w-full flex items-center space-x-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                currentView === "wholesaler"
-                  ? "bg-indigo-600/15 text-indigo-400 border border-indigo-500/20 font-semibold"
-                  : isDark ? "text-gray-300 hover:bg-gray-800/60" : "text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              <User className="h-4 w-4" />
-              <span>{t("nav.wholesaler_space")}</span>
-            </button>
+            {!loggedWholesaler && (
+              <button
+                onClick={openTrackModal}
+                className="w-full flex items-center space-x-2 px-3 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+              >
+                <Search className="h-4 w-4" />
+                <span>Suivre ma Commande</span>
+              </button>
+            )}
 
             {loggedWholesaler && (
               <div className={`flex items-center justify-between px-3 py-2.5 rounded-lg border ${
@@ -217,6 +272,16 @@ export default function Header({
               </div>
             )}
 
+            <button
+              onClick={() => handleNavClick("wholesaler")}
+              className={`w-full flex items-center justify-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                isDark ? "text-gray-500 hover:text-gray-300" : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <User className="h-3.5 w-3.5" />
+              <span>{t("nav.wholesaler_space")}</span>
+            </button>
+
             <div className="flex items-center justify-between px-3 pt-2">
               <span className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-slate-500"}`}>{t("nav.language")}</span>
               <LanguageToggle variant={currentView === "retail" ? "light" : "dark"} />
@@ -224,6 +289,117 @@ export default function Header({
           </div>
         )}
       </div>
+
+      {/* Fenêtre de suivi de commande (accessible depuis n'importe quelle page) */}
+      {showTrackModal && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+          onClick={() => setShowTrackModal(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl my-8 sm:my-0 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white">
+              <div className="flex items-center space-x-2.5">
+                <div className="h-9 w-9 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                  <Search className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-slate-900 text-base">Suivre ma Commande</h3>
+                  <p className="text-[11px] text-slate-400">Entrez votre téléphone, email ou n° de commande</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTrackModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg cursor-pointer shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              <form onSubmit={handleTrackSubmit} className="flex gap-2">
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: 0553494318 ou #o-abc123"
+                  value={trackQuery}
+                  onChange={(e) => setTrackQuery(e.target.value)}
+                  className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={trackLoading}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all cursor-pointer shrink-0"
+                >
+                  {trackLoading ? "..." : "Chercher"}
+                </button>
+              </form>
+
+              {trackError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium">
+                  {trackError}
+                </div>
+              )}
+
+              {trackedOrders && trackedOrders.length > 0 && (
+                <div className="space-y-3">
+                  {trackedOrders.map((order: any) => (
+                    <div key={order.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[11px] text-slate-400">#{order.id}</span>
+                        <span className={`px-2 py-0.5 rounded font-bold text-[10px] border ${statusColor(order.status)}`}>
+                          {statusLabel(order.status)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-800 font-semibold">{order.productName}</p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(order.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} · {order.priceDA?.toLocaleString()} DA
+                      </p>
+
+                      {order.credentials?.satCode && (
+                        <div className="pt-2 border-t border-slate-200 space-y-1.5">
+                          <span className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider flex items-center gap-1"><Key className="h-3 w-3" /> Votre Code</span>
+                          <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200 font-mono text-xs">
+                            <span className="text-slate-800 select-all">{order.credentials.satCode}</span>
+                            <button onClick={() => handleCopy(order.credentials.satCode, "code")} className="text-slate-400 hover:text-slate-900 cursor-pointer">
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {order.credentials?.m3uUrl && (
+                        <div className="pt-2 border-t border-slate-200 space-y-1.5">
+                          <span className="text-[10px] uppercase font-bold text-indigo-600 tracking-wider flex items-center gap-1"><Key className="h-3 w-3" /> Vos Accès IPTV</span>
+                          <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200 font-mono text-[11px]">
+                            <span className="text-slate-800 truncate select-all">{order.credentials.m3uUrl}</span>
+                            <button onClick={() => handleCopy(order.credentials.m3uUrl, "m3u")} className="text-slate-400 hover:text-slate-900 cursor-pointer shrink-0 ml-2">
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {order.shippingWilaya && (
+                        <div className="pt-2 border-t border-slate-200 flex items-center gap-1.5 text-xs text-slate-500">
+                          <Package className="h-3.5 w-3.5" />
+                          <span>Livraison vers {order.shippingWilaya} ({order.shippingType === "domicile" ? "à domicile" : "au bureau"})</span>
+                        </div>
+                      )}
+
+                      {copiedField && (
+                        <p className="text-[10px] text-emerald-600 font-semibold">✓ Copié !</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
