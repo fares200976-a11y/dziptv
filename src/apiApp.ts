@@ -2206,6 +2206,19 @@ app.put("/api/admin/wholesalers/:id", requireAdminAuth, requireAdminPermission("
   res.json({ message: "Compte grossiste mis à jour.", wholesaler: sanitizeWholesaler(updated) });
 });
 
+// Suppression d'un revendeur : réservée au compte principal.
+app.delete("/api/admin/wholesalers/:id", requireAdminAuth, requireOwner, async (req, res) => {
+  const { id } = req.params;
+  const db = await readDB();
+  const existed = db.wholesalers.some(w => w.id === id);
+  if (!existed) {
+    return res.status(404).json({ error: "Grossiste introuvable." });
+  }
+  db.wholesalers = db.wholesalers.filter(w => w.id !== id);
+  await writeDB(db);
+  res.json({ success: true });
+});
+
 app.get("/api/admin/orders", requireAdminAuth, async (req, res) => {
   const db = await readDB();
   if ((req as any).isOwner) {
@@ -2349,6 +2362,19 @@ app.put("/api/admin/credit-requests/:id", requireAdminAuth, requireAdminPermissi
     message: action === "approve" ? "Recharge crédit approuvée et crédit ajouté au grossiste." : "Demande de recharge rejetée.",
     request
   });
+});
+
+// Suppression d'une demande de recharge (historique) : réservée au compte principal.
+app.delete("/api/admin/credit-requests/:id", requireAdminAuth, requireOwner, async (req, res) => {
+  const { id } = req.params;
+  const db = await readDB();
+  const existed = db.creditRequests.some(r => r.id === id);
+  if (!existed) {
+    return res.status(404).json({ error: "Demande introuvable." });
+  }
+  db.creditRequests = db.creditRequests.filter(r => r.id !== id);
+  await writeDB(db);
+  res.json({ success: true });
 });
 
 app.get("/api/admin/notifications", requireAdminAuth, async (req, res) => {

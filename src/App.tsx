@@ -609,6 +609,24 @@ export default function App() {
     refreshAllData();
   };
 
+  const handleDeleteWholesaler = async (id: string) => {
+    const res = await fetch(`/api/admin/wholesalers/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Échec de la suppression (code ${res.status}).`);
+    }
+    refreshAllData();
+  };
+
+  const handleDeleteCreditRequest = async (id: string) => {
+    const res = await fetch(`/api/admin/credit-requests/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Échec de la suppression (code ${res.status}).`);
+    }
+    refreshAllData();
+  };
+
   // Activation d'un client par un membre de l'équipe, avec son propre crédit.
   const handleStaffActivateClient = async (payload: any) => {
     const res = await fetch("/api/admin/staff-clients", {
@@ -902,6 +920,8 @@ export default function App() {
                 onDeleteOrder={handleDeleteOrder}
                 onUpdateOrderCredentials={handleUpdateOrderCredentials}
                 onDeleteClient={handleDeleteClient}
+                onDeleteWholesaler={handleDeleteWholesaler}
+                onDeleteCreditRequest={handleDeleteCreditRequest}
                 onProcessCreditRequest={handleProcessCreditRequest}
                 onProcessPanelRequest={handleProcessPanelRequest}
                 onAddCategory={handleAddCategory}
