@@ -684,6 +684,10 @@ export default function App() {
       });
       if (res.ok) {
         const newCategory = await res.json();
+        // Mise à jour immédiate (pas d'attente du refresh complet) pour que
+        // le menu déroulant du formulaire produit affiche tout de suite la
+        // nouvelle catégorie et puisse la sélectionner correctement.
+        setCatalogCategories(prev => [...prev, newCategory]);
         refreshAllData();
         return newCategory;
       }
