@@ -117,7 +117,7 @@ export default function WholesalerDashboard({
 
   // New Recharge Form
   const [rechargeAmount, setRechargeAmount] = useState("");
-  const [rechargeMethod, setRechargeMethod] = useState<"baridimob" | "ccp">("baridimob");
+  const [rechargeMethod, setRechargeMethod] = useState<"baridimob">("baridimob");
   const [rechargeRef, setRechargeRef] = useState("");
 
   useEffect(() => {
@@ -1239,46 +1239,18 @@ export default function WholesalerDashboard({
 
               <div>
                 <label className="block text-slate-600 font-semibold mb-1">Mode de Paiement effectué</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setRechargeMethod("baridimob")}
-                    className={`p-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
-                      rechargeMethod === "baridimob"
-                        ? "bg-indigo-500/10 border-indigo-500 text-indigo-600"
-                        : "bg-white/50 border-slate-200 text-slate-500"
-                    }`}
-                  >
-                    BaridiMob
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRechargeMethod("ccp")}
-                    className={`p-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
-                      rechargeMethod === "ccp"
-                        ? "bg-indigo-500/10 border-indigo-500 text-indigo-600"
-                        : "bg-white/50 border-slate-200 text-slate-500"
-                    }`}
-                  >
-                    Virement CCP
-                  </button>
+                <div className="p-2.5 rounded-xl border bg-indigo-500/10 border-indigo-500 text-indigo-600 font-bold text-center">
+                  BaridiMob
                 </div>
               </div>
 
               {/* Display payment details */}
               <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5 text-slate-600">
                 <span className="font-bold text-amber-600">Coordonnées de virement :</span>
-                {rechargeMethod === "baridimob" ? (
-                  <p className="font-mono">
-                    RIP : 007999990022334455 <br />
-                    Titulaire : Belkacem Fares
-                  </p>
-                ) : (
-                  <p className="font-mono">
-                    CCP : 1234567 Clé 89 <br />
-                    Titulaire : Belkacem Fares
-                  </p>
-                )}
+                <p className="font-mono">
+                  RIP : 007999990022334455 <br />
+                  Titulaire : Belkacem Fares
+                </p>
               </div>
 
               <div>
@@ -1288,8 +1260,7 @@ export default function WholesalerDashboard({
                   required
                   placeholder="Ex: Trans #882190 ou Virement par Salah K."
                   value={rechargeRef}
-                  onChange={(e) => setRegUsername(e.target.value)} // wait, let's fix this to setRechargeRef
-                  onChangeCapture={(e) => setRechargeRef((e.target as HTMLInputElement).value)}
+                  onChange={(e) => setRechargeRef(e.target.value)}
                   className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900"
                 />
               </div>

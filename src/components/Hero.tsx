@@ -61,8 +61,8 @@ export default function Hero({ onExploreClick, onWholesaleClick, onSlideClick }:
   const goPrev = () => goTo((current - 1 + slides.length) % slides.length);
   const goNext = () => goTo((current + 1) % slides.length);
 
-  // Tant que le chargement n'est pas terminÃ©, ou si aucune slide n'existe
-  // (catalogue vide cÃ´tÃ© admin), on affiche le contenu par dÃ©faut traduit
+  // Tant que le chargement n'est pas terminé, ou si aucune slide n'existe
+  // (catalogue vide côté admin), on affiche le contenu par défaut traduit
   // pour ne jamais laisser la page d'accueil vide.
   if (!loaded || slides.length === 0) {
     return (
@@ -162,13 +162,13 @@ export default function Hero({ onExploreClick, onWholesaleClick, onSlideClick }:
             </div>
           </div>
 
-          {/* Navigation flÃ¨ches (si plus d'une slide) */}
+          {/* Navigation flèches (si plus d'une slide) */}
           {slides.length > 1 && (
             <>
               <button
                 onClick={goPrev}
                 className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white rounded-full shadow-md text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
-                title="PrÃ©cÃ©dent"
+                title="Précédent"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -219,7 +219,7 @@ function StatsRow({ t }: { t: (key: string) => string }) {
         </div>
         <div className="bg-white border border-slate-100 p-5 rounded-2xl text-center shadow-sm hover:shadow-md hover:border-blue-100 transition-all">
           <span className="block text-2xl font-bold font-display text-emerald-600">100% {t("hero.stat_secure")}</span>
-          <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1.5 block">BaridiMob & CCP</span>
+          <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1.5 block">BaridiMob</span>
         </div>
       </div>
     </div>
