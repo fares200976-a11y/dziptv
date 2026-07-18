@@ -69,6 +69,9 @@ export interface Product {
   // (au lieu de générer des identifiants automatiquement) — pour Code Sat et
   // certains produits IPTV vendus avec un simple "code d'activation".
   usesCodeStock?: boolean;
+  // Nom de l'application recommandée pour ce produit (ex: "IPTV Smarters Pro"),
+  // affiché sur la page dédiée du produit.
+  appName?: string;
 }
 
 // Un code du stock pré-chargé, rattaché à un produit précis.

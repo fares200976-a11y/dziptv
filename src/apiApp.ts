@@ -2668,7 +2668,7 @@ async function drawStockCode(db: DBStructure, productId: string, clientId: strin
 
 
 app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
-  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock } = req.body;
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock, appName } = req.body;
   if (!name || !type || priceRetail === undefined || priceWholesale === undefined) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
@@ -2684,7 +2684,8 @@ app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("produc
     imageUrl: imageUrl || "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=300",
     imageUrl2: imageUrl2 || "",
     isPopular: !!isPopular,
-    usesCodeStock: !!usesCodeStock
+    usesCodeStock: !!usesCodeStock,
+    appName: appName || ""
   };
   db.products.push(newProduct);
   await writeDB(db);
@@ -2693,7 +2694,7 @@ app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("produc
 
 app.put("/api/admin/products/:id", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
   const { id } = req.params;
-  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock } = req.body;
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock, appName } = req.body;
   const db = await readDB();
   const index = db.products.findIndex(p => p.id === id);
   if (index === -1) {
@@ -2710,7 +2711,8 @@ app.put("/api/admin/products/:id", requireAdminAuth, requireAdminPermission("pro
     imageUrl: imageUrl !== undefined ? imageUrl : db.products[index].imageUrl,
     imageUrl2: imageUrl2 !== undefined ? imageUrl2 : db.products[index].imageUrl2,
     isPopular: isPopular !== undefined ? !!isPopular : db.products[index].isPopular,
-    usesCodeStock: usesCodeStock !== undefined ? !!usesCodeStock : db.products[index].usesCodeStock
+    usesCodeStock: usesCodeStock !== undefined ? !!usesCodeStock : db.products[index].usesCodeStock,
+    appName: appName !== undefined ? appName : db.products[index].appName
   };
   await writeDB(db);
   res.json(db.products[index]);
