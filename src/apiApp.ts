@@ -2163,13 +2163,15 @@ app.get("/api/admin/wholesalers", requireAdminAuth, async (req, res) => {
     return res.json(db.wholesalers.map(sanitizeWholesaler));
   }
   const teamMemberId = (req as any).teamMemberId;
-  const visible = db.wholesalers.filter(w => !w.handledByTeamMemberId || w.handledByTeamMemberId === teamMemberId);
+  // Strict : un membre ne voit que SES revendeurs assignés. Les revendeurs
+  // sans préférence (non assignés) restent visibles uniquement par l'admin.
+  const visible = db.wholesalers.filter(w => w.handledByTeamMemberId === teamMemberId);
   res.json(visible.map(sanitizeWholesaler));
 });
 
 app.put("/api/admin/wholesalers/:id", requireAdminAuth, requireAdminPermission("wholesalers"), async (req, res) => {
   const { id } = req.params;
-  const { status, creditBalance, username, password, businessName, email, phone } = req.body;
+  const { status, creditBalance, username, password, businessName, email, phone, handledByTeamMemberId } = req.body;
 
   const db = await readDB();
   const wholesalerIndex = db.wholesalers.findIndex(w => w.id === id);
@@ -2178,20 +2180,13 @@ app.put("/api/admin/wholesalers/:id", requireAdminAuth, requireAdminPermission("
     return res.status(404).json({ error: "Grossiste introuvable." });
   }
 
-  // Un membre de l'équipe ne peut pas agir sur un revendeur déjà pris en
-  // charge par un autre membre.
-  if (!(req as any).isOwner
-    && db.wholesalers[wholesalerIndex].handledByTeamMemberId
-    && db.wholesalers[wholesalerIndex].handledByTeamMemberId !== (req as any).teamMemberId) {
-    return res.status(403).json({ error: "Ce revendeur est déjà pris en charge par un autre membre de l'équipe." });
+  // Un membre de l'équipe ne peut agir que sur SES revendeurs assignés
+  // (jamais sur un revendeur non assigné, ni sur celui d'un autre membre).
+  if (!(req as any).isOwner && db.wholesalers[wholesalerIndex].handledByTeamMemberId !== (req as any).teamMemberId) {
+    return res.status(403).json({ error: "Ce revendeur n'est pas dans votre liste." });
   }
 
   const updated = { ...db.wholesalers[wholesalerIndex] };
-
-  // Prise en charge automatique dès la première action (comme pour les commandes).
-  if (!(req as any).isOwner && !updated.handledByTeamMemberId) {
-    updated.handledByTeamMemberId = (req as any).teamMemberId;
-  }
 
   if (status !== undefined) updated.status = status;
   if (creditBalance !== undefined) updated.creditBalance = Number(creditBalance);
@@ -2200,6 +2195,10 @@ app.put("/api/admin/wholesalers/:id", requireAdminAuth, requireAdminPermission("
   if (businessName !== undefined) updated.businessName = businessName;
   if (email !== undefined) updated.email = email;
   if (phone !== undefined) updated.phone = phone;
+  // Réassignation à un membre de l'équipe : réservée au compte principal.
+  if (handledByTeamMemberId !== undefined && (req as any).isOwner) {
+    updated.handledByTeamMemberId = handledByTeamMemberId || undefined;
+  }
 
   db.wholesalers[wholesalerIndex] = updated;
   await writeDB(db);
@@ -2300,7 +2299,7 @@ app.get("/api/admin/credit-requests", requireAdminAuth, async (req, res) => {
   const teamMemberId = (req as any).teamMemberId;
   const visible = db.creditRequests.filter(r => {
     const wholesaler = db.wholesalers.find(w => w.id === r.wholesalerId);
-    return !wholesaler?.handledByTeamMemberId || wholesaler.handledByTeamMemberId === teamMemberId;
+    return wholesaler?.handledByTeamMemberId === teamMemberId;
   });
   res.json(visible);
 });
@@ -2324,8 +2323,8 @@ app.put("/api/admin/credit-requests/:id", requireAdminAuth, requireAdminPermissi
 
   if (!(req as any).isOwner) {
     const wholesaler = db.wholesalers.find(w => w.id === request.wholesalerId);
-    if (wholesaler?.handledByTeamMemberId && wholesaler.handledByTeamMemberId !== (req as any).teamMemberId) {
-      return res.status(403).json({ error: "Ce revendeur est pris en charge par un autre membre de l'équipe." });
+    if (wholesaler?.handledByTeamMemberId !== (req as any).teamMemberId) {
+      return res.status(403).json({ error: "Ce revendeur n'est pas dans votre liste." });
     }
   }
 

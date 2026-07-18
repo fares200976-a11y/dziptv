@@ -514,6 +514,19 @@ export default function App() {
     }
   };
 
+  const handleAssignWholesalerTeamMember = async (id: string, teamMemberId: string) => {
+    const res = await fetch(`/api/admin/wholesalers/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ handledByTeamMemberId: teamMemberId || null })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Échec de la réassignation.");
+    }
+    refreshAllData();
+  };
+
   const handleAddCreditManual = async (id: string, amount: number) => {
     try {
       // Fetch current wholesaler balance first
@@ -868,6 +881,7 @@ export default function App() {
                 catalogCategories={catalogCategories}
                 onUpdateClient={handleUpdateClient}
                 onApproveWholesaler={handleApproveWholesaler}
+                onAssignWholesalerTeamMember={handleAssignWholesalerTeamMember}
                 onAddCreditManual={handleAddCreditManual}
                 onUpdateOrderStatus={handleUpdateOrderStatus}
                 onDeleteOrder={handleDeleteOrder}
