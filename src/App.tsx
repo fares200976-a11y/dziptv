@@ -22,6 +22,8 @@ import { Tv, Sparkles, ShieldCheck, Flame, HelpCircle } from "lucide-react";
 
 export default function App() {
   const [currentView, setView] = useState<"retail" | "wholesaler" | "admin">("retail");
+  const [isForeignVisitor, setIsForeignVisitor] = useState(false);
+  const [eurRate, setEurRate] = useState(152);
   // La vraie source de vérité est le cookie HttpOnly "admin_token" côté serveur,
   // vérifié au chargement via /api/auth/admin/session (voir useEffect plus bas).
   // Ne JAMAIS se fier à un flag localStorage pour une décision de sécurité.
@@ -63,6 +65,19 @@ export default function App() {
   const [adminNotifications, setAdminNotifications] = useState<EmailNotification[]>([]);
   const [adminClients, setAdminClients] = useState<IptvClient[]>([]);
   const [adminPanelRequests, setAdminPanelRequests] = useState<PanelRequest[]>([]);
+
+  // Détection du pays du visiteur (Algérie = DA, ailleurs = EUR affiché en boutique)
+  useEffect(() => {
+    fetch("/api/geo")
+      .then(res => res.ok ? res.json() : { isAlgeria: true })
+      .then(data => setIsForeignVisitor(!data.isAlgeria))
+      .catch(() => setIsForeignVisitor(false));
+
+    fetch("/api/eur-rate")
+      .then(res => res.ok ? res.json() : { rate: 152 })
+      .then(data => setEurRate(data.rate || 152))
+      .catch(() => setEurRate(152));
+  }, []);
 
   // 1. Initial Load of Products, Categories & Auth check
   useEffect(() => {
@@ -845,6 +860,8 @@ export default function App() {
               products={products} 
               catalogCategories={catalogCategories}
               onOrderSubmit={handleOrderSubmit}
+              isForeignVisitor={isForeignVisitor}
+              eurRate={eurRate}
             />
 
             {/* Video Installation Tutorials */}

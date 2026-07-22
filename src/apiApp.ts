@@ -508,6 +508,7 @@ interface DBStructure {
   heroSlides?: HeroSlide[];
   teamMembers?: TeamMember[];
   codeStock?: StockCode[];
+  eurExchangeRate?: number; // DZD pour 1 EUR, appliqué aux visiteurs hors Algérie
 }
 
 // Read database
@@ -939,6 +940,32 @@ async function sendAdminEmail(subject: string, body: string, type: EmailNotifica
 // ==========================================
 
 // Get Products
+// Détection du pays du visiteur via l'en-tête géo fourni automatiquement par
+// Vercel (aucun service externe nécessaire). Absent en dev local : on suppose
+// alors l'Algérie par défaut pour ne pas fausser les tests.
+app.get("/api/geo", async (req, res) => {
+  const country = (req.headers["x-vercel-ip-country"] as string) || "DZ";
+  res.json({ country, isAlgeria: country === "DZ" });
+});
+
+// Taux de change EUR affiché aux visiteurs hors Algérie (lecture publique,
+// modification réservée à l'admin).
+app.get("/api/eur-rate", async (req, res) => {
+  const db = await readDB();
+  res.json({ rate: db.eurExchangeRate || 152 });
+});
+
+app.put("/api/admin/eur-rate", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
+  const { rate } = req.body;
+  if (!rate || Number(rate) <= 0) {
+    return res.status(400).json({ error: "Taux invalide." });
+  }
+  const db = await readDB();
+  db.eurExchangeRate = Number(rate);
+  await writeDB(db);
+  res.json({ rate: db.eurExchangeRate });
+});
+
 app.get("/api/products", async (req, res) => {
   const db = await readDB();
   res.json(db.products);
