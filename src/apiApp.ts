@@ -957,7 +957,7 @@ app.get("/api/geo", async (req, res) => {
 // modification réservée à l'admin).
 app.get("/api/eur-rate", async (req, res) => {
   const db = await readDB();
-  res.json({ rate: db.eurExchangeRate || 152 });
+  res.json({ rate: db.eurExchangeRate || 280 });
 });
 
 app.put("/api/admin/eur-rate", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
@@ -2700,7 +2700,7 @@ async function drawStockCode(db: DBStructure, productId: string, clientId: strin
 
 
 app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
-  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock, appName } = req.body;
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock, appName, priceRetailEUR } = req.body;
   if (!name || !type || priceRetail === undefined || priceWholesale === undefined) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
@@ -2717,7 +2717,8 @@ app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("produc
     imageUrl2: imageUrl2 || "",
     isPopular: !!isPopular,
     usesCodeStock: !!usesCodeStock,
-    appName: appName || ""
+    appName: appName || "",
+    priceRetailEUR: priceRetailEUR !== undefined && priceRetailEUR !== "" ? Number(priceRetailEUR) : undefined
   };
   db.products.push(newProduct);
   await writeDB(db);
@@ -2726,7 +2727,7 @@ app.post("/api/admin/products", requireAdminAuth, requireAdminPermission("produc
 
 app.put("/api/admin/products/:id", requireAdminAuth, requireAdminPermission("products"), async (req, res) => {
   const { id } = req.params;
-  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock, appName } = req.body;
+  const { name, type, priceRetail, priceWholesale, description, features, imageUrl, imageUrl2, isPopular, usesCodeStock, appName, priceRetailEUR } = req.body;
   const db = await readDB();
   const index = db.products.findIndex(p => p.id === id);
   if (index === -1) {
@@ -2744,7 +2745,8 @@ app.put("/api/admin/products/:id", requireAdminAuth, requireAdminPermission("pro
     imageUrl2: imageUrl2 !== undefined ? imageUrl2 : db.products[index].imageUrl2,
     isPopular: isPopular !== undefined ? !!isPopular : db.products[index].isPopular,
     usesCodeStock: usesCodeStock !== undefined ? !!usesCodeStock : db.products[index].usesCodeStock,
-    appName: appName !== undefined ? appName : db.products[index].appName
+    appName: appName !== undefined ? appName : db.products[index].appName,
+    priceRetailEUR: priceRetailEUR !== undefined ? (priceRetailEUR === "" ? undefined : Number(priceRetailEUR)) : db.products[index].priceRetailEUR
   };
   await writeDB(db);
   res.json(db.products[index]);

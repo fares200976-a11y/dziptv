@@ -72,6 +72,9 @@ export interface Product {
   // Nom de l'application recommandée pour ce produit (ex: "IPTV Smarters Pro"),
   // affiché sur la page dédiée du produit.
   appName?: string;
+  // Prix en euros fixé manuellement par l'admin (optionnel). Si absent, le
+  // prix EUR est calculé automatiquement à partir du prix DA et du taux de change.
+  priceRetailEUR?: number;
 }
 
 // Un code du stock pré-chargé, rattaché à un produit précis.
