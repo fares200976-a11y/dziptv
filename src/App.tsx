@@ -68,7 +68,7 @@ export default function App() {
 
   // Détection du pays du visiteur (Algérie = DA, ailleurs = EUR affiché en boutique)
   useEffect(() => {
-    fetch("/api/geo")
+    fetch("/api/geo", { cache: "no-store" })
       .then(res => res.ok ? res.json() : { isAlgeria: true })
       .then(data => setIsForeignVisitor(!data.isAlgeria))
       .catch(() => setIsForeignVisitor(false));

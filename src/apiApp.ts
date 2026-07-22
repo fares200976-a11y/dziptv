@@ -944,6 +944,11 @@ async function sendAdminEmail(subject: string, body: string, type: EmailNotifica
 // Vercel (aucun service externe nécessaire). Absent en dev local : on suppose
 // alors l'Algérie par défaut pour ne pas fausser les tests.
 app.get("/api/geo", async (req, res) => {
+  // Cette réponse dépend de l'IP du visiteur : jamais de cache navigateur/CDN,
+  // sinon un visiteur garde le résultat détecté pour un autre (ex: 304 réutilisant
+  // une réponse mise en cache avant l'activation d'un VPN).
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.setHeader("Pragma", "no-cache");
   const country = (req.headers["x-vercel-ip-country"] as string) || "DZ";
   res.json({ country, isAlgeria: country === "DZ" });
 });
