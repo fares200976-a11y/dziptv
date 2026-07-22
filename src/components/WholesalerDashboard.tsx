@@ -28,6 +28,8 @@ interface WholesalerDashboardProps {
   loggedWholesaler: Wholesaler | null;
   onLogin: (username: string, password: string) => Promise<any>;
   onRegister: (data: any) => Promise<any>;
+  isForeignVisitor?: boolean;
+  eurRate?: number;
   wholesalerClients: IptvClient[];
   wholesalerRequests: CreditRequest[];
   panelRequests?: PanelRequest[];
@@ -45,6 +47,8 @@ export default function WholesalerDashboard({
   loggedWholesaler,
   onLogin,
   onRegister,
+  isForeignVisitor = false,
+  eurRate = 280,
   wholesalerClients,
   wholesalerRequests,
   panelRequests = [],
@@ -117,7 +121,11 @@ export default function WholesalerDashboard({
 
   // New Recharge Form
   const [rechargeAmount, setRechargeAmount] = useState("");
-  const [rechargeMethod, setRechargeMethod] = useState<"baridimob">("baridimob");
+  const [rechargeMethod, setRechargeMethod] = useState<"baridimob" | "paypal" | "paysera">("baridimob");
+
+  useEffect(() => {
+    setRechargeMethod(isForeignVisitor ? "paypal" : "baridimob");
+  }, [isForeignVisitor]);
   const [rechargeRef, setRechargeRef] = useState("");
 
   useEffect(() => {
@@ -1239,19 +1247,71 @@ export default function WholesalerDashboard({
 
               <div>
                 <label className="block text-slate-600 font-semibold mb-1">Mode de Paiement effectué</label>
-                <div className="p-2.5 rounded-xl border bg-indigo-500/10 border-indigo-500 text-indigo-600 font-bold text-center">
-                  BaridiMob
-                </div>
+                {!isForeignVisitor ? (
+                  <div className="p-2.5 rounded-xl border bg-indigo-500/10 border-indigo-500 text-indigo-600 font-bold text-center">
+                    BaridiMob
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRechargeMethod("paypal")}
+                      className={`p-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
+                        rechargeMethod === "paypal"
+                          ? "bg-indigo-500/10 border-indigo-500 text-indigo-600"
+                          : "bg-white/50 border-slate-200 text-slate-500"
+                      }`}
+                    >
+                      PayPal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRechargeMethod("paysera")}
+                      className={`p-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
+                        rechargeMethod === "paysera"
+                          ? "bg-indigo-500/10 border-indigo-500 text-indigo-600"
+                          : "bg-white/50 border-slate-200 text-slate-500"
+                      }`}
+                    >
+                      Paysera
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Display payment details */}
-              <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5 text-slate-600">
-                <span className="font-bold text-amber-600">Coordonnées de virement :</span>
-                <p className="font-mono">
-                  RIP : 007999990022334455 <br />
-                  Titulaire : Belkacem Fares
-                </p>
-              </div>
+              {!isForeignVisitor ? (
+                <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5 text-slate-600">
+                  <span className="font-bold text-amber-600">Coordonnées de virement :</span>
+                  <p className="font-mono">
+                    RIP : 007999990022334455 <br />
+                    Titulaire : Belkacem Fares
+                  </p>
+                </div>
+              ) : rechargeMethod === "paypal" ? (
+                <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5 text-slate-600">
+                  <span className="font-bold text-amber-600">Envoyer via PayPal à :</span>
+                  <p className="font-mono">fares200976@gmail.com</p>
+                  {rechargeAmount && (
+                    <p className="text-slate-500">
+                      Montant : <strong className="text-slate-800">€{((Number(rechargeAmount) / eurRate) + 5).toFixed(2)}</strong> <span className="text-slate-400">(inclut 5€ de frais)</span>
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-slate-600">
+                  <span className="font-bold text-amber-600">Paiement Paysera :</span>
+                  <p>Contactez-nous sur WhatsApp pour recevoir nos coordonnées Paysera.</p>
+                  <a
+                    href="https://wa.me/213553494318?text=Bonjour%2C%20je%20souhaite%20recharger%20mon%20cr%C3%A9dit%20revendeur%20via%20Paysera."
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded-lg transition-colors"
+                  >
+                    Nous contacter sur WhatsApp
+                  </a>
+                </div>
+              )}
 
               <div>
                 <label className="block text-slate-600 font-semibold mb-1">Numéro de Reçu / Référence du Transfert</label>
