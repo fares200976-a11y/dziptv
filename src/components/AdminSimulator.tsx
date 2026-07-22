@@ -401,8 +401,8 @@ export default function AdminSimulator({
         resetSlideForm();
         fetchHeroSlides();
       } else {
-        const data = await res.json();
-        setErrorMessage(data.error || "Échec de la modification.");
+        const data = await res.json().catch(() => ({}));
+        setErrorMessage(data.error || `Échec de la modification (code ${res.status}).`);
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -1065,8 +1065,8 @@ export default function AdminSimulator({
         setEditingProduct(null);
         refreshAllData();
       } else {
-        const data = await res.json();
-        setErrorMessage(data.error || "Échec de la modification.");
+        const data = await res.json().catch(() => ({}));
+        setErrorMessage(data.error || `Échec de la modification (code ${res.status}).`);
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -1098,7 +1098,7 @@ export default function AdminSimulator({
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      const res = await fetch("/api/tutorials", {
+      const res = await fetch("/api/admin/tutorials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(tutorialForm)
@@ -1115,8 +1115,8 @@ export default function AdminSimulator({
         setShowAddTutorial(false);
         refreshAllData();
       } else {
-        const data = await res.json();
-        setErrorMessage(data.error || "Échec de l'ajout.");
+        const data = await res.json().catch(() => ({}));
+        setErrorMessage(data.error || `Échec de l'ajout (code ${res.status}).`);
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -1129,7 +1129,7 @@ export default function AdminSimulator({
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      const res = await fetch(`/api/tutorials/${editingTutorial.id}`, {
+      const res = await fetch(`/api/admin/tutorials/${editingTutorial.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editingTutorial)
@@ -1139,8 +1139,8 @@ export default function AdminSimulator({
         setEditingTutorial(null);
         refreshAllData();
       } else {
-        const data = await res.json();
-        setErrorMessage(data.error || "Échec de la modification.");
+        const data = await res.json().catch(() => ({}));
+        setErrorMessage(data.error || `Échec de la modification (code ${res.status}).`);
       }
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -1152,7 +1152,7 @@ export default function AdminSimulator({
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      const res = await fetch(`/api/tutorials/${id}`, {
+      const res = await fetch(`/api/admin/tutorials/${id}`, {
         method: "DELETE"
       });
       if (res.ok) {
