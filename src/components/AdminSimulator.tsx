@@ -184,14 +184,14 @@ export default function AdminSimulator({
   }, []);
 
   // Taux de change EUR (affiché aux visiteurs hors Algérie sur la boutique)
-  const [eurRateInput, setEurRateInput] = useState("152");
+  const [eurRateInput, setEurRateInput] = useState("280");
   const [eurRateSaving, setEurRateSaving] = useState(false);
   const [eurRateSaved, setEurRateSaved] = useState(false);
 
   useEffect(() => {
     fetch("/api/eur-rate")
-      .then(res => res.ok ? res.json() : { rate: 152 })
-      .then(data => setEurRateInput(String(data.rate || 152)))
+      .then(res => res.ok ? res.json() : { rate: 280 })
+      .then(data => setEurRateInput(String(data.rate || 280)))
       .catch(() => {});
   }, []);
 
@@ -837,7 +837,8 @@ export default function AdminSimulator({
     imageUrl2: "",
     categoryId: "",
     usesCodeStock: false,
-    appName: ""
+    appName: "",
+    priceRetailEUR: ""
   });
 
   // Ajout rapide d'une catégorie directement depuis le formulaire produit
@@ -1062,7 +1063,8 @@ export default function AdminSimulator({
           imageUrl2: "",
           categoryId: "",
           usesCodeStock: false,
-          appName: ""
+          appName: "",
+          priceRetailEUR: ""
         });
         setShowAddProduct(false);
         refreshAllData();
@@ -2698,6 +2700,17 @@ export default function AdminSimulator({
                       />
                     </div>
                     <div>
+                      <label className="block text-indigo-600 mb-1 font-semibold">Prix Détail EUR (Optionnel)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Auto (taux de change)"
+                        value={productForm.priceRetailEUR}
+                        onChange={e => setProductForm({ ...productForm, priceRetailEUR: e.target.value })}
+                        className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-slate-900"
+                      />
+                    </div>
+                    <div>
                       <label className="block text-slate-500 mb-1">Prix Grossiste (DA)</label>
                       <input
                         type="number"
@@ -2934,6 +2947,17 @@ export default function AdminSimulator({
                         value={editingProduct.priceRetail}
                         onChange={e => setEditingProduct({ ...editingProduct, priceRetail: parseInt(e.target.value) || 0 })}
                         className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-indigo-600 mb-1 font-semibold">Prix Détail EUR (Optionnel)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Auto (taux de change)"
+                        value={editingProduct.priceRetailEUR ?? ""}
+                        onChange={e => setEditingProduct({ ...editingProduct, priceRetailEUR: e.target.value === "" ? undefined : parseFloat(e.target.value) })}
+                        className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-slate-900"
                       />
                     </div>
                     <div>

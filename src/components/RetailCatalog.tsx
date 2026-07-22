@@ -48,7 +48,7 @@ interface RetailCatalogProps {
   eurRate?: number;
 }
 
-export default function RetailCatalog({ products, catalogCategories = [], onOrderSubmit, isForeignVisitor = false, eurRate = 152 }: RetailCatalogProps) {
+export default function RetailCatalog({ products, catalogCategories = [], onOrderSubmit, isForeignVisitor = false, eurRate = 280 }: RetailCatalogProps) {
   const { t } = useTranslation();
 
   // Formate un prix en DA (Algérie) ou converti en EUR (visiteurs hors Algérie).
@@ -58,6 +58,19 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
       return `€${eur.toFixed(2)}`;
     }
     return `${priceDA.toLocaleString()} DA`;
+  };
+
+  // Comme formatPrice, mais pour un produit précis : privilégie le prix EUR
+  // fixé manuellement par l'admin (product.priceRetailEUR) s'il existe, plutôt
+  // que le calcul automatique via le taux de change.
+  const formatProductPrice = (product: Product): string => {
+    if (isForeignVisitor) {
+      if (product.priceRetailEUR !== undefined && product.priceRetailEUR !== null) {
+        return `€${product.priceRetailEUR.toFixed(2)}`;
+      }
+      return `€${(product.priceRetail / eurRate).toFixed(2)}`;
+    }
+    return `${product.priceRetail.toLocaleString()} DA`;
   };
 
   const [filter, setFilter] = useState<"all" | "iptv" | "box" | "led" | "codesat" | "accessoire" | "adsl" | "track">("all");
@@ -716,7 +729,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 <div className="border-t border-slate-100 pt-4 mt-auto flex items-center justify-between">
                   <div>
                     <span className="text-xs text-slate-400 block">{t("shop.price_retail")}</span>
-                    <span className="text-2xl font-black font-display text-indigo-600">{formatPrice(product.priceRetail)}</span>
+                    <span className="text-2xl font-black font-display text-indigo-600">{formatProductPrice(product)}</span>
                     {product.type === "iptv" && <span className="text-slate-400 text-[10px] block">{t("shop.per_year")}</span>}
                   </div>
                   <button
@@ -949,7 +962,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     <div className="border border-slate-200 rounded-xl overflow-hidden text-sm">
                       <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
                         <span className="text-slate-400">Prix du produit</span>
-                        <span className="font-bold text-slate-900">{formatPrice(selectedProduct?.priceRetail || 0)}</span>
+                        <span className="font-bold text-slate-900">{selectedProduct ? formatProductPrice(selectedProduct) : formatPrice(0)}</span>
                       </div>
                       <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
                         <span className="text-slate-400">Prix de livraison</span>
@@ -1176,7 +1189,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
             <div className="mt-4 flex items-center justify-between w-full max-w-lg gap-4">
               <div className="text-left">
                 <h4 className="text-white font-display font-bold text-lg">{zoomedProduct.name}</h4>
-                <p className="text-slate-300 text-sm">{formatPrice(zoomedProduct.priceRetail)}</p>
+                <p className="text-slate-300 text-sm">{formatProductPrice(zoomedProduct)}</p>
               </div>
               <button
                 onClick={() => {
@@ -1244,7 +1257,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 <p className="text-slate-600 text-sm sm:text-base leading-relaxed">{detailProduct.description}</p>
 
                 <div className="flex items-baseline gap-2 pt-2">
-                  <span className="text-3xl sm:text-4xl font-black font-display text-indigo-600">{formatPrice(detailProduct.priceRetail)}</span>
+                  <span className="text-3xl sm:text-4xl font-black font-display text-indigo-600">{formatProductPrice(detailProduct)}</span>
                   <span className="text-xs text-slate-400">{t("shop.price_retail")}</span>
                 </div>
 
@@ -1301,7 +1314,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
               <div className="sticky top-24 p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{t("shop.price_retail")}</span>
-                  <p className="text-2xl font-black font-display text-indigo-600">{formatPrice(detailProduct.priceRetail)}</p>
+                  <p className="text-2xl font-black font-display text-indigo-600">{formatProductPrice(detailProduct)}</p>
                 </div>
                 {detailProduct.appName && (
                   <div className="flex items-center gap-2 text-xs text-slate-500 pt-3 border-t border-slate-100">
