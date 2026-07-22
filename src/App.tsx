@@ -23,7 +23,7 @@ import { Tv, Sparkles, ShieldCheck, Flame, HelpCircle } from "lucide-react";
 export default function App() {
   const [currentView, setView] = useState<"retail" | "wholesaler" | "admin">("retail");
   const [isForeignVisitor, setIsForeignVisitor] = useState(false);
-  const [eurRate, setEurRate] = useState(152);
+  const [eurRate, setEurRate] = useState(280);
   // La vraie source de vérité est le cookie HttpOnly "admin_token" côté serveur,
   // vérifié au chargement via /api/auth/admin/session (voir useEffect plus bas).
   // Ne JAMAIS se fier à un flag localStorage pour une décision de sécurité.
@@ -74,9 +74,9 @@ export default function App() {
       .catch(() => setIsForeignVisitor(false));
 
     fetch("/api/eur-rate")
-      .then(res => res.ok ? res.json() : { rate: 152 })
-      .then(data => setEurRate(data.rate || 152))
-      .catch(() => setEurRate(152));
+      .then(res => res.ok ? res.json() : { rate: 280 })
+      .then(data => setEurRate(data.rate || 280))
+      .catch(() => setEurRate(280));
   }, []);
 
   // 1. Initial Load of Products, Categories & Auth check
@@ -899,6 +899,8 @@ export default function App() {
               loggedWholesaler={loggedWholesaler}
               onLogin={handleWholesalerLogin}
               onRegister={handleWholesalerRegister}
+              isForeignVisitor={isForeignVisitor}
+              eurRate={eurRate}
               wholesalerClients={wholesalerClients}
               wholesalerRequests={wholesalerRequests}
               panelRequests={wholesalerPanelRequests}
