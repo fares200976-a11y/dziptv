@@ -44,10 +44,22 @@ interface RetailCatalogProps {
   products: Product[];
   catalogCategories?: CatalogCategory[];
   onOrderSubmit: (orderData: any) => Promise<any>;
+  isForeignVisitor?: boolean;
+  eurRate?: number;
 }
 
-export default function RetailCatalog({ products, catalogCategories = [], onOrderSubmit }: RetailCatalogProps) {
+export default function RetailCatalog({ products, catalogCategories = [], onOrderSubmit, isForeignVisitor = false, eurRate = 152 }: RetailCatalogProps) {
   const { t } = useTranslation();
+
+  // Formate un prix en DA (Algérie) ou converti en EUR (visiteurs hors Algérie).
+  const formatPrice = (priceDA: number): string => {
+    if (isForeignVisitor) {
+      const eur = priceDA / eurRate;
+      return `€${eur.toFixed(2)}`;
+    }
+    return `${priceDA.toLocaleString()} DA`;
+  };
+
   const [filter, setFilter] = useState<"all" | "iptv" | "box" | "led" | "codesat" | "accessoire" | "adsl" | "track">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -228,6 +240,11 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
         <div>
           <h2 className="font-display text-2xl font-bold text-slate-900">{t("shop.title")}</h2>
           <p className="text-slate-500 text-sm mt-1">{t("shop.subtitle")}</p>
+          {isForeignVisitor && (
+            <span className="inline-flex items-center gap-1 mt-2 px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-bold">
+              💶 Prix affichés en EUR (taux indicatif)
+            </span>
+          )}
         </div>
         <button
           onClick={() => {
@@ -699,7 +716,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 <div className="border-t border-slate-100 pt-4 mt-auto flex items-center justify-between">
                   <div>
                     <span className="text-xs text-slate-400 block">{t("shop.price_retail")}</span>
-                    <span className="text-2xl font-black font-display text-indigo-600">{product.priceRetail.toLocaleString()} DA</span>
+                    <span className="text-2xl font-black font-display text-indigo-600">{formatPrice(product.priceRetail)}</span>
                     {product.type === "iptv" && <span className="text-slate-400 text-[10px] block">{t("shop.per_year")}</span>}
                   </div>
                   <button
@@ -760,7 +777,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{t("checkout.total")}</span>
-                      <p className="text-xl font-extrabold text-blue-600 font-display">{totalWithShipping.toLocaleString()} DA</p>
+                      <p className="text-xl font-extrabold text-blue-600 font-display">{formatPrice(totalWithShipping)}</p>
                     </div>
                   </div>
                   {isPhysicalCheckout && shippingWilaya && (
@@ -932,7 +949,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     <div className="border border-slate-200 rounded-xl overflow-hidden text-sm">
                       <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
                         <span className="text-slate-400">Prix du produit</span>
-                        <span className="font-bold text-slate-900">{selectedProduct?.priceRetail.toLocaleString()} DA</span>
+                        <span className="font-bold text-slate-900">{formatPrice(selectedProduct?.priceRetail || 0)}</span>
                       </div>
                       <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
                         <span className="text-slate-400">Prix de livraison</span>
@@ -940,7 +957,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                       </div>
                       <div className="flex items-center justify-between px-4 py-3 bg-slate-50">
                         <span className="font-bold text-slate-700">Total</span>
-                        <span className="font-extrabold text-emerald-600 text-base">{totalWithShipping.toLocaleString()} DA</span>
+                        <span className="font-extrabold text-emerald-600 text-base">{formatPrice(totalWithShipping)}</span>
                       </div>
                     </div>
                   </div>
@@ -1074,7 +1091,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                     ) : (
                       <>
                         <ShoppingBag className="h-4 w-4" />
-                        <span>{t("checkout.confirm")} ({totalWithShipping.toLocaleString()} DA)</span>
+                        <span>{t("checkout.confirm")} ({formatPrice(totalWithShipping)})</span>
                       </>
                     )}
                   </button>
@@ -1101,7 +1118,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                   <p><strong className="text-slate-800">Client :</strong> {successOrder.customerName}</p>
                   <p><strong className="text-slate-800">Téléphone :</strong> {successOrder.customerPhone}</p>
                   <p><strong className="text-slate-800">Produit :</strong> {successOrder.productName}</p>
-                  <p><strong className="text-slate-800">Montant :</strong> {successOrder.priceDA.toLocaleString()} DA</p>
+                  <p><strong className="text-slate-800">Montant :</strong> {formatPrice(successOrder.priceDA)}</p>
                   <p><strong className="text-slate-800">Méthode de paiement :</strong> {successOrder.paymentMethod.toUpperCase()}</p>
                 </div>
 
@@ -1159,7 +1176,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
             <div className="mt-4 flex items-center justify-between w-full max-w-lg gap-4">
               <div className="text-left">
                 <h4 className="text-white font-display font-bold text-lg">{zoomedProduct.name}</h4>
-                <p className="text-slate-300 text-sm">{zoomedProduct.priceRetail.toLocaleString()} DA</p>
+                <p className="text-slate-300 text-sm">{formatPrice(zoomedProduct.priceRetail)}</p>
               </div>
               <button
                 onClick={() => {
@@ -1227,7 +1244,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 <p className="text-slate-600 text-sm sm:text-base leading-relaxed">{detailProduct.description}</p>
 
                 <div className="flex items-baseline gap-2 pt-2">
-                  <span className="text-3xl sm:text-4xl font-black font-display text-indigo-600">{detailProduct.priceRetail.toLocaleString()} DA</span>
+                  <span className="text-3xl sm:text-4xl font-black font-display text-indigo-600">{formatPrice(detailProduct.priceRetail)}</span>
                   <span className="text-xs text-slate-400">{t("shop.price_retail")}</span>
                 </div>
 
@@ -1284,7 +1301,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
               <div className="sticky top-24 p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{t("shop.price_retail")}</span>
-                  <p className="text-2xl font-black font-display text-indigo-600">{detailProduct.priceRetail.toLocaleString()} DA</p>
+                  <p className="text-2xl font-black font-display text-indigo-600">{formatPrice(detailProduct.priceRetail)}</p>
                 </div>
                 {detailProduct.appName && (
                   <div className="flex items-center gap-2 text-xs text-slate-500 pt-3 border-t border-slate-100">

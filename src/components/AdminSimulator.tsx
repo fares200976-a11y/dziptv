@@ -183,6 +183,38 @@ export default function AdminSimulator({
       .catch(() => setBouquetLinksLoaded(true));
   }, []);
 
+  // Taux de change EUR (affiché aux visiteurs hors Algérie sur la boutique)
+  const [eurRateInput, setEurRateInput] = useState("152");
+  const [eurRateSaving, setEurRateSaving] = useState(false);
+  const [eurRateSaved, setEurRateSaved] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/eur-rate")
+      .then(res => res.ok ? res.json() : { rate: 152 })
+      .then(data => setEurRateInput(String(data.rate || 152)))
+      .catch(() => {});
+  }, []);
+
+  const handleSaveEurRate = async () => {
+    setEurRateSaving(true);
+    setEurRateSaved(false);
+    try {
+      const res = await fetch("/api/admin/eur-rate", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rate: Number(eurRateInput) })
+      });
+      if (res.ok) {
+        setEurRateSaved(true);
+        setTimeout(() => setEurRateSaved(false), 2500);
+      }
+    } catch (e) {
+      console.error("Error saving EUR rate:", e);
+    } finally {
+      setEurRateSaving(false);
+    }
+  };
+
   const handleSaveBouquetLinks = async () => {
     setBouquetLinksSaving(true);
     setBouquetLinksSaved(false);
@@ -2314,6 +2346,43 @@ export default function AdminSimulator({
                   <Plus className="h-3.5 w-3.5" />
                   <span>{showAddProduct ? "Masquer" : "Ajouter un Produit"}</span>
                 </button>
+              </div>
+
+              {/* Taux de change EUR pour les visiteurs hors Algérie */}
+              <div className="p-5 bg-white rounded-2xl border border-slate-200 space-y-3">
+                <h4 className="font-bold text-slate-900 uppercase text-xs tracking-wider flex items-center gap-1.5">
+                  <span>💶</span>
+                  <span>Taux de Change EUR (Visiteurs hors Algérie)</span>
+                </h4>
+                <p className="text-slate-400 text-[11px]">
+                  Les visiteurs qui naviguent depuis l'étranger (détecté automatiquement) voient les prix convertis en euros selon ce taux. Les visiteurs en Algérie continuent de voir les prix en DA, inchangés.
+                </p>
+                <div className="flex items-end gap-3">
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1 text-xs">1 EUR =</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={eurRateInput}
+                        onChange={e => setEurRateInput(e.target.value)}
+                        className="w-28 bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900 text-sm font-bold"
+                      />
+                      <span className="text-slate-500 text-sm font-semibold">DA</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveEurRate}
+                    disabled={eurRateSaving}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer"
+                  >
+                    {eurRateSaving ? "Enregistrement..." : "Enregistrer"}
+                  </button>
+                  {eurRateSaved && (
+                    <span className="text-emerald-600 text-xs font-semibold">✓ Enregistré</span>
+                  )}
+                </div>
               </div>
 
               {/* Liens de gestion des bouquets IPTV (Dino / 8K / Golden OTT) */}
