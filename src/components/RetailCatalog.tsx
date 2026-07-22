@@ -83,7 +83,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"baridimob" | "hand">("baridimob");
+  const [paymentMethod, setPaymentMethod] = useState<"baridimob" | "hand" | "paypal" | "paysera">("baridimob");
   const [paymentDetails, setPaymentDetails] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successOrder, setSuccessOrder] = useState<Order | null>(null);
@@ -164,7 +164,7 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
     setName("");
     setPhone("");
     setEmail("");
-    setPaymentMethod("baridimob");
+    setPaymentMethod(isForeignVisitor ? "paypal" : "baridimob");
     setPaymentDetails("");
     setSuccessOrder(null);
     setFormError("");
@@ -210,6 +210,10 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
         details = `BaridiMob: ${paymentDetails || "En attente de vérification"}`;
       } else if (paymentMethod === "hand") {
         details = "Livraison contre remboursement (Yalidine) / Main à main.";
+      } else if (paymentMethod === "paypal") {
+        details = `PayPal (fares200976@gmail.com, +5€ frais): ${paymentDetails || "En attente de vérification"}`;
+      } else if (paymentMethod === "paysera") {
+        details = `Paysera: ${paymentDetails || "Contact WhatsApp en attente"}`;
       }
 
       const orderPayload: any = {
@@ -1008,31 +1012,63 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-2">{t("checkout.payment_method")}</label>
                   <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("baridimob")}
-                      className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
-                        paymentMethod === "baridimob"
-                          ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
-                          : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Smartphone className="h-5 w-5 text-blue-600" />
-                      <span className="text-[10px] font-bold">BaridiMob</span>
-                    </button>
+                    {!isForeignVisitor ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("baridimob")}
+                          className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
+                            paymentMethod === "baridimob"
+                              ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
+                              : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                          }`}
+                        >
+                          <Smartphone className="h-5 w-5 text-blue-600" />
+                          <span className="text-[10px] font-bold">BaridiMob</span>
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("hand")}
-                      className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
-                        paymentMethod === "hand"
-                          ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
-                          : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Truck className="h-5 w-5 text-blue-600" />
-                      <span className="text-[10px] font-bold">Yalidine COD</span>
-                    </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("hand")}
+                          className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
+                            paymentMethod === "hand"
+                              ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
+                              : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                          }`}
+                        >
+                          <Truck className="h-5 w-5 text-blue-600" />
+                          <span className="text-[10px] font-bold">Yalidine COD</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("paypal")}
+                          className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
+                            paymentMethod === "paypal"
+                              ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
+                              : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                          }`}
+                        >
+                          <CreditCard className="h-5 w-5 text-blue-600" />
+                          <span className="text-[10px] font-bold">PayPal</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("paysera")}
+                          className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
+                            paymentMethod === "paysera"
+                              ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
+                              : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                          }`}
+                        >
+                          <ShieldCheck className="h-5 w-5 text-blue-600" />
+                          <span className="text-[10px] font-bold">Paysera</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1081,6 +1117,73 @@ export default function RetailCatalog({ products, catalogCategories = [], onOrde
                           </>
                         )}
                       </p>
+                    </>
+                  )}
+
+                  {paymentMethod === "paypal" && (
+                    <>
+                      <div className="flex items-center space-x-1.5 text-blue-600 font-bold">
+                        <CreditCard className="h-3.5 w-3.5" />
+                        <span>Paiement via PayPal</span>
+                      </div>
+                      <p className="leading-relaxed">
+                        Envoyez le montant total via PayPal (option "Envoyer à un ami/famille" si possible, pour éviter les frais) à l'adresse :
+                      </p>
+                      <div className="p-2.5 bg-slate-100 rounded font-mono text-slate-800 border border-slate-200">
+                        fares200976@gmail.com
+                      </div>
+                      <p className="leading-relaxed">
+                        Montant à envoyer : <strong className="text-slate-900">
+                          {selectedProduct && (
+                            `€${(
+                              (selectedProduct.priceRetailEUR !== undefined ? selectedProduct.priceRetailEUR : selectedProduct.priceRetail / eurRate)
+                              + (isPhysicalCheckout ? shippingPrice / eurRate : 0)
+                              + 5
+                            ).toFixed(2)}`
+                          )}
+                        </strong> <span className="text-slate-400">(inclut 5€ de frais de transaction PayPal)</span>
+                      </p>
+                      <div className="mt-2">
+                        <label className="block text-[10px] text-slate-500 mb-1 font-semibold">ID de transaction PayPal :</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: 8HK09284JD8391029"
+                          value={paymentDetails}
+                          onChange={(e) => setPaymentDetails(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {paymentMethod === "paysera" && (
+                    <>
+                      <div className="flex items-center space-x-1.5 text-blue-600 font-bold">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        <span>Paiement sécurisé via Paysera</span>
+                      </div>
+                      <p className="leading-relaxed">
+                        Contactez-nous directement sur WhatsApp pour recevoir nos coordonnées Paysera et finaliser votre paiement en toute sécurité.
+                      </p>
+                      <a
+                        href={`https://wa.me/213553494318?text=${encodeURIComponent(`Bonjour, je souhaite payer via Paysera pour : ${selectedProduct?.name || ""}`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-center gap-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 px-4 rounded-lg transition-colors mt-1"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.48 1.32 4.99L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15h-.01c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.146 8.146 0 01-1.25-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.176 8.176 0 012.41 5.83c0 4.55-3.7 8.24-8.24 8.24z"/></svg>
+                        <span>Nous contacter sur WhatsApp</span>
+                      </a>
+                      <div className="mt-2">
+                        <label className="block text-[10px] text-slate-500 mb-1 font-semibold">Référence de paiement (si déjà envoyé) :</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Référence Paysera"
+                          value={paymentDetails}
+                          onChange={(e) => setPaymentDetails(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900"
+                        />
+                      </div>
                     </>
                   )}
                 </div>
