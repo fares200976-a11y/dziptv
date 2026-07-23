@@ -1344,7 +1344,7 @@ app.get("/api/auth/admin/session", requireAdminAuth, async (req, res) => {
   if (!member) {
     return res.status(401).json({ error: "Compte introuvable. Veuillez vous reconnecter." });
   }
-  res.json({ ok: true, isOwner: false, name: member.name, permissions: member.permissions || [], creditBalance: member.creditBalance ?? 0, teamMemberId: member.id });
+  res.json({ ok: true, isOwner: false, name: member.name, permissions: member.permissions || [], creditBalance: member.creditBalance ?? 0, creditBalanceEUR: member.creditBalanceEUR ?? 0, teamMemberId: member.id });
 });
 
 app.post("/api/auth/admin/logout-complete", async (req, res) => {
@@ -1619,7 +1619,7 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
     return res.status(400).json({ error: "Cette activation est réservée aux membres de l'équipe (pas au compte principal)." });
   }
   const teamMemberId = (req as any).teamMemberId as string;
-  const { clientName, server, durationMonths, notes, serviceType, productId, adultContent } = req.body;
+  const { clientName, server, durationMonths, notes, serviceType, productId, adultContent, payWithEUR } = req.body;
   const type: "iptv" | "sat" | "box" = serviceType === "sat" || serviceType === "box" ? serviceType : "iptv";
 
   if (!clientName) {
@@ -1632,6 +1632,8 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
     return res.status(404).json({ error: "Membre introuvable." });
   }
   if (member.creditBalance === undefined) member.creditBalance = 0;
+  if (member.creditBalanceEUR === undefined) member.creditBalanceEUR = 0;
+  const eurRate = db.eurExchangeRate || 280;
 
   if (type === "iptv") {
     if (!server || !durationMonths) {
@@ -1646,7 +1648,14 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
     else if (durationMonths === 6) pricePaid = Math.round(product.priceWholesale * 0.60);
     else if (durationMonths === 12) pricePaid = product.priceWholesale;
 
-    if (member.creditBalance < pricePaid) {
+    const priceEUR = Math.round((pricePaid / eurRate) * 100) / 100;
+    if (payWithEUR) {
+      if (member.creditBalanceEUR < priceEUR) {
+        return res.status(400).json({
+          error: `Crédit EUR insuffisant. Cette activation coûte €${priceEUR.toFixed(2)}. Votre solde EUR actuel est de €${member.creditBalanceEUR.toFixed(2)}. Demandez à l'administrateur de recharger votre crédit EUR.`
+        });
+      }
+    } else if (member.creditBalance < pricePaid) {
       return res.status(400).json({
         error: `Crédit insuffisant. Cette activation coûte ${pricePaid} DA. Votre solde actuel est de ${member.creditBalance} DA. Demandez à l'administrateur de recharger votre crédit.`
       });
@@ -1699,16 +1708,20 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
         : { m3uUrl, xtreamUser: username, xtreamPass: password, xtreamHost: host, bouquetLink: bouquetLink || undefined }
     };
 
-    member.creditBalance -= pricePaid;
+    if (payWithEUR) {
+      member.creditBalanceEUR -= priceEUR;
+    } else {
+      member.creditBalance -= pricePaid;
+    }
     db.clients.push(newClient);
     await writeDB(db);
 
     try {
       await sendAdminEmail(
         `Activation IPTV par l'équipe (${member.name}) : ${clientName}`,
-        `Le membre de l'équipe '${member.name}' a activé un abonnement IPTV avec son crédit interne.\n\n` +
-        `- Client: ${clientName}\n- Serveur: ${server}\n- Durée: ${durationMonths} Mois\n- Prix: ${pricePaid} DA\n` +
-        `- Nouveau solde de ${member.name}: ${member.creditBalance} DA`,
+        `Le membre de l'équipe '${member.name}' a activé un abonnement IPTV avec son crédit interne (${payWithEUR ? "EUR" : "DA"}).\n\n` +
+        `- Client: ${clientName}\n- Serveur: ${server}\n- Durée: ${durationMonths} Mois\n- Prix: ${payWithEUR ? `€${priceEUR.toFixed(2)}` : `${pricePaid} DA`}\n` +
+        `- Nouveau solde de ${member.name}: ${payWithEUR ? `€${member.creditBalanceEUR.toFixed(2)}` : `${member.creditBalance} DA`}`,
         "client_activation"
       );
     } catch (err) {
@@ -1716,9 +1729,12 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
     }
 
     return res.json({
-      message: `Activation réussie ! ${pricePaid} DA ont été déduits de votre crédit.`,
+      message: payWithEUR
+        ? `Activation réussie ! €${priceEUR.toFixed(2)} ont été déduits de votre crédit EUR.`
+        : `Activation réussie ! ${pricePaid} DA ont été déduits de votre crédit.`,
       client: newClient,
-      newBalance: member.creditBalance
+      newBalance: payWithEUR ? member.creditBalanceEUR : member.creditBalance,
+      newBalanceEUR: member.creditBalanceEUR
     });
   }
 
@@ -1731,7 +1747,14 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
     return res.status(400).json({ error: "Produit introuvable ou type invalide." });
   }
   const pricePaid = product.priceWholesale;
-  if (member.creditBalance < pricePaid) {
+  const priceEUR = Math.round((pricePaid / eurRate) * 100) / 100;
+  if (payWithEUR) {
+    if (member.creditBalanceEUR < priceEUR) {
+      return res.status(400).json({
+        error: `Crédit EUR insuffisant. Cette activation coûte €${priceEUR.toFixed(2)}. Votre solde EUR actuel est de €${member.creditBalanceEUR.toFixed(2)}. Demandez à l'administrateur de recharger votre crédit EUR.`
+      });
+    }
+  } else if (member.creditBalance < pricePaid) {
     return res.status(400).json({
       error: `Crédit insuffisant. Cette activation coûte ${pricePaid} DA. Votre solde actuel est de ${member.creditBalance} DA. Demandez à l'administrateur de recharger votre crédit.`
     });
@@ -1773,17 +1796,21 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
     credentials: type === "sat" ? { satCode: drawnCode2 || undefined } : undefined
   };
 
-  member.creditBalance -= pricePaid;
+  if (payWithEUR) {
+    member.creditBalanceEUR -= priceEUR;
+  } else {
+    member.creditBalance -= pricePaid;
+  }
   db.clients.push(newClient);
   await writeDB(db);
 
   try {
     await sendAdminEmail(
       `Activation ${type === "sat" ? "Code Sat" : "Box Android"} par l'équipe (${member.name}) : ${clientName}`,
-      `Le membre de l'équipe '${member.name}' a activé un ${type === "sat" ? "code satellite" : "boîtier Android"} avec son crédit interne.\n\n` +
-      `- Client: ${clientName}\n- Produit: ${product.name}\n- Prix: ${pricePaid} DA\n` +
+      `Le membre de l'équipe '${member.name}' a activé un ${type === "sat" ? "code satellite" : "boîtier Android"} avec son crédit interne (${payWithEUR ? "EUR" : "DA"}).\n\n` +
+      `- Client: ${clientName}\n- Produit: ${product.name}\n- Prix: ${payWithEUR ? `€${priceEUR.toFixed(2)}` : `${pricePaid} DA`}\n` +
       (type === "sat" ? `- Code: ${newClient.credentials?.satCode}\n` : ``) +
-      `- Nouveau solde de ${member.name}: ${member.creditBalance} DA`,
+      `- Nouveau solde de ${member.name}: ${payWithEUR ? `€${member.creditBalanceEUR.toFixed(2)}` : `${member.creditBalance} DA`}`,
       "client_activation"
     );
   } catch (err) {
@@ -1791,9 +1818,12 @@ app.post("/api/admin/staff-clients", requireAdminAuth, requireAdminPermission("c
   }
 
   res.json({
-    message: `Activation réussie ! ${pricePaid} DA ont été déduits de votre crédit.`,
+    message: payWithEUR
+      ? `Activation réussie ! €${priceEUR.toFixed(2)} ont été déduits de votre crédit EUR.`
+      : `Activation réussie ! ${pricePaid} DA ont été déduits de votre crédit.`,
     client: newClient,
-    newBalance: member.creditBalance
+    newBalance: payWithEUR ? member.creditBalanceEUR : member.creditBalance,
+    newBalanceEUR: member.creditBalanceEUR
   });
 });
 
@@ -2102,7 +2132,8 @@ app.post("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => 
     alertWhatsappPhone: alertWhatsappPhone || undefined,
     alertWhatsappApiKey: alertWhatsappApiKey || undefined,
     alertTelegramChatId: alertTelegramChatId || undefined,
-    creditBalance: 0
+    creditBalance: 0,
+    creditBalanceEUR: 0
   };
   db.teamMembers.push(newMember);
   await writeDB(db);
@@ -2113,7 +2144,7 @@ app.post("/api/admin/team", requireAdminAuth, requireOwner, async (req, res) => 
 
 app.put("/api/admin/team/:id", requireAdminAuth, requireOwner, async (req, res) => {
   const { id } = req.params;
-  const { permissions, name, alertEmail, alertWhatsappPhone, alertWhatsappApiKey, alertTelegramChatId, creditBalance, password } = req.body;
+  const { permissions, name, alertEmail, alertWhatsappPhone, alertWhatsappApiKey, alertTelegramChatId, creditBalance, creditBalanceEUR, password } = req.body;
   const db = await readDB();
   const member = (db.teamMembers || []).find(m => m.id === id);
   if (!member) {
@@ -2121,6 +2152,7 @@ app.put("/api/admin/team/:id", requireAdminAuth, requireOwner, async (req, res) 
   }
   if (name !== undefined) member.name = name;
   if (creditBalance !== undefined) member.creditBalance = Number(creditBalance);
+  if (creditBalanceEUR !== undefined) member.creditBalanceEUR = Number(creditBalanceEUR);
   if (password !== undefined && password !== "") {
     if (password.length < 6) {
       return res.status(400).json({ error: "Le mot de passe doit contenir au moins 6 caractères." });

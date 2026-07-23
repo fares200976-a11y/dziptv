@@ -19,6 +19,8 @@ export interface TeamMember {
   // Crédit accordé par l'admin, utilisé par ce membre pour activer lui-même
   // des abonnements IPTV/Sat/Box (comme un revendeur, mais en interne).
   creditBalance?: number;
+  // Solde EUR séparé, utilisé pour activer des clients étrangers (payés en euros).
+  creditBalanceEUR?: number;
   // Alertes personnelles (en plus de celles de l'administrateur principal).
   alertEmail?: string;
   // Clé CallMeBot du membre : chacun doit l'obtenir lui-même en envoyant

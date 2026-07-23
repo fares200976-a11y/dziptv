@@ -32,6 +32,7 @@ export default function App() {
   const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
   const [adminName, setAdminName] = useState("");
   const [adminCreditBalance, setAdminCreditBalance] = useState(0);
+  const [adminCreditBalanceEUR, setAdminCreditBalanceEUR] = useState(0);
 
   // Secret Admin modal states
   const [showSecretModal, setShowSecretModal] = useState(false);
@@ -116,6 +117,7 @@ export default function App() {
           setAdminPermissions(data.permissions || []);
           setAdminName(data.name || "");
           setAdminCreditBalance(data.creditBalance || 0);
+          setAdminCreditBalanceEUR(data.creditBalanceEUR || 0);
         }
       } catch (e) {
         setAdminUnlocked(false);
@@ -411,6 +413,7 @@ export default function App() {
           setAdminPermissions(sessionData.permissions || []);
           setAdminName(sessionData.name || "");
           setAdminCreditBalance(sessionData.creditBalance || 0);
+          setAdminCreditBalanceEUR(sessionData.creditBalanceEUR || 0);
         }
       } catch (e) {
         // Non bloquant : au pire le panel se rechargera sans détail au prochain accès.
@@ -443,6 +446,7 @@ export default function App() {
     setAdminIsOwner(true);
     setAdminPermissions([]);
     setAdminCreditBalance(0);
+    setAdminCreditBalanceEUR(0);
     setAdminName("");
     setView("retail");
   };
@@ -653,8 +657,11 @@ export default function App() {
     if (!res.ok) {
       throw new Error(data.error || "Échec de l'activation.");
     }
-    if (typeof data.newBalance === "number") {
+    if (!payload.payWithEUR && typeof data.newBalance === "number") {
       setAdminCreditBalance(data.newBalance);
+    }
+    if (typeof data.newBalanceEUR === "number") {
+      setAdminCreditBalanceEUR(data.newBalanceEUR);
     }
     refreshAllData();
     return data;
@@ -924,6 +931,7 @@ export default function App() {
                 permissions={adminPermissions}
                 adminName={adminName}
                 adminCreditBalance={adminCreditBalance}
+                adminCreditBalanceEUR={adminCreditBalanceEUR}
                 onStaffActivateClient={handleStaffActivateClient}
                 stats={adminStats}
                 wholesalers={adminWholesalers}
