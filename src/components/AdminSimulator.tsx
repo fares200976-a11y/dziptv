@@ -42,6 +42,7 @@ interface AdminSimulatorProps {
   permissions?: string[];
   adminName?: string;
   adminCreditBalance?: number;
+  adminCreditBalanceEUR?: number;
   onStaffActivateClient?: (payload: any) => Promise<any>;
   stats: AppStats;
   wholesalers: Wholesaler[];
@@ -118,6 +119,7 @@ export default function AdminSimulator({
   permissions = [],
   adminName = "",
   adminCreditBalance = 0,
+  adminCreditBalanceEUR = 0,
   onStaffActivateClient,
   stats,
   wholesalers,
@@ -520,6 +522,7 @@ export default function AdminSimulator({
   const [editPermissionsDraft, setEditPermissionsDraft] = useState<string[]>([]);
   const [editAlertDraft, setEditAlertDraft] = useState({ alertEmail: "", alertWhatsappPhone: "", alertWhatsappApiKey: "", alertTelegramChatId: "" });
   const [editCreditDraft, setEditCreditDraft] = useState<string>("0");
+  const [editCreditEURDraft, setEditCreditEURDraft] = useState<string>("0");
   const [editPasswordDraft, setEditPasswordDraft] = useState<string>("");
 
   const startEditPermissions = (member: any) => {
@@ -532,6 +535,7 @@ export default function AdminSimulator({
       alertTelegramChatId: member.alertTelegramChatId || ""
     });
     setEditCreditDraft(String(member.creditBalance ?? 0));
+    setEditCreditEURDraft(String(member.creditBalanceEUR ?? 0));
     setEditPasswordDraft("");
   };
 
@@ -547,7 +551,7 @@ export default function AdminSimulator({
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      const payload: any = { permissions: editPermissionsDraft, creditBalance: Number(editCreditDraft) || 0, ...editAlertDraft };
+      const payload: any = { permissions: editPermissionsDraft, creditBalance: Number(editCreditDraft) || 0, creditBalanceEUR: Number(editCreditEURDraft) || 0, ...editAlertDraft };
       if (editPasswordDraft) payload.password = editPasswordDraft;
       const res = await fetch(`/api/admin/team/${id}`, {
         method: "PUT",
@@ -725,6 +729,7 @@ export default function AdminSimulator({
   // --- Auto-activation par un membre de l'équipe (avec son propre crédit) ---
   const [showStaffActivate, setShowStaffActivate] = useState(false);
   const [staffServiceType, setStaffServiceType] = useState<"iptv" | "sat" | "box">("iptv");
+  const [staffPayWithEUR, setStaffPayWithEUR] = useState(false);
   const [staffForm, setStaffForm] = useState({
     clientName: "",
     server: "Dino",
@@ -757,7 +762,8 @@ export default function AdminSimulator({
       const payload: any = {
         clientName: staffForm.clientName,
         serviceType: staffServiceType,
-        notes: staffForm.notes
+        notes: staffForm.notes,
+        payWithEUR: staffPayWithEUR
       };
       if (staffServiceType === "iptv") {
         payload.server = staffForm.server;
@@ -770,6 +776,7 @@ export default function AdminSimulator({
       const result = await onStaffActivateClient(payload);
       setStaffActivationResult(result.client);
       setStaffForm({ clientName: "", server: "Dino", durationMonths: 12, productId: "", adultContent: false, notes: "" });
+      setStaffPayWithEUR(false);
       setShowStaffActivate(false);
     } catch (err: any) {
       setStaffError(err.message || "Échec de l'activation.");
@@ -3309,10 +3316,16 @@ export default function AdminSimulator({
               {/* Auto-activation pour les membres de l'équipe (avec leur propre crédit) */}
               {!isOwner && (
                 <div className="p-5 bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-2xl space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs text-emerald-600 font-bold uppercase tracking-wider">Votre Crédit</span>
-                      <p className="text-2xl font-black text-emerald-700">{adminCreditBalance.toLocaleString()} DA</p>
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-6">
+                      <div>
+                        <span className="text-xs text-emerald-600 font-bold uppercase tracking-wider">Votre Crédit DA</span>
+                        <p className="text-2xl font-black text-emerald-700">{adminCreditBalance.toLocaleString()} DA</p>
+                      </div>
+                      <div>
+                        <span className="text-xs text-blue-600 font-bold uppercase tracking-wider">💶 Votre Crédit EUR</span>
+                        <p className="text-2xl font-black text-blue-700">€{adminCreditBalanceEUR.toFixed(2)}</p>
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -3329,6 +3342,34 @@ export default function AdminSimulator({
                       {staffError && (
                         <div className="p-2.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-medium">{staffError}</div>
                       )}
+
+                      <div>
+                        <label className="block text-slate-600 font-semibold mb-1.5 text-xs">Payer avec</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setStaffPayWithEUR(false)}
+                            className={`py-2 rounded-xl border text-center text-xs font-bold transition-all cursor-pointer ${
+                              !staffPayWithEUR
+                                ? "bg-emerald-500/15 border-emerald-500 text-emerald-700"
+                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                            }`}
+                          >
+                            Crédit DA
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setStaffPayWithEUR(true)}
+                            className={`py-2 rounded-xl border text-center text-xs font-bold transition-all cursor-pointer ${
+                              staffPayWithEUR
+                                ? "bg-blue-500/15 border-blue-500 text-blue-700"
+                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                            }`}
+                          >
+                            💶 Crédit EUR
+                          </button>
+                        </div>
+                      </div>
 
                       <div className="grid grid-cols-3 gap-2">
                         {([
@@ -4824,6 +4865,9 @@ export default function AdminSimulator({
                           </p>
                           <p className="text-xs font-bold text-emerald-600 mt-0.5">
                             💰 Crédit : {(member.creditBalance ?? 0).toLocaleString()} DA
+                            {(member.creditBalanceEUR ?? 0) > 0 && (
+                              <span className="text-blue-600 ml-2">· 💶 €{(member.creditBalanceEUR ?? 0).toFixed(2)}</span>
+                            )}
                           </p>
                         </div>
                         <div className="flex gap-1.5 shrink-0">
@@ -4856,6 +4900,17 @@ export default function AdminSimulator({
                               className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-slate-900 text-sm font-bold"
                             />
                             <p className="text-[10px] text-emerald-600 mt-1">Ce membre peut activer des abonnements IPTV/Sat/Box avec ce crédit, comme un revendeur.</p>
+                          </div>
+                          <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                            <label className="block text-blue-700 font-semibold mb-1 text-xs">💶 Crédit EUR (Optionnel)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editCreditEURDraft}
+                              onChange={e => setEditCreditEURDraft(e.target.value)}
+                              className="w-full bg-white border border-blue-300 rounded-lg px-3 py-1.5 text-slate-900 text-sm font-bold"
+                            />
+                            <p className="text-[10px] text-blue-600 mt-1">Solde séparé, utilisé pour activer des clients étrangers payés en euros.</p>
                           </div>
                           <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
                             <label className="block text-amber-700 font-semibold mb-1 text-xs">Nouveau mot de passe</label>
