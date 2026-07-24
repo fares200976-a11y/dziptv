@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { 
   Heart, Phone, MapPin, Instagram, Play, Pause, ChevronLeft, ChevronRight, 
   Sparkles, Calendar, MessageCircle, Star, ShieldCheck, Mail, Lock, 
@@ -15,7 +15,7 @@ import { loadCollection, saveCollection, subscribeCollection, updateDocument } f
 import AudioPlayer from './components/AudioPlayer';
 import DressModal from './components/DressModal';
 import CheckoutModal from './components/CheckoutModal';
-import AdminPanel from './components/AdminPanel';
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
 
 const normalizeSettings = (value?: Partial<AppSettings> | null): AppSettings => {
   const merged: AppSettings = {
@@ -154,19 +154,19 @@ export default function App() {
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
   const heroSlides = [
     {
-      image: 'https://images.unsplash.com/photo-1549417229-aa67d3263c09?auto=format&fit=crop&w=1920&q=80',
+      image: 'https://images.unsplash.com/photo-1549417229-aa67d3263c09?auto=format&fit=crop&w=1600&q=75&fm=webp',
       tagline: 'L\'Élégance Royale',
       title: 'Robes de Mariée de Créateurs',
       description: 'Découvrez des designs exclusifs, de la dentelle perlée aux traînes impériales pour briller le jour de votre vie.'
     },
     {
-      image: 'https://images.unsplash.com/photo-1610030469668-93535c17b6b3?auto=format&fit=crop&w=1920&q=80',
+      image: 'https://images.unsplash.com/photo-1610030469668-93535c17b6b3?auto=format&fit=crop&w=1600&q=75&fm=webp',
       tagline: 'Fierté & Tradition de Kabylie',
       title: 'Robes Kabyles Prestigieuses',
       description: 'Célébrez l\'héritage de Tizi Ouzou avec nos créations kabyles rehaussées de broderies fardas de luxe faites main.'
     },
     {
-      image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1920&q=80',
+      image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1600&q=75&fm=webp',
       tagline: 'Héritage Artisanal Impérial',
       title: 'Caftans & Tenues Traditionnelles',
       description: 'Satin de soie, velours royal et sfifa dorée. Louez des pièces d\'exception adaptées à toutes vos cérémonies.'
@@ -361,6 +361,7 @@ export default function App() {
               id="admin-login-btn"
               className="p-2.5 text-bento-gold border border-bento-gold/50 bg-white/40 hover:bg-bento-gold hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-xs rounded-none"
               title="Espace Admin"
+              aria-label="Espace Admin"
             >
               <Lock className="w-4 h-4" />
             </button>
@@ -378,6 +379,7 @@ export default function App() {
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2.5 text-bento-text hover:text-bento-gold transition-colors cursor-pointer"
+            aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -405,6 +407,7 @@ export default function App() {
                     onClick={() => { setMobileMenuOpen(false); setIsAdminOpen(true); }}
                     className="p-3 text-bento-gold border border-bento-gold/30 rounded-none bg-white/40 flex items-center justify-center cursor-pointer"
                     title="Admin"
+                    aria-label="Espace Admin"
                   >
                     <Lock className="w-4 h-4" />
                   </button>
@@ -422,6 +425,8 @@ export default function App() {
           )}
         </AnimatePresence>
       </header>
+
+      <main>
 
       {/* HERO SECTION / SLIDESHOW */}
       <section id="home" className="relative h-[550px] overflow-hidden bg-bento-dark border border-bento-gold/20 shadow-xl bg-rose-gradient rounded-md mx-4 lg:mx-auto max-w-7xl my-6 flex items-center">
@@ -509,6 +514,7 @@ export default function App() {
             onClick={handlePrevSlide}
             className="p-3 bg-bento-dark/40 hover:bg-bento-dark/60 text-white border border-white/20 rounded-none backdrop-blur-xs transition-colors cursor-pointer"
             title="Précédent"
+            aria-label="Image précédente"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -516,6 +522,7 @@ export default function App() {
             onClick={handleNextSlide}
             className="p-3 bg-bento-dark/40 hover:bg-bento-dark/60 text-white border border-white/20 rounded-none backdrop-blur-xs transition-colors cursor-pointer"
             title="Suivant"
+            aria-label="Image suivante"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -534,7 +541,7 @@ export default function App() {
               <div className="w-12 h-12 rounded-full bg-bento-rose text-bento-gold flex items-center justify-center mb-1 shadow-xs">
                 <Award className="w-6 h-6 text-bento-gold" />
               </div>
-              <h4 className="font-serif font-light text-bento-gold italic text-base">Robes Exclusives</h4>
+              <h3 className="font-serif font-light text-bento-gold italic text-base">Robes Exclusives</h3>
               <p className="text-xs text-bento-text/85 leading-relaxed max-w-[210px] font-sans">Des créations uniques de grands couturiers introuvables ailleurs.</p>
             </div>
 
@@ -542,7 +549,7 @@ export default function App() {
               <div className="w-12 h-12 rounded-full bg-bento-rose text-bento-gold flex items-center justify-center mb-1 shadow-xs">
                 <Clock className="w-6 h-6 text-bento-gold" />
               </div>
-              <h4 className="font-serif font-light text-bento-gold italic text-base">Location Facilitée</h4>
+              <h3 className="font-serif font-light text-bento-gold italic text-base">Location Facilitée</h3>
               <p className="text-xs text-bento-text/85 leading-relaxed max-w-[210px] font-sans">Réservez en ligne avec acompte et retirez sereinement à la boutique.</p>
             </div>
 
@@ -550,7 +557,7 @@ export default function App() {
               <div className="w-12 h-12 rounded-full bg-bento-rose text-bento-gold flex items-center justify-center mb-1 shadow-xs">
                 <Sparkles className="w-6 h-6 text-bento-gold" />
               </div>
-              <h4 className="font-serif font-light text-bento-gold italic text-base">Retouches & Ajustements</h4>
+              <h3 className="font-serif font-light text-bento-gold italic text-base">Retouches & Ajustements</h3>
               <p className="text-xs text-bento-text/85 leading-relaxed max-w-[210px] font-sans">Nos couturières professionnelles ajustent chaque robe à vos mensures exactes.</p>
             </div>
 
@@ -558,7 +565,7 @@ export default function App() {
               <div className="w-12 h-12 rounded-full bg-bento-rose text-bento-gold flex items-center justify-center mb-1 shadow-xs">
                 <ShieldCheck className="w-6 h-6 text-bento-gold" />
               </div>
-              <h4 className="font-serif font-light text-bento-gold italic text-base">Hygiène Exemplaire</h4>
+              <h3 className="font-serif font-light text-bento-gold italic text-base">Hygiène Exemplaire</h3>
               <p className="text-xs text-bento-text/85 leading-relaxed max-w-[210px] font-sans">Chaque robe subit un nettoyage à sec premium écologique avant chaque remise.</p>
             </div>
 
@@ -571,7 +578,7 @@ export default function App() {
         
         {/* Header Title */}
         <div className="text-center space-y-3.5 mb-12">
-          <span className="text-[10px] uppercase tracking-[0.3em] text-bento-gold font-bold bg-bento-rose border border-bento-gold/25 px-4 py-1.5 inline-block rounded-none">
+          <span className="text-[10px] uppercase tracking-[0.3em] text-gold-700 font-bold bg-bento-rose border border-bento-gold/25 px-4 py-1.5 inline-block rounded-none">
             Notre Garde-Robe Prestigieuse
           </span>
           <h2 className="text-3xl md:text-5xl font-serif font-light text-bento-text uppercase tracking-wide">
@@ -745,6 +752,7 @@ export default function App() {
                         <button
                           onClick={() => setPlayingVideoId(v.id)}
                           className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/45 transition-colors cursor-pointer group"
+                          aria-label={`Lire la vidéo : ${v.title}`}
                         >
                           <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gold-gradient flex items-center justify-center text-white shadow-xl group-hover:scale-105 transition-transform">
                             <Play className="w-4 h-4 md:w-6 md:h-6 fill-current text-white ml-1" />
@@ -758,7 +766,7 @@ export default function App() {
                   <div className="p-4 md:p-5 flex flex-col justify-between flex-grow gap-4 border-t border-bento-gold/15 bg-bento-dark">
                     <div className="space-y-1.5 min-w-0">
                       <p className="text-[9px] uppercase tracking-widest font-sans font-bold text-bento-gold">{v.category}</p>
-                      <h4 className="font-serif font-light text-sm md:text-base text-white uppercase tracking-wide truncate" title={v.title}>{v.title}</h4>
+                      <h3 className="font-serif font-light text-sm md:text-base text-white uppercase tracking-wide truncate" title={v.title}>{v.title}</h3>
                       <p className="text-[10px] md:text-xs text-white/60 font-sans line-clamp-2 leading-relaxed">{v.description}</p>
                     </div>
                     <a
@@ -792,7 +800,7 @@ export default function App() {
         
         {/* Header Title */}
         <div className="text-center space-y-3.5 mb-16">
-          <span className="text-[10px] uppercase tracking-[0.3em] text-bento-gold font-bold bg-bento-rose border border-bento-gold/25 px-4 py-1.5 inline-block rounded-none">
+          <span className="text-[10px] uppercase tracking-[0.3em] text-gold-700 font-bold bg-bento-rose border border-bento-gold/25 px-4 py-1.5 inline-block rounded-none">
             Savoir-Faire & Passion
           </span>
           <h2 className="text-3xl md:text-5xl font-serif font-light text-bento-text uppercase tracking-wide">
@@ -840,7 +848,7 @@ export default function App() {
           
           {/* Title Header */}
           <div className="text-center space-y-3.5 mb-16">
-            <span className="text-[10px] uppercase tracking-[0.3em] text-bento-gold font-bold bg-white border border-bento-gold/25 px-4 py-1.5 inline-block rounded-none">
+            <span className="text-[10px] uppercase tracking-[0.3em] text-gold-700 font-bold bg-white border border-bento-gold/25 px-4 py-1.5 inline-block rounded-none">
               Vos Moments de Bonheur
             </span>
             <h2 className="text-3xl md:text-5xl font-serif font-light text-bento-text uppercase tracking-wide">
@@ -896,7 +904,7 @@ export default function App() {
         
         {/* Title Header */}
         <div className="text-center space-y-3.5 mb-16">
-          <span className="text-[10px] uppercase tracking-[0.3em] text-bento-gold font-bold bg-bento-rose border border-bento-gold/25 px-4 py-1.5 inline-block rounded-none">
+          <span className="text-[10px] uppercase tracking-[0.3em] text-gold-700 font-bold bg-bento-rose border border-bento-gold/25 px-4 py-1.5 inline-block rounded-none">
             Nous Trouver & Prendre RDV
           </span>
           <h2 className="text-3xl md:text-5xl font-serif font-light text-bento-text uppercase tracking-wide">
@@ -1031,6 +1039,8 @@ export default function App() {
       </section>
 
       {/* LUXURIOUS FOOTER */}
+      </main>
+
       <footer className="bg-bento-dark text-white/75 py-12 border-t border-bento-gold/30 relative z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-bento-gold/15">
@@ -1044,9 +1054,9 @@ export default function App() {
                 Location de robes de mariée de créateurs, robes kabyles d'exception, caftans royaux et robes de soirée à Tizi Ouzou. Votre joie suprême, notre noble passion.
               </p>
               <div className="flex gap-4 justify-center md:justify-start pt-1.5 text-white/60">
-                <a href="#" className="hover:text-bento-gold transition-colors"><Instagram className="w-4 h-4" /></a>
-                <a href="https://wa.me/213550123456" className="hover:text-bento-gold transition-colors"><MessageCircle className="w-4 h-4" /></a>
-                <a href="tel:0550123456" className="hover:text-bento-gold transition-colors"><Phone className="w-4 h-4" /></a>
+                <a href="#" className="hover:text-bento-gold transition-colors" aria-label="Suivez-nous sur Instagram"><Instagram className="w-4 h-4" /></a>
+                <a href="https://wa.me/213550123456" className="hover:text-bento-gold transition-colors" aria-label="Contactez-nous sur WhatsApp"><MessageCircle className="w-4 h-4" /></a>
+                <a href="tel:0550123456" className="hover:text-bento-gold transition-colors" aria-label="Appelez-nous"><Phone className="w-4 h-4" /></a>
               </div>
             </div>
 
@@ -1120,24 +1130,30 @@ export default function App() {
 
       {/* COUTURE BOUTIQUE MANAGEMENT PANEL (ADMIN PORTAL) */}
       {isAdminOpen && (
-        <AdminPanel
-          dresses={dresses}
-          setDresses={setDresses}
-          bookings={bookings}
-          setBookings={setBookings}
-          team={team}
-          setTeam={setTeam}
-          testimonials={testimonials}
-          setTestimonials={setTestimonials}
-          defileVideos={defileVideos}
-          setDefileVideos={setDefileVideos}
-          settings={settings}
-          setSettings={setSettings}
-          onClose={() => setIsAdminOpen(false)}
-          displayMode={displayMode}
-          setDisplayMode={handleSetDisplayMode}
-          isMobileLayout={isMobileLayout}
-        />
+        <Suspense fallback={
+          <div className="fixed inset-0 z-[100] bg-bento-dark flex items-center justify-center">
+            <div className="text-white/70 text-sm font-sans tracking-widest uppercase">Chargement...</div>
+          </div>
+        }>
+          <AdminPanel
+            dresses={dresses}
+            setDresses={setDresses}
+            bookings={bookings}
+            setBookings={setBookings}
+            team={team}
+            setTeam={setTeam}
+            testimonials={testimonials}
+            setTestimonials={setTestimonials}
+            defileVideos={defileVideos}
+            setDefileVideos={setDefileVideos}
+            settings={settings}
+            setSettings={setSettings}
+            onClose={() => setIsAdminOpen(false)}
+            displayMode={displayMode}
+            setDisplayMode={handleSetDisplayMode}
+            isMobileLayout={isMobileLayout}
+          />
+        </Suspense>
       )}
     </div>
   );
