@@ -121,6 +121,7 @@ export default function DressModal({ dress, isOpen, onClose, existingBookings, o
             onClick={onClose}
             className="absolute top-4 right-4 z-30 p-3 bg-white hover:bg-bento-rose text-bento-text rounded-none shadow-sm transition-all border border-bento-gold/25 cursor-pointer"
             title="Fermer"
+            aria-label="Fermer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -407,6 +408,7 @@ export default function DressModal({ dress, isOpen, onClose, existingBookings, o
                   }}
                   className="p-1.5 hover:bg-white/10 text-white/85 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
                   title="Zoom Arrière"
+                  aria-label="Zoom arrière"
                 >
                   <ZoomOut className="w-4 h-4" />
                 </button>
@@ -423,6 +425,7 @@ export default function DressModal({ dress, isOpen, onClose, existingBookings, o
                   }}
                   className="p-1.5 hover:bg-white/10 text-white/85 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
                   title="Zoom Avant"
+                  aria-label="Zoom avant"
                 >
                   <ZoomIn className="w-4 h-4" />
                 </button>

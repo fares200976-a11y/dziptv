@@ -134,6 +134,7 @@ export default function CheckoutModal({ isOpen, onClose, dress, bookingDetails, 
               <button
                 onClick={onClose}
                 className="p-3 rounded-none text-bento-text/40 hover:bg-bento-rose hover:text-bento-gold transition-all cursor-pointer"
+                aria-label="Fermer"
               >
                 <X className="w-4.5 h-4.5" />
               </button>
