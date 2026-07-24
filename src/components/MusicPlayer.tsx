@@ -8,7 +8,7 @@ export default function MusicPlayer() {
 
   useEffect(() => {
     // Create audio element
-    const audio = new Audio("https://mp3tourl.com/audio/1784219222470-27652ba3-7399-40cd-8b67-3f5b47b118da.mp3");
+    const audio = new Audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3");
     audio.loop = true;
     audio.volume = 0.25; // elegant low volume
     audio.muted = true; // requis par les navigateurs pour autoriser l'autoplay
