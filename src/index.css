@@ -1,68 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Playfair Display", Georgia, Cambria, "Times New Roman", Times, serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  
-  --color-bento-bg: #FAF7F5;
-  --color-bento-card: #FFFFFF;
-  --color-bento-text: #3D3434;
-  --color-bento-gold: #C5A059;
-  --color-bento-gold-dark: #A68641;
-  --color-bento-rose: #FDF2F4;
-  --color-bento-dark: #1A1A1A;
-  
-  --color-gold-50: #FAF6EB;
-  --color-gold-100: #F3E9CD;
-  --color-gold-200: #E7D29E;
-  --color-gold-300: #DBBC6F;
-  --color-gold-400: #C5A059;
-  --color-gold-500: #C5A059;
-  --color-gold-600: #A68641;
-  --color-gold-700: #824B12;
-  --color-gold-800: #62340E;
-  --color-gold-900: #4B240B;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-arabic: "Tajawal", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Custom romantic luxury gradients and animations */
-.text-gold-gradient {
-  background: linear-gradient(135deg, #E6C653 0%, #C5A059 50%, #E6C653 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+body {
+  font-family: var(--font-sans);
+  background-color: #0b0f19;
+  color: #f3f4f6;
+  overflow-x: hidden;
 }
 
-.bg-gold-gradient {
-  background: linear-gradient(135deg, #E6C653 0%, #C5A059 100%);
+/* Mode arabe (RTL) : police adaptée aux glyphes arabes sur tout le site */
+html[dir="rtl"] body {
+  font-family: var(--font-arabic);
+}
+html[dir="rtl"] .font-display {
+  font-family: var(--font-arabic);
 }
 
-.bg-rose-gradient {
-  background: linear-gradient(135deg, #FAF7F5 0%, #FDF2F4 100%);
+/* Les tableaux de données (admin/revendeur) restent toujours alignés à
+   gauche et en LTR même en arabe : plus lisible pour les chiffres, prix,
+   dates et références, comme dans la plupart des back-offices arabes. */
+.data-table-ltr {
+  direction: ltr;
+  text-align: left;
 }
 
-.gold-border-glow {
-  box-shadow: 0 0 15px rgba(197, 160, 89, 0.15);
+/* Clignotement des éléments en attente (commandes, demandes de crédit,
+   demandes de panel...) dans le panel admin, jusqu'à leur traitement.
+   Pulse le fond/la bordure plutôt que l'opacité, pour rester lisible. */
+@keyframes pending-blink {
+  0%, 100% { background-color: rgba(254, 226, 226, 0.4); border-color: rgba(248, 113, 113, 0.9); }
+  50% { background-color: rgba(254, 226, 226, 1); border-color: rgba(248, 113, 113, 0.3); }
+}
+.animate-pending-blink {
+  animation: pending-blink 1.2s ease-in-out infinite;
 }
 
-/* Scrollbar design */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+/* Variante pour texte/icônes (badges de comptage dans les onglets) : pulse
+   la couleur sans jamais faire disparaître le texte. */
+@keyframes pending-blink-text {
+  0%, 100% { color: rgb(220, 38, 38); }
+  50% { color: rgb(248, 180, 180); }
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.animate-pending-blink-text {
+  animation: pending-blink-text 1.2s ease-in-out infinite;
 }
 
+/* Glassmorphism utility classes */
+.glass-panel {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(31, 41, 55, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(31, 41, 55, 0.6);
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.2);
+}
+
+/* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #FAF7F5;
+  background: #0b0f19;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #C5A059;
-  border-radius: 3px;
+  background: #1f2937;
+  border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #A68641;
+  background: #3b82f6;
 }
